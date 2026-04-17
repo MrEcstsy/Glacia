@@ -27,14 +27,24 @@ final class JackpotInstance {
     private array $tickets = [];
 
     public function __construct() {
-        $config = GeneralUtils::getConfiguration(Loader::getInstance(), "config.yml")->getAll();
-        $this->ticketPrice = $config["jackpot"]["ticket-price"] ?? 10000;
-        $this->taxPercent = $config["tax"]["jackpot"] ?? 0.10;
-        $this->interval = $config["jackpot"]["interval"] ?? 7200; 
-        $this->timeLeft = $this->interval;
+        $this->reloadSettingsFromConfig();
 
         $this->loadPot();
         $this->scheduleDrawTask();
+    }
+
+    public function reloadSettingsFromConfig(): void {
+        $config = GeneralUtils::getConfiguration(Loader::getInstance(), "config.yml")?->getAll() ?? [];
+        $this->ticketPrice = (int) ($config["jackpot"]["ticket-price"] ?? 10000);
+        $this->taxPercent = (float) ($config["tax"]["jackpot"] ?? 0.10);
+        $this->interval = (int) ($config["jackpot"]["interval"] ?? 7200);
+
+        if (!isset($this->timeLeft) || $this->timeLeft <= 0) {
+            $this->timeLeft = $this->interval;
+            return;
+        }
+
+        $this->timeLeft = min($this->timeLeft, $this->interval);
     }
 
     public function purchaseTickets(Player $player, int $amount): bool {

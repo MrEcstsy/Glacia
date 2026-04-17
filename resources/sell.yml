@@ -1,0 +1,60 @@
+sell-prices:
+  farming:
+    wheat: 2.5
+    carrot: 3
+    potato: 3.25
+    beetroot: 2.25
+    sugar_cane: 3.75
+    melon: 1
+    pumpkin: 5.5
+    cocoa_beans: 2
+    nether_wart: 4.25
+    cactus: 1.75
+    wheat_seeds: 0.25
+    melon_seeds: 0.25
+    pumpkin_seeds: 0.25
+    beetroot_seeds: 0.25
+    bamboo: 2
+
+  mob_drops:
+    rotten_flesh: 1.25
+    bone: 1.75
+    string: 1.25
+    spider_eye: 1.75
+    gunpowder: 3.25
+    ender_pearl: 6
+    blaze_rod: 7
+    slimeball: 3.5
+    ghast_tear: 8.5
+    magma_cream: 5.25
+
+  ores:
+    coal: 2
+    iron_ingot: 5.5
+    gold_ingot: 7.75
+    redstone: 1.25
+    lapis_lazuli: 2.25
+    diamond: 15
+    emerald: 17.5
+    copper_ingot: 3.5
+
+  nature:
+    oak_log: 1.25
+    spruce_log: 1.25
+    birch_log: 1.25
+    jungle_log: 1.5
+    acacia_log: 1.5
+    dark_oak_log: 1.5
+
+  items:
+    apple: 2
+    stick: 0.25
+    leather: 2.5
+    feather: 1
+    egg: 1.5
+    ink_sac: 2.25
+    glow_ink_sac: 3.75
+    cobweb: 2.5
+    arrow: 0.75
+    prismarine_crystals: 4.25
+    prismarine_shard: 4.25

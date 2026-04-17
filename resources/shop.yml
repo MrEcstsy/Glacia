@@ -1,0 +1,55 @@
+shop:
+  potions:
+    - id: "strong_regeneration_potion"
+      buy: 120
+    - id: "strong_regeneration_splash_potion"
+      buy: 145
+    - id: "strong_swiftness_potion"
+      buy: 30
+    - id: "strong_swiftness_splash_potion"
+      buy: 55
+    - id: "water_breathing_potion"
+      buy: 115
+    - id: "strong_strength_splash_potion"
+      buy: 110
+    - id: "strong_strength_potion"
+      buy: 85
+    - id: "strong_healing_splash_potion"
+      buy: 75
+  raid: []
+  spawners:
+    - id: "chicken_spawner"
+      buy: 30000
+    - id: "sheep_spawner"
+      buy: 50000
+    - id: "pig_spawner"
+      buy: 75000
+    - id: "cow_spawner"
+      buy: 100000
+    - id: "spider_spawner"
+      buy: 150000
+    - id: "zombie_spawner"
+      buy: 200000
+    - id: "skeleton_spawner"
+      buy: 250000
+    - id: "zombie_pigman_spawner"
+      buy: 300000
+    - id: "enderman_spawner"
+      buy: 400000
+    - id: "blaze_spawner"
+      buy: 500000
+    - id: "slime_spawner"
+      buy: 1000000
+    - id: "creeper_spawner"
+      buy: 1500000
+    - id: "iron_golem_spawner"
+      buy: 2000000
+  blocks: []
+  ores: []
+  food: []
+  drops: []
+  special: []
+  brewing: []
+  wool: []
+  glass: []
+  base: []

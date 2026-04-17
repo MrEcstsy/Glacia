@@ -9,6 +9,7 @@ use ecstsy\Glacia\blocks\tiles\SpawnerTile;
 use ecstsy\Glacia\commands\AdminModeCommand;
 use ecstsy\Glacia\commands\SellCommand;
 use ecstsy\Glacia\commands\BalanceCommand;
+use ecstsy\Glacia\commands\BalTopCommand;
 use ecstsy\Glacia\commands\BlackMarketCommand;
 use ecstsy\Glacia\commands\CreateHomeCommand;
 use ecstsy\Glacia\commands\CreateWarpCommand;
@@ -49,6 +50,8 @@ use ecstsy\Glacia\commands\JackpotCommand;
 use ecstsy\Glacia\commands\SeeBragCommand;
 use ecstsy\Glacia\commands\SeeItemCommand;
 use ecstsy\Glacia\commands\SettingsCommand;
+use ecstsy\Glacia\commands\ShopCommand;
+use ecstsy\Glacia\commands\GlaciaReloadCommand;
 use ecstsy\Glacia\entity\boss\bosses\AstralDevourer;
 use ecstsy\Glacia\entity\CombatLoggerEntity;
 use ecstsy\Glacia\entity\FloatingTextEntity;
@@ -206,6 +209,7 @@ final class GlaciaUtils
             new SpawnCommand($loader, "spawn", "Teleport to spawn"),
             new ExpCommand($loader, "exp", "Experience commands"),
             new BalanceCommand($loader, "balance", "View your balance or another player's balance", ["bal"]),
+            new BalTopCommand($loader, "baltop", "View the richest players on the server"),
             new PayCommand($loader, "pay", "Pay another player", ["p"]),
             new EcoCommand($loader, "eco", "Economy commands", ["economy"]),
             new HomeCommand($loader, "home", "Home commands"),
@@ -244,6 +248,8 @@ final class GlaciaUtils
             new FeedCommand($loader, "feed", "Feed yourself or another player"),
             new BlackMarketCommand($loader, "blackmarket", "Black market commands", ["bah"]),
             new CollectCommand($loader, "collect", "Collect items"),
+            new ShopCommand($loader, "shop", "Open the shop"),
+            new GlaciaReloadCommand($loader, "greload", "Reload Glacia configs"),
         ]);
 
         $listeners = [ 
@@ -365,7 +371,6 @@ final class GlaciaUtils
             FloatingTextInstance::$particles[$key] = $entity; 
         }
 
-        SellHandler::registerDefaults();
         QuestInstance::registerDefaults();
         CustomEnchantments::getAll();
 
@@ -425,11 +430,13 @@ final class GlaciaUtils
         Loader::getInstance()->getScheduler()->scheduleRepeatingTask($autoPlantTask, 5  );
         AutoPlanterEnchant::setTask($autoPlantTask);
 
-        $files = ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml"];
+        $files = ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml"];
 
         foreach ($files as $file) {
             $loader->saveResource($file);
         }
+
+        SellHandler::registerDefaults();
 
         Loader::getInstance()->getScheduler()->scheduleRepeatingTask(new BlackMarketAuctionTickTask(), 20);
     }

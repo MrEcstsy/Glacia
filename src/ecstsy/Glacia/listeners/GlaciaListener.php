@@ -47,6 +47,7 @@ use pocketmine\item\ItemBlock;
 use pocketmine\item\ItemTypeIds;
 use pocketmine\item\Pickaxe;
 use pocketmine\item\StringToItemParser;
+use pocketmine\entity\object\FireworkRocket;
 use pocketmine\network\mcpe\protocol\TextPacket;
 use pocketmine\player\Player;
 use pocketmine\Server;
@@ -349,6 +350,11 @@ final class GlaciaListener implements Listener {
 
         $player = $event->getEntity();
         $damager = $event->getDamager();
+
+        if ($damager instanceof FireworkRocket) {
+            $event->cancel();
+            return;
+        }
         
         if (!($player instanceof Player) || !($damager instanceof Player)) return;
 

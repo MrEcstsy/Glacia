@@ -6,82 +6,58 @@ namespace ecstsy\Glacia\server\economy;
 
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\quests\QuestInstance;
+use ecstsy\MartianUtilities\utils\GeneralUtils;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
-use pocketmine\block\BlockTypeIds;
 use pocketmine\item\Item;
-use pocketmine\item\ItemTypeIds;
+use pocketmine\item\StringToItemParser;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
 use pocketmine\world\particle\LavaParticle;
-
-use function PHPSTORM_META\map;
 
 final class SellHandler {
 
     public static array $sellPrices = [];
 
     public static function registerDefaults(): void {
-        self::$sellPrices = [
-            // FARMING
-            ItemTypeIds::WHEAT => 2.5,
-            ItemTypeIds::CARROT => 3,
-            ItemTypeIds::POTATO => 3.25,
-            ItemTypeIds::BEETROOT => 2.25,
-            BlockTypeIds::SUGARCANE => 3.75,
-            ItemTypeIds::MELON => 1,
-            BlockTypeIds::PUMPKIN => 5.50,
-            ItemTypeIds::COCOA_BEANS => 2,
-            BlockTypeIds::NETHER_WART => 4.25,
-            BlockTypeIds::CACTUS => 1.75,
-            ItemTypeIds::WHEAT_SEEDS => 0.25,
-            ItemTypeIds::MELON_SEEDS => 0.25,
-            ItemTypeIds::PUMPKIN_SEEDS => 0.25,
-            ItemTypeIds::BEETROOT_SEEDS => 0.25,
-            ItemTypeIds::BAMBOO => 2,
+        self::loadFromConfig();
+    }
 
-            // MOB DROPS
-            ItemTypeIds::ROTTEN_FLESH => 1.25,
-            ItemTypeIds::BONE => 1.75,
-            ItemTypeIds::STRING => 1.25,
-            ItemTypeIds::SPIDER_EYE => 1.75,
-            ItemTypeIds::GUNPOWDER => 3.25,
-            ItemTypeIds::ENDER_PEARL => 6,
-            ItemTypeIds::BLAZE_ROD => 7,
-            ItemTypeIds::SLIMEBALL => 3.50,
-            ItemTypeIds::GHAST_TEAR => 8.50,
-            ItemTypeIds::MAGMA_CREAM => 5.25,
+    public static function loadFromConfig(): void {
+        self::$sellPrices = [];
 
-            // ORES
-            ItemTypeIds::COAL => 2,
-            ItemTypeIds::IRON_INGOT => 5.50,
-            ItemTypeIds::GOLD_INGOT => 7.75,
-            ItemTypeIds::REDSTONE_DUST => 1.25,
-            ItemTypeIds::LAPIS_LAZULI => 2.25,
-            ItemTypeIds::DIAMOND => 15,
-            ItemTypeIds::EMERALD => 17.50,
-            ItemTypeIds::COPPER_INGOT => 3.50,
+        $config = GeneralUtils::getConfiguration(Loader::getInstance(), "sell.yml");
+        $priceSections = $config?->get("sell-prices", []);
 
-            // Nature
-            BlockTypeIds::OAK_WOOD => 1.25,
-            BlockTypeIds::SPRUCE_WOOD => 1.25,
-            BlockTypeIds::BIRCH_WOOD => 1.25,
-            BlockTypeIds::JUNGLE_WOOD => 1.50,
-            BlockTypeIds::ACACIA_WOOD => 1.50,
-            BlockTypeIds::DARK_OAK_WOOD => 1.50,
+        if (!is_array($priceSections)) {
+            Loader::getInstance()->getLogger()->warning("sell.yml is missing a valid 'sell-prices' section.");
+            return;
+        }
 
-            // Items
-            ItemTypeIds::APPLE => 2,
-            ItemTypeIds::STICK => 0.25,
-            ItemTypeIds::LEATHER => 2.50,
-            ItemTypeIds::FEATHER => 1,
-            ItemTypeIds::EGG => 1.50,
-            ItemTypeIds::INK_SAC => 2.25,
-            ItemTypeIds::GLOW_INK_SAC => 3.75,
-            BlockTypeIds::COBWEB => 2.50,
-            ItemTypeIds::ARROW => 0.75,
-            ItemTypeIds::PRISMARINE_CRYSTALS => 4.25,
-            ItemTypeIds::PRISMARINE_SHARD => 4.25
-        ];
+        foreach ($priceSections as $section => $entries) {
+            if (!is_array($entries)) {
+                Loader::getInstance()->getLogger()->warning("Sell section '$section' is not a valid map.");
+                continue;
+            }
+
+            foreach ($entries as $itemId => $price) {
+                self::registerSellEntry((string) $section, (string) $itemId, $price);
+            }
+        }
+    }
+
+    private static function registerSellEntry(string $section, string $itemId, mixed $price): void {
+        if (!is_numeric($price)) {
+            Loader::getInstance()->getLogger()->warning("Sell price for '$itemId' in section '$section' is not numeric.");
+            return;
+        }
+
+        $item = StringToItemParser::getInstance()->parse($itemId);
+        if ($item === null) {
+            Loader::getInstance()->getLogger()->warning("Could not parse sell item '$itemId' in section '$section'.");
+            return;
+        }
+
+        self::$sellPrices[$item->getTypeId()] = round((float) $price, 2);
     }
 
     public static function sellItem(Player $player, Item $item): bool {
@@ -127,7 +103,7 @@ final class SellHandler {
             $id = $item->getTypeId();
 
             if (!isset(self::$sellPrices[$id])) {
-                continue; 
+                continue;
             }
 
             $count = $item->getCount();
@@ -150,5 +126,18 @@ final class SellHandler {
             $player->sendMessage(C::colorize("&r&cYou have no items that can be sold."));
             PlayerUtils::playSound($player, "note.bass");
         }
+    }
+
+    public static function getBuyPrice(int $id): ?float {
+        $sellPrice = self::getSellPrice($id);
+        if ($sellPrice === null) {
+            return null;
+        }
+
+        return round($sellPrice * 3, 2);
+    }
+
+    public static function getSellPrice(int $id): ?float {
+        return self::$sellPrices[$id] ?? null;
     }
 }

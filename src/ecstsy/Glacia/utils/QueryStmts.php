@@ -9,6 +9,8 @@ final class QueryStmts {
     // PLAYER
     public const PLAYERS_INIT = "glacia_players.init";
     public const PLAYERS_SELECT = "glacia_players.select";
+    public const PLAYERS_BALTOP = "glacia_players.baltop";
+    public const PLAYERS_BALTOP_COUNT = "glacia_players.baltop_count";
     public const PLAYERS_CREATE = "glacia_players.create";
     public const PLAYERS_UPDATE = "glacia_players.update";
     public const PLAYERS_DELETE = "glacia_players.delete";

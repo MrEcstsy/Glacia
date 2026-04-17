@@ -56,6 +56,25 @@ final class GeneralUtils {
         return $config;
     }
 
+    public static function reloadConfiguration(Plugin $plugin, string $fileName): ?Config {
+        $pluginFolder = $plugin->getDataFolder();
+        $filePath = $pluginFolder . $fileName;
+
+        $config = self::getConfiguration($plugin, $fileName);
+        if ($config === null) {
+            return null;
+        }
+
+        $config->reload();
+        self::$configCache[$filePath] = $config;
+        return $config;
+    }
+
+    public static function forgetConfiguration(Plugin $plugin, string $fileName): void {
+        $filePath = $plugin->getDataFolder() . $fileName;
+        unset(self::$configCache[$filePath]);
+    }
+
     public static function addParticleToPosition(Position $position, string $particleName): void {
         $world = $position->getWorld();
     

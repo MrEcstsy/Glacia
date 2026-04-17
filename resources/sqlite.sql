@@ -24,6 +24,22 @@ SELECT *
 FROM glacia_players;
 -- # }
 
+-- # { baltop
+-- #    :limit int
+-- #    :offset int
+SELECT username, balance
+FROM glacia_players
+WHERE username IS NOT NULL AND username != ''
+ORDER BY balance DESC, username ASC
+LIMIT :limit OFFSET :offset;
+-- # }
+
+-- # { baltop_count
+SELECT COUNT(*) AS count
+FROM glacia_players
+WHERE username IS NOT NULL AND username != '';
+-- # }
+
 -- # { create
 -- #    :uuid string
 -- #    :username string
