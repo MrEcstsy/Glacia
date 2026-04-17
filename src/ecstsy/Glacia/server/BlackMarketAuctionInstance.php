@@ -1,0 +1,333 @@
+<?php
+
+declare(strict_types=1);
+
+namespace ecstsy\Glacia\server;
+
+use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\player\PlayerManager;
+use ecstsy\Glacia\server\blackmarket\BlackMarketAuctionManager;
+use ecstsy\Glacia\utils\QueryStmts;
+use pocketmine\item\Item;
+use pocketmine\player\Player;
+use pocketmine\utils\SingletonTrait;
+use pocketmine\utils\TextFormat;
+
+final class BlackMarketAuctionInstance {
+    use SingletonTrait;
+
+    private bool $enabled = false;
+    private int $nextAuctionTime = 0;
+
+    private int $currentBid = 0;
+    private int $startingBid = 0;
+    private int $endTime = 0;
+    private string $highestBidder = "";
+    private string $listingName = "";
+    private ?Item $currentItem = null;
+
+    public function __construct() {
+        self::setInstance($this);
+        $this->load();
+    }
+
+    private function load(): void {
+        $db = Loader::getDatabase();
+        $db->executeSelect(QueryStmts::SERVER_GLACIA_SELECT, [], function(array $rows): void {
+            foreach ($rows as $row) {
+                switch ($row['key'] ?? '') {
+                    case GlaciaServerKeys::BAH_ACTIVE:
+                        $this->enabled = (bool) $row['value'];
+                        break;
+
+                    case GlaciaServerKeys::BAH_NEXT_AUCTION:
+                        $this->nextAuctionTime = (int) $row['value'];
+                        break;
+                }
+            }
+
+            if ($this->nextAuctionTime <= 0) {
+                $this->startCountdown(1800);
+            }
+        });
+    }
+
+    public function isEnabled(): bool {
+        return $this->enabled;
+    }
+
+    public function hasStarted(): bool {
+        return $this->enabled && $this->currentItem !== null && $this->endTime > time();
+    }
+
+    public function isCountingDown(): bool {
+        return $this->enabled && $this->currentItem === null && $this->nextAuctionTime > time();
+    }
+
+    public function tick(): void {
+        if (!$this->enabled) {
+            $this->startCountdown(BlackMarketAuctionManager::getInstance()->getInterval());
+            return;
+        }
+
+        if ($this->currentItem !== null && $this->endTime > 0 && $this->endTime <= time()) {
+            $this->finishAuction();
+            $this->startCountdown(BlackMarketAuctionManager::getInstance()->getInterval());
+            return;
+        }
+
+        if ($this->currentItem !== null && $this->endTime > time()) {
+            return;
+        }
+
+        if ($this->currentItem === null && $this->nextAuctionTime > 0 && time() >= $this->nextAuctionTime) {
+            $this->startAuction();
+            return;
+        }
+
+        if ($this->currentItem === null && $this->nextAuctionTime <= 0) {
+            $this->startCountdown(BlackMarketAuctionManager::getInstance()->getInterval());
+        }
+    }
+
+    public function startAuction(): void {
+        $listing = BlackMarketAuctionManager::getInstance()->rollListing();
+
+        if ($listing === null) {
+            $this->startCountdown(60);
+            return;
+        }
+
+        $this->currentBid = 0;
+        $this->startingBid = $listing->getStartingBid();
+        $this->endTime = time() + BlackMarketAuctionManager::getInstance()->getAuctionDuration();
+        $this->highestBidder = "";
+        $this->listingName = $listing->getName();
+        $this->currentItem = $listing->getItem();
+        $this->nextAuctionTime = 0;
+
+        $this->save(GlaciaServerKeys::BAH_ACTIVE, "1");
+        $this->save(GlaciaServerKeys::BAH_NEXT_AUCTION, "0");
+
+        $message = "&r&l&6BAH &r&8» &eA new item is up for auction: {$this->listingName} &7(Starting Bid: &a$" . number_format($this->startingBid) . "&7)";
+
+        BlackMarketAuctionManager::getInstance()->messageAll(TextFormat::colorize($message));
+    }
+
+    public function finishAuction(): void {
+        $winner = $this->highestBidder;
+        $finalBid = $this->currentBid;
+        $listingName = $this->listingName;
+        $item = $this->currentItem !== null ? clone $this->currentItem : null;
+
+        if ($item !== null && $winner !== "") {
+            BlackMarketAuctionManager::getInstance()->giveAuctionToWinner(
+                $winner,
+                $item,
+                $finalBid
+            );
+
+            $message = "&r&l&6BAH &r&8» &e{$winner} &ewon {$listingName} &efor &a$" . number_format($finalBid) . " &7(Starting Bid: &a$" . number_format($this->startingBid) . "&7)";
+
+            BlackMarketAuctionManager::getInstance()->messageAll(TextFormat::colorize($message));
+
+        } else {
+            $message = "&r&l&6BAH &r&8» &eThe Black Market Auction ended with no bids.";
+            BlackMarketAuctionManager::getInstance()->messageAll(TextFormat::colorize($message));
+        }
+
+        $this->currentBid = 0;
+        $this->startingBid = 0;
+        $this->endTime = 0;
+        $this->highestBidder = "";
+        $this->listingName = "";
+        $this->currentItem = null;
+    }
+
+    public function getNextAuctionTime(): int {
+        return $this->nextAuctionTime;
+    }
+
+    public function getRemaining(): int {
+        if ($this->hasStarted()) {
+            return $this->getAuctionTimeLeft();
+        }
+
+        return max(0, $this->nextAuctionTime - time());
+    }
+
+    public function startCountdown(int $durationSeconds): void {
+        if ($durationSeconds <= 0) {
+            return;
+        }
+
+        $this->enabled = true;
+        $this->nextAuctionTime = time() + $durationSeconds;
+
+        $this->currentBid = 0;
+        $this->startingBid = 0;
+        $this->endTime = 0;
+        $this->highestBidder = "";
+        $this->listingName = "";
+        $this->currentItem = null;
+
+        $this->save(GlaciaServerKeys::BAH_ACTIVE, "1");
+        $this->save(GlaciaServerKeys::BAH_NEXT_AUCTION, (string) $this->nextAuctionTime);
+    }
+
+    public function disable(): void {
+        $this->enabled = false;
+        $this->nextAuctionTime = 0;
+
+        $this->currentBid = 0;
+        $this->startingBid = 0;
+        $this->endTime = 0;
+        $this->highestBidder = "";
+        $this->listingName = "";
+        $this->currentItem = null;
+
+        $this->save(GlaciaServerKeys::BAH_ACTIVE, "0");
+        $this->save(GlaciaServerKeys::BAH_NEXT_AUCTION, "0");
+    }
+
+    private function save(string $key, string $value): void {
+        Loader::getDatabase()->executeChange(QueryStmts::SERVER_GLACIA_CREATE, [
+            'key' => $key,
+            'value' => $value
+        ]);
+    }
+
+    public function setCurrentBid(int $bid): void {
+        $this->currentBid = max(0, $bid);
+    }
+
+    public function getCurrentBid(): int {
+        return $this->currentBid;
+    }
+
+    public function setStartingBid(int $bid): void {
+        $this->startingBid = max(0, $bid);
+    }
+
+    public function getStartingBid(): int {
+        return $this->startingBid;
+    }
+
+    public function setEndTime(int $time): void {
+        $this->endTime = max(0, $time);
+    }
+
+    public function getEndTime(): int {
+        return $this->endTime;
+    }
+
+    public function getAuctionTimeLeft(): int {
+        return max(0, $this->endTime - time());
+    }
+
+    public function setHighestBidder(string $name): void {
+        $this->highestBidder = $name;
+    }
+
+    public function getHighestBidder(): string {
+        return $this->highestBidder;
+    }
+
+    public function setListingName(string $name): void {
+        $this->listingName = $name;
+    }
+
+    public function getListingName(): string {
+        return $this->listingName;
+    }
+
+    public function setCurrentItem(?Item $item): void {
+        $this->currentItem = $item !== null ? clone $item : null;
+    }
+
+    public function getCurrentItem(): ?Item {
+        return $this->currentItem !== null ? clone $this->currentItem : null;
+    }
+
+    public function hasActiveAuction(): bool {
+        return $this->enabled && $this->currentItem !== null && $this->endTime > time();
+    }
+
+    public function getNextBidAmount(): int {
+        if ($this->currentBid <= 0) {
+            return $this->startingBid;
+        }
+
+        return $this->currentBid + $this->getBidIncrement();
+    }
+
+    public function getBidIncrement(): int {
+        return BlackMarketAuctionManager::getInstance()->getBidIncrement($this->startingBid);
+    }
+
+    public function hasBids(): bool {
+        return $this->currentBid > 0;
+    }
+
+    public function placeBid(Player $player): bool {
+        if (!$this->isEnabled() || !$this->hasStarted() || $this->currentItem === null) {
+            return false;
+        }
+
+        $session = PlayerManager::getInstance()->getSession($player);
+        if ($session === null) {
+            return false;
+        }
+
+        if ($this->highestBidder !== "" && strcasecmp($this->highestBidder, $player->getName()) === 0) {
+            $player->sendMessage("§cYou are already the highest bidder.");
+            return false;
+        }
+
+        $amount = $this->getNextBidAmount();
+
+        if ($session->getBalance() < $amount) {
+            $player->sendMessage("§cYou do not have enough money to bid §f$" . number_format($amount) . "§c.");
+            return false;
+        }
+
+        $previousBid = $this->currentBid;
+        $previousBidder = $this->highestBidder;
+
+        if ($previousBidder !== "") {
+            $previousPlayer = Loader::getInstance()->getServer()->getPlayerExact($previousBidder);
+            if ($previousPlayer !== null && $previousPlayer->isOnline()) {
+                $previousSession = PlayerManager::getInstance()->getSession($previousPlayer);
+                if ($previousSession !== null) {
+                    $previousSession->addBalance($previousBid);
+                    $previousPlayer->sendMessage("§eYou have been outbid on the Black Market Auction.");
+                }
+            }
+        }
+
+        $session->removeBalance($amount);
+
+        $this->currentBid = $amount;
+        $this->highestBidder = $player->getName();
+
+        $antiSnipe = BlackMarketAuctionManager::getInstance()->getAntiSnipeSeconds();
+        $extended = false;
+
+        if ($this->getAuctionTimeLeft() <= $antiSnipe) {
+            $this->endTime += $antiSnipe;
+            $extended = true;
+        }
+
+        $message = "&r&l&6BAH &r&8» &e{$player->getName()} &ebid &a$" . number_format($amount) . " &eon &f{$this->listingName}" . ($extended ? " &7(+{$antiSnipe}s anti-snipe)" : "");
+        BlackMarketAuctionManager::getInstance()->messageAll(TextFormat::colorize($message));
+
+        return true;
+    }
+
+    public function setNextAuctionTime(int $time): void {
+        $this->nextAuctionTime = max(0, $time);
+
+        $this->save(GlaciaServerKeys::BAH_ACTIVE, $this->enabled ? "1" : "0");
+        $this->save(GlaciaServerKeys::BAH_NEXT_AUCTION, (string) $this->nextAuctionTime);
+    }
+}

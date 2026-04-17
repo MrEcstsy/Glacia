@@ -1,0 +1,447 @@
+settings:
+  pick-amount: 5
+
+legendary-loot:
+  simple:
+    - type: item
+      id: "legendarybook"
+      chance: 30
+    - type: item
+      id: "ultimatebook"
+      chance: 28
+    - type: item
+      id: "elitebook"
+      chance: 22
+    - type: item
+      id: "ultimatedp"
+      chance: 18
+    - type: item
+      id: "legendarydp"
+      chance: 16
+    - type: item
+      id: whitescroll
+      chance: 18
+    - type: item
+      id: blackscroll
+      chance: 16
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: mysterymobspawner
+      chance: 12
+
+    - type: item
+      id: phantom_helmet
+      enchanted: true
+      chance: 6
+    - type: item
+      id: phantom_chestplate
+      enchanted: true
+      chance: 5
+    - type: item
+      id: phantom_leggings
+      enchanted: true
+      chance: 5
+    - type: item
+      id: phantom_boots
+      enchanted: true
+      chance: 6
+
+    - type: item
+      id: yeti_helmet
+      enchanted: true
+      chance: 6
+    - type: item
+      id: yeti_chestplate
+      enchanted: true
+      chance: 5
+    - type: item
+      id: yeti_leggings
+      enchanted: true
+      chance: 5
+    - type: item
+      id: yeti_boots
+      enchanted: true
+      chance: 6
+
+    - type: item
+      id: yijki_helmet
+      enchanted: true
+      chance: 4
+    - type: item
+      id: yijki_chestplate
+      enchanted: true
+      chance: 3
+    - type: item
+      id: yijki_leggings
+      enchanted: true
+      chance: 3
+    - type: item
+      id: yijki_boots
+      enchanted: true
+      chance: 4
+
+  unique:
+    - type: item
+      id: "legendarybook"
+      chance: 32
+    - type: item
+      id: "ultimatebook"
+      chance: 28
+    - type: item
+      id: "elitebook"
+      chance: 22
+    - type: item
+      id: "ultimatedp"
+      chance: 20
+    - type: item
+      id: "legendarydp"
+      chance: 18
+    - type: item
+      id: whitescroll
+      chance: 18
+    - type: item
+      id: blackscroll
+      chance: 18
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: mysterymobspawner
+      chance: 14
+
+    - type: item
+      id: phantom_helmet
+      enchanted: true
+      chance: 8
+    - type: item
+      id: phantom_chestplate
+      enchanted: true
+      chance: 7
+    - type: item
+      id: phantom_leggings
+      enchanted: true
+      chance: 7
+    - type: item
+      id: phantom_boots
+      enchanted: true
+      chance: 8
+
+    - type: item
+      id: yeti_helmet
+      enchanted: true
+      chance: 8
+    - type: item
+      id: yeti_chestplate
+      enchanted: true
+      chance: 7
+    - type: item
+      id: yeti_leggings
+      enchanted: true
+      chance: 7
+    - type: item
+      id: yeti_boots
+      enchanted: true
+      chance: 8
+
+    - type: item
+      id: yijki_helmet
+      enchanted: true
+      chance: 5
+    - type: item
+      id: yijki_chestplate
+      enchanted: true
+      chance: 4
+    - type: item
+      id: yijki_leggings
+      enchanted: true
+      chance: 4
+    - type: item
+      id: yijki_boots
+      enchanted: true
+      chance: 5
+
+  elite:
+    - type: item
+      id: "legendarybook"
+      chance: 34
+    - type: item
+      id: "ultimatebook"
+      chance: 30
+    - type: item
+      id: "elitebook"
+      chance: 22
+    - type: item
+      id: "ultimatedp"
+      chance: 22
+    - type: item
+      id: "legendarydp"
+      chance: 20
+    - type: item
+      id: whitescroll
+      chance: 18
+    - type: item
+      id: blackscroll
+      chance: 20
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: mysterymobspawner
+      chance: 14
+
+    - type: item
+      id: phantom_helmet
+      enchanted: true
+      chance: 10
+    - type: item
+      id: phantom_chestplate
+      enchanted: true
+      chance: 9
+    - type: item
+      id: phantom_leggings
+      enchanted: true
+      chance: 9
+    - type: item
+      id: phantom_boots
+      enchanted: true
+      chance: 10
+
+    - type: item
+      id: yeti_helmet
+      enchanted: true
+      chance: 10
+    - type: item
+      id: yeti_chestplate
+      enchanted: true
+      chance: 9
+    - type: item
+      id: yeti_leggings
+      enchanted: true
+      chance: 9
+    - type: item
+      id: yeti_boots
+      enchanted: true
+      chance: 10
+
+    - type: item
+      id: yijki_helmet
+      enchanted: true
+      chance: 6
+    - type: item
+      id: yijki_chestplate
+      enchanted: true
+      chance: 5
+    - type: item
+      id: yijki_leggings
+      enchanted: true
+      chance: 5
+    - type: item
+      id: yijki_boots
+      enchanted: true
+      chance: 6
+    - type: item
+      id: phantom_sword
+      enchanted: true
+      chance: 10
+    - type: item
+      id: yeti_sword
+      enchanted: true
+      chance: 10
+    - type: item
+      id: yijki_sword
+      enchanted: true
+      chance: 6
+    - type: item
+      id: heroicmysterymobspawner
+      chance: 4
+  ultimate:
+    - type: item
+      id: "legendarybook"
+      chance: 36
+    - type: item
+      id: "ultimatebook"
+      chance: 32
+    - type: item
+      id: "elitebook"
+      chance: 22
+    - type: item
+      id: "ultimatedp"
+      chance: 24
+    - type: item
+      id: "legendarydp"
+      chance: 22
+    - type: item
+      id: whitescroll
+      chance: 18
+    - type: item
+      id: blackscroll
+      chance: 22
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: mysterymobspawner
+      chance: 15
+
+    - type: item
+      id: phantom_helmet
+      enchanted: true
+      chance: 12
+    - type: item
+      id: phantom_chestplate
+      enchanted: true
+      chance: 11
+    - type: item
+      id: phantom_leggings
+      enchanted: true
+      chance: 11
+    - type: item
+      id: phantom_boots
+      enchanted: true
+      chance: 12
+
+    - type: item
+      id: yeti_helmet
+      enchanted: true
+      chance: 12
+    - type: item
+      id: yeti_chestplate
+      enchanted: true
+      chance: 11
+    - type: item
+      id: yeti_leggings
+      enchanted: true
+      chance: 11
+    - type: item
+      id: yeti_boots
+      enchanted: true
+      chance: 12
+
+    - type: item
+      id: yijki_helmet
+      enchanted: true
+      chance: 7
+    - type: item
+      id: yijki_chestplate
+      enchanted: true
+      chance: 6
+    - type: item
+      id: yijki_leggings
+      enchanted: true
+      chance: 6
+    - type: item
+      id: yijki_boots
+      enchanted: true
+      chance: 7
+
+    - type: item
+      id: phantom_sword
+      enchanted: true
+      chance: 14
+    - type: item
+      id: yeti_sword
+      enchanted: true
+      chance: 14
+    - type: item
+      id: yijki_sword
+      enchanted: true
+      chance: 9
+    - type: item
+      id: heroicmysterymobspawner
+      chance: 6
+  legendary:
+    - type: item
+      id: "legendarybook"
+      chance: 40
+    - type: item
+      id: "ultimatebook"
+      chance: 34
+    - type: item
+      id: "elitebook"
+      chance: 22
+    - type: item
+      id: "ultimatedp"
+      chance: 25
+    - type: item
+      id: "legendarydp"
+      chance: 25
+    - type: item
+      id: whitescroll
+      chance: 20
+    - type: item
+      id: blackscroll
+      chance: 24
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: mysterymobspawner
+      chance: 16
+
+    - type: item
+      id: phantom_helmet
+      enchanted: true
+      chance: 14
+    - type: item
+      id: phantom_chestplate
+      enchanted: true
+      chance: 13
+    - type: item
+      id: phantom_leggings
+      enchanted: true
+      chance: 13
+    - type: item
+      id: phantom_boots
+      enchanted: true
+      chance: 14
+
+    - type: item
+      id: yeti_helmet
+      enchanted: true
+      chance: 14
+    - type: item
+      id: yeti_chestplate
+      enchanted: true
+      chance: 13
+    - type: item
+      id: yeti_leggings
+      enchanted: true
+      chance: 13
+    - type: item
+      id: yeti_boots
+      enchanted: true
+      chance: 14
+
+    - type: item
+      id: yijki_helmet
+      enchanted: true
+      chance: 8
+    - type: item
+      id: yijki_chestplate
+      enchanted: true
+      chance: 7
+    - type: item
+      id: yijki_leggings
+      enchanted: true
+      chance: 7
+    - type: item
+      id: yijki_boots
+      enchanted: true
+      chance: 8
+    - type: item
+      id: phantom_sword
+      enchanted: true
+      chance: 18
+    - type: item
+      id: yeti_sword
+      enchanted: true
+      chance: 18
+    - type: item
+      id: yijki_sword
+      enchanted: true
+      chance: 12
+    - type: item
+      id: heroicmysterymobspawner
+      chance: 8

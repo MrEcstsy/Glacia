@@ -1,0 +1,46 @@
+<?php
+
+declare(strict_types=1);
+
+namespace ecstsy\Glacia\commands;
+
+use CortexPE\Commando\BaseCommand;
+use ecstsy\MartianUtilities\utils\commands\arguments\PlayerArgument;
+use pocketmine\command\CommandSender;
+use pocketmine\player\Player;
+use ecstsy\Glacia\managers\TPAManager;
+use ecstsy\Glacia\utils\GlaciaUtils;
+use pocketmine\utils\TextFormat as C;
+
+final class TPAHereCommand extends BaseCommand {
+
+    public function prepare(): void {
+        $this->setPermission($this->getPermission());
+        $this->registerArgument(0, new PlayerArgument("target", false));
+    }
+
+    public function onRun(CommandSender $sender, string $aliasUsed, array $args): void
+    {
+        if (!$sender instanceof Player) return;
+
+        /** @var Player|null $target */
+        $target = $args["target"] ?? null;
+        if ($target === null || !$target->isOnline()) {
+            $sender->sendMessage(GlaciaUtils::format("player.error.invalid", ["{name}" => $target->getName()], "error"));
+            return;
+        }
+        if ($target->getName() === $sender->getName()) {
+            $sender->sendMessage(C::colorize("&c[/TPAHERE] You cannot send a teleport request to yourself."));
+            return;
+        }
+        if (TPAManager::hasPendingRequest($target, $sender)) {
+            $sender->sendMessage(C::colorize("&c[/TPAHERE] You already have a pending request to this player."));
+            return;
+        }
+        TPAManager::sendTPA($sender, $target, "tpahere");
+    }
+
+    public function getPermission(): string {
+        return "glacia.default";
+    }
+}

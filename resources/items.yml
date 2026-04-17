@@ -1,0 +1,18 @@
+mysterymobspawner:
+  pool:
+    - mob: creeper
+      chance: 20
+    - mob: zombie_pigman
+      chance: 20
+    - mob: enderman
+      chance: 20
+    - mob: mooshroom
+      chance: 25
+    - mob: ghast
+      chance: 5
+    - mob: magma_cube
+      chance: 5
+    - mob: blaze
+      chance: 5
+    - mob: iron_golem
+      chance: 5

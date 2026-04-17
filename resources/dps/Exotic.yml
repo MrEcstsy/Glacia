@@ -1,0 +1,217 @@
+settings:
+  pick-amount: 5
+
+exotic-loot:
+  simple:
+    - type: item
+      id: "uniquebook"
+      chance: 22
+    - type: item
+      id: "elitebook"
+      chance: 24
+    - type: item
+      id: "ultimatebook"
+      chance: 16
+    - type: item
+      id: "legendarybook"
+      chance: 8
+    - type: item
+      id: "uniquedp"
+      chance: 14
+    - type: item
+      id: "elitedp"
+      chance: 16
+    - type: item
+      id: "ultimatedp"
+      chance: 10
+    - type: item
+      id: whitescroll
+      chance: 14
+    - type: item
+      id: blackscroll
+      chance: 14
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: zombie_spawner
+      chance: 10
+    - type: item
+      id: skeleton_spawner
+      chance: 10
+    - type: item
+      id: spider_spawner
+      chance: 10
+    - type: item
+      id: creeper_spawner
+      chance: 10
+    - type: item
+      id: enderman_spawner
+      chance: 8
+    - type: item
+      id: mysterymobspawner
+      chance: 10
+
+  unique:
+    - type: item
+      id: "elitebook"
+      chance: 24
+    - type: item
+      id: "ultimatebook"
+      chance: 18
+    - type: item
+      id: "legendarybook"
+      chance: 10
+    - type: item
+      id: "elitedp"
+      chance: 16
+    - type: item
+      id: "ultimatedp"
+      chance: 12
+    - type: item
+      id: whitescroll
+      chance: 14
+    - type: item
+      id: blackscroll
+      chance: 16
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: zombie_spawner
+      chance: 10
+    - type: item
+      id: skeleton_spawner
+      chance: 10
+    - type: item
+      id: spider_spawner
+      chance: 10
+    - type: item
+      id: creeper_spawner
+      chance: 10
+    - type: item
+      id: enderman_spawner
+      chance: 10
+    - type: item
+      id: mysterymobspawner
+      chance: 12
+
+  elite:
+    - type: item
+      id: "elitebook"
+      chance: 22
+    - type: item
+      id: "ultimatebook"
+      chance: 20
+    - type: item
+      id: "legendarybook"
+      chance: 12
+    - type: item
+      id: "elitedp"
+      chance: 14
+    - type: item
+      id: "ultimatedp"
+      chance: 14
+    - type: item
+      id: "legendarydp"
+      chance: 6
+    - type: item
+      id: whitescroll
+      chance: 14
+    - type: item
+      id: blackscroll
+      chance: 16
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: creeper_spawner
+      chance: 10
+    - type: item
+      id: enderman_spawner
+      chance: 10
+    - type: item
+      id: blaze_spawner
+      chance: 6
+    - type: item
+      id: mysterymobspawner
+      chance: 14
+
+  ultimate:
+    - type: item
+      id: "ultimatebook"
+      chance: 20
+    - type: item
+      id: "legendarybook"
+      chance: 14
+    - type: item
+      id: "ultimatedp"
+      chance: 16
+    - type: item
+      id: "legendarydp"
+      chance: 10
+    - type: item
+      id: whitescroll
+      chance: 14
+    - type: item
+      id: blackscroll
+      chance: 18
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: enderman_spawner
+      chance: 10
+    - type: item
+      id: blaze_spawner
+      chance: 8
+    - type: item
+      id: zombified_piglin_spawner
+      chance: 8
+    - type: item
+      id: mysterymobspawner
+      chance: 16
+    - type: item
+      id: heroicmysterymobspawner
+      chance: 4
+
+  legendary:
+    - type: item
+      id: "ultimatebook"
+      chance: 22
+    - type: item
+      id: "legendarybook"
+      chance: 16
+    - type: item
+      id: "ultimatedp"
+      chance: 16
+    - type: item
+      id: "legendarydp"
+      chance: 12
+    - type: item
+      id: whitescroll
+      chance: 14
+    - type: item
+      id: blackscroll
+      chance: 18
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: enderman_spawner
+      chance: 10
+    - type: item
+      id: blaze_spawner
+      chance: 10
+    - type: item
+      id: zombified_piglin_spawner
+      chance: 10
+    - type: item
+      id: iron_golem_spawner
+      chance: 5
+    - type: item
+      id: mysterymobspawner
+      chance: 18
+    - type: item
+      id: heroicmysterymobspawner
+      chance: 6

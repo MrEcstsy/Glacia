@@ -1,0 +1,87 @@
+name: GlaciaExo
+main: ecstsy\Glacia\Loader
+api: 5.3.0
+version: 1.0.0
+author: ecstsylove
+
+permissions:
+  glacia.default:
+    description: Default Glacia permission
+    default: true
+  glacia.admin:
+    description: Admin Glacia permission
+    default: op
+  glacia.command.ranks:
+    default: op
+  glacia.add-xp:
+    description: Permission to add experience points
+    default: op
+  glacia.eco:
+    description: Permission to use economy commands
+    default: op
+  glacia.eco.give:
+    description: Permission to give money to players
+    default: op
+  glacia.eco.take:
+    description: Permission to take money from players
+    default: op
+  glacia.create-warp:
+    description: Permission to create warps
+    default: op
+  glacia.remove-warp:
+    description: Permission to remove warps
+    default: op
+  glacia.give-item:
+    description: Permission to use /giveitem command
+    default: op
+  glacia.flyspeed:
+    description: Permission to use /flyspeed command
+    default: op
+  glacia.sellall:
+    description: Permission to use /sellall command
+    default: op
+  glacia.enchant:
+    description: Permission to use /ge enchant command
+    default: op
+  glacia.give-book:
+    description: Permission to use /ge givebook command
+    default: op
+  glacia.give-item:
+    description: Permission to use /ge giveitem command
+    default: op
+  glacia.unenchant:
+    description: Permission to use /ge unenchant command
+    default: op
+  glacia.info:
+    description: Permission to use /ge info command
+    default: op
+  glacia.list:
+    description: Permission to use /ge list command
+    default: op
+  glacia.give-rcbook:
+    description: Permission to use /ge givercbook command
+    default: op
+  glacia.fix:
+    description: Permission to use /fix command
+    default: op
+  glacia.fixall:
+    description: Permission to use /fixall command
+    default: op
+  glacia.bless:
+    description: Permission to use /bess command
+    default: op
+  glacia.heal:
+    description: Permission to use /heal command
+    default: op
+  glacia.dupe:
+    description: Permission to use /dupe command
+    default: op
+  glacia.fly:
+    description: Permission to use /fly command
+    default: op
+  glacia.feed:
+    description: Permission to use /feed command
+    default: op
+  glacia.gamemode:
+    description: Permission to use /gamemode command
+    default: op

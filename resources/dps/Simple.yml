@@ -1,0 +1,193 @@
+settings:
+  pick-amount: 5
+
+simple-loot:
+  simple:
+    - type: item
+      id: "simplebook"
+      chance: 40
+    - type: item
+      id: "uniquebook"
+      chance: 24
+    - type: item
+      id: "simpledp"
+      chance: 22
+    - type: item
+      id: "uniquedp"
+      chance: 14
+    - type: item
+      id: whitescroll
+      chance: 12
+    - type: item
+      id: blackscroll
+      chance: 8
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: sheep_spawner
+      chance: 14
+    - type: item
+      id: chicken_spawner
+      chance: 14
+    - type: item
+      id: cow_spawner
+      chance: 14
+    - type: item
+      id: pig_spawner
+      chance: 12
+
+  unique:
+    - type: item
+      id: "simplebook"
+      chance: 34
+    - type: item
+      id: "uniquebook"
+      chance: 28
+    - type: item
+      id: "elitebook"
+      chance: 14
+    - type: item
+      id: "simpledp"
+      chance: 20
+    - type: item
+      id: "uniquedp"
+      chance: 16
+    - type: item
+      id: whitescroll
+      chance: 14
+    - type: item
+      id: blackscroll
+      chance: 10
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: sheep_spawner
+      chance: 12
+    - type: item
+      id: chicken_spawner
+      chance: 12
+    - type: item
+      id: cow_spawner
+      chance: 12
+    - type: item
+      id: pig_spawner
+      chance: 12
+    - type: item
+      id: zombie_spawner
+      chance: 8
+    - type: item
+      id: skeleton_spawner
+      chance: 8
+
+  elite:
+    - type: item
+      id: "uniquebook"
+      chance: 26
+    - type: item
+      id: "elitebook"
+      chance: 22
+    - type: item
+      id: "ultimatebook"
+      chance: 10
+    - type: item
+      id: "uniquedp"
+      chance: 18
+    - type: item
+      id: "elitedp"
+      chance: 14
+    - type: item
+      id: whitescroll
+      chance: 14
+    - type: item
+      id: blackscroll
+      chance: 12
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: zombie_spawner
+      chance: 12
+    - type: item
+      id: skeleton_spawner
+      chance: 12
+    - type: item
+      id: spider_spawner
+      chance: 10
+    - type: item
+      id: mysterymobspawner
+      chance: 5
+
+  ultimate:
+    - type: item
+      id: "elitebook"
+      chance: 20
+    - type: item
+      id: "ultimatebook"
+      chance: 14
+    - type: item
+      id: "legendarybook"
+      chance: 6
+    - type: item
+      id: "elitedp"
+      chance: 16
+    - type: item
+      id: "ultimatedp"
+      chance: 10
+    - type: item
+      id: whitescroll
+      chance: 14
+    - type: item
+      id: blackscroll
+      chance: 14
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: zombie_spawner
+      chance: 10
+    - type: item
+      id: skeleton_spawner
+      chance: 10
+    - type: item
+      id: spider_spawner
+      chance: 10
+    - type: item
+      id: creeper_spawner
+      chance: 8
+    - type: item
+      id: mysterymobspawner
+      chance: 6
+
+  legendary:
+    - type: item
+      id: "ultimatebook"
+      chance: 12
+    - type: item
+      id: "legendarybook"
+      chance: 8
+    - type: item
+      id: "ultimatedp"
+      chance: 10
+    - type: item
+      id: "legendarydp"
+      chance: 6
+    - type: item
+      id: whitescroll
+      chance: 14
+    - type: item
+      id: blackscroll
+      chance: 14
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: creeper_spawner
+      chance: 8
+    - type: item
+      id: enderman_spawner
+      chance: 5
+    - type: item
+      id: mysterymobspawner
+      chance: 6

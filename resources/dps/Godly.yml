@@ -1,0 +1,388 @@
+settings:
+  pick-amount: 5
+
+godly-loot:
+  simple:
+    - type: item
+      id: "ultimatebook"
+      chance: 22
+    - type: item
+      id: "legendarybook"
+      chance: 18
+    - type: item
+      id: "ultimatedp"
+      chance: 16
+    - type: item
+      id: "legendarydp"
+      chance: 12
+    - type: item
+      id: whitescroll
+      chance: 16
+    - type: item
+      id: blackscroll
+      chance: 18
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: blaze_spawner
+      chance: 10
+    - type: item
+      id: enderman_spawner
+      chance: 10
+    - type: item
+      id: zombified_piglin_spawner
+      chance: 10
+    - type: item
+      id: mysterymobspawner
+      chance: 18
+    - type: item
+      id: heroicmysterymobspawner
+      chance: 6
+
+  unique:
+    - type: item
+      id: "ultimatebook"
+      chance: 24
+    - type: item
+      id: "legendarybook"
+      chance: 20
+    - type: item
+      id: "ultimatedp"
+      chance: 16
+    - type: item
+      id: "legendarydp"
+      chance: 14
+    - type: item
+      id: whitescroll
+      chance: 16
+    - type: item
+      id: blackscroll
+      chance: 18
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: blaze_spawner
+      chance: 10
+    - type: item
+      id: enderman_spawner
+      chance: 10
+    - type: item
+      id: zombified_piglin_spawner
+      chance: 10
+    - type: item
+      id: iron_golem_spawner
+      chance: 6
+    - type: item
+      id: mysterymobspawner
+      chance: 18
+    - type: item
+      id: heroicmysterymobspawner
+      chance: 8
+
+  elite:
+    - type: item
+      id: "legendarybook"
+      chance: 22
+    - type: item
+      id: "ultimatedp"
+      chance: 16
+    - type: item
+      id: "legendarydp"
+      chance: 14
+    - type: item
+      id: whitescroll
+      chance: 16
+    - type: item
+      id: blackscroll
+      chance: 18
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: blaze_spawner
+      chance: 12
+    - type: item
+      id: enderman_spawner
+      chance: 12
+    - type: item
+      id: zombified_piglin_spawner
+      chance: 10
+    - type: item
+      id: iron_golem_spawner
+      chance: 8
+    - type: item
+      id: mysterymobspawner
+      chance: 18
+    - type: item
+      id: heroicmysterymobspawner
+      chance: 8
+
+    - type: item
+      id: phantom_helmet
+      enchanted: true
+      chance: 8
+    - type: item
+      id: phantom_chestplate
+      enchanted: true
+      chance: 7
+    - type: item
+      id: phantom_leggings
+      enchanted: true
+      chance: 7
+    - type: item
+      id: phantom_boots
+      enchanted: true
+      chance: 8
+
+    - type: item
+      id: yeti_helmet
+      enchanted: true
+      chance: 8
+    - type: item
+      id: yeti_chestplate
+      enchanted: true
+      chance: 7
+    - type: item
+      id: yeti_leggings
+      enchanted: true
+      chance: 7
+    - type: item
+      id: yeti_boots
+      enchanted: true
+      chance: 8
+
+    - type: item
+      id: yijki_helmet
+      enchanted: true
+      chance: 5
+    - type: item
+      id: yijki_chestplate
+      enchanted: true
+      chance: 4
+    - type: item
+      id: yijki_leggings
+      enchanted: true
+      chance: 4
+    - type: item
+      id: yijki_boots
+      enchanted: true
+      chance: 5
+
+    - type: item
+      id: phantom_sword
+      enchanted: true
+      chance: 8
+    - type: item
+      id: yeti_sword
+      enchanted: true
+      chance: 8
+    - type: item
+      id: yijki_sword
+      enchanted: true
+      chance: 5
+
+  ultimate:
+    - type: item
+      id: "legendarybook"
+      chance: 24
+    - type: item
+      id: "ultimatedp"
+      chance: 18
+    - type: item
+      id: "legendarydp"
+      chance: 16
+    - type: item
+      id: whitescroll
+      chance: 16
+    - type: item
+      id: blackscroll
+      chance: 20
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: blaze_spawner
+      chance: 12
+    - type: item
+      id: enderman_spawner
+      chance: 12
+    - type: item
+      id: zombified_piglin_spawner
+      chance: 12
+    - type: item
+      id: iron_golem_spawner
+      chance: 8
+    - type: item
+      id: mysterymobspawner
+      chance: 20
+    - type: item
+      id: heroicmysterymobspawner
+      chance: 10
+
+    - type: item
+      id: phantom_helmet
+      enchanted: true
+      chance: 12
+    - type: item
+      id: phantom_chestplate
+      enchanted: true
+      chance: 11
+    - type: item
+      id: phantom_leggings
+      enchanted: true
+      chance: 11
+    - type: item
+      id: phantom_boots
+      enchanted: true
+      chance: 12
+
+    - type: item
+      id: yeti_helmet
+      enchanted: true
+      chance: 12
+    - type: item
+      id: yeti_chestplate
+      enchanted: true
+      chance: 11
+    - type: item
+      id: yeti_leggings
+      enchanted: true
+      chance: 11
+    - type: item
+      id: yeti_boots
+      enchanted: true
+      chance: 12
+
+    - type: item
+      id: yijki_helmet
+      enchanted: true
+      chance: 7
+    - type: item
+      id: yijki_chestplate
+      enchanted: true
+      chance: 6
+    - type: item
+      id: yijki_leggings
+      enchanted: true
+      chance: 6
+    - type: item
+      id: yijki_boots
+      enchanted: true
+      chance: 7
+
+    - type: item
+      id: phantom_sword
+      enchanted: true
+      chance: 14
+    - type: item
+      id: yeti_sword
+      enchanted: true
+      chance: 14
+    - type: item
+      id: yijki_sword
+      enchanted: true
+      chance: 9
+
+  legendary:
+    - type: item
+      id: "legendarybook"
+      chance: 28
+    - type: item
+      id: "ultimatedp"
+      chance: 18
+    - type: item
+      id: "legendarydp"
+      chance: 18
+    - type: item
+      id: whitescroll
+      chance: 18
+    - type: item
+      id: blackscroll
+      chance: 22
+    - type: item
+      id: renametag
+      chance: 10
+    - type: item
+      id: blaze_spawner
+      chance: 14
+    - type: item
+      id: enderman_spawner
+      chance: 14
+    - type: item
+      id: zombified_piglin_spawner
+      chance: 12
+    - type: item
+      id: iron_golem_spawner
+      chance: 10
+    - type: item
+      id: mysterymobspawner
+      chance: 22
+    - type: item
+      id: heroicmysterymobspawner
+      chance: 12
+
+    - type: item
+      id: phantom_helmet
+      enchanted: true
+      chance: 16
+    - type: item
+      id: phantom_chestplate
+      enchanted: true
+      chance: 15
+    - type: item
+      id: phantom_leggings
+      enchanted: true
+      chance: 15
+    - type: item
+      id: phantom_boots
+      enchanted: true
+      chance: 16
+
+    - type: item
+      id: yeti_helmet
+      enchanted: true
+      chance: 16
+    - type: item
+      id: yeti_chestplate
+      enchanted: true
+      chance: 15
+    - type: item
+      id: yeti_leggings
+      enchanted: true
+      chance: 15
+    - type: item
+      id: yeti_boots
+      enchanted: true
+      chance: 16
+
+    - type: item
+      id: yijki_helmet
+      enchanted: true
+      chance: 10
+    - type: item
+      id: yijki_chestplate
+      enchanted: true
+      chance: 9
+    - type: item
+      id: yijki_leggings
+      enchanted: true
+      chance: 9
+    - type: item
+      id: yijki_boots
+      enchanted: true
+      chance: 10
+
+    - type: item
+      id: phantom_sword
+      enchanted: true
+      chance: 20
+    - type: item
+      id: yeti_sword
+      enchanted: true
+      chance: 20
+    - type: item
+      id: yijki_sword
+      enchanted: true
+      chance: 14

@@ -1,0 +1,89 @@
+settings:
+  interval: 1800
+  anti-snipe-seconds: 10
+  bid-increments:
+    default: 100000
+    thresholds:
+      - min: 1000000
+        increment: 250000
+      - min: 5000000
+        increment: 500000
+      - min: 10000000
+        increment: 1000000
+
+  broadcast:
+    start: "&r&6&l[/BAH] &r&fA new black market item has been listed: {item}"
+    bid: "&r&6&l[/BAH] &r&f{player} bid &a${amount} &fon {item}"
+    won: "&r&6&l[/BAH] &r&f{player} won {item} &ffor &a${amount}"
+
+pool:
+  simple_book:
+    chance: 20
+    reward:
+      type: item
+      id: "simplebook"
+      count: 1
+    listing:
+      name: "&fSimple Enchantment Book"
+      starting-bid: 10000
+
+  unique_book:
+    chance: 18
+    reward:
+      type: item
+      id: "uniquebook"
+      count: 1
+    listing:
+      name: "&aUnique Enchantment Book"
+      starting-bid: 10000
+
+  elite_book:
+    chance: 14
+    reward:
+      type: item
+      id: "elitebook"
+      count: 1
+    listing:
+      name: "&bElite Enchantment Book"
+      starting-bid: 10000
+
+  white_scroll:
+    chance: 10
+    reward:
+      type: item
+      id: "whitescroll"
+      count: 1
+    listing:
+      name: "&fWhite Scroll"
+      starting-bid: 75000
+
+  black_scroll:
+    chance: 8
+    reward:
+      type: item
+      id: "blackscroll"
+      success: "{80-100}"
+      count: 1
+    listing:
+      name: "&8Black Scroll"
+      starting-bid: 75000
+
+  simple_dust_bundle:
+    chance: 10
+    reward:
+      type: item
+      id: "simpledust"
+      percent: "{3-8}"
+      count: "{2-5}"
+    listing:
+      name: "&fSimple Magic Dust Bundle"
+      starting-bid: 10000
+
+  mysteryspawner:
+    chance: 6
+    reward:
+      type: mysteryspawner
+      count: 1
+    listing:
+      name: "&dMystery Mob Spawner"
+      starting-bid: 10000
