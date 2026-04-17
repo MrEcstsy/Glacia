@@ -9,6 +9,7 @@ use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
 use ecstsy\Glacia\server\enchantments\Groups;
 use ecstsy\Glacia\server\items\armor\ArmorSetEnchants;
+use ecstsy\Glacia\server\quests\QuestInstance;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\item\enchantment\EnchantmentInstance;
 use pocketmine\item\enchantment\VanillaEnchantments;
@@ -292,6 +293,51 @@ final class GlaciaItemFactory {
 
     public static function mobSpawner(string $type): Item {
         return StringToItemParser::getInstance()->parse($type . "_spawner");
+    }
+
+    public static function questSigil(string $tier, int $questIndex = 0): Item {
+        $player = null; 
+        $data = QuestInstance::getTierData($tier);
+
+        if ($data === null) {
+            throw new \InvalidArgumentException("Unknown quest sigil tier: {$tier}");
+        }
+
+        $material = \pocketmine\item\StringToItemParser::getInstance()->parse($data["material"]) ?? \pocketmine\item\VanillaItems::AMETHYST_SHARD();
+
+        $tierColor = match($tier) {
+            "dormant" => "&b",
+            "awakened" => "&5",
+            "ascendent" => "&e",
+            "eternal" => "&c",
+            default => "&7",
+        };
+
+        $symbol = match($tier) {
+            "dormant" => "❄",
+            "awakened" => "✦",
+            "ascendent" => "✪",
+            "eternal" => "☯",
+            default => "•",
+        };
+
+        $quest = $data["quests"][$questIndex] ?? null;
+        if ($quest === null) {
+            throw new \InvalidArgumentException("Invalid quest index {$questIndex} for sigil tier {$tier}");
+        }
+
+        $item = $material->setCustomName(C::colorize("&r&7{$symbol} {$tierColor}{$data['display']} Sigil &7{$symbol}"));
+
+        $nbt = $item->getNamedTag();
+        $nbt->setString("glacia_quest_tier", $tier);
+        $nbt->setInt("glacia_quest_index", $questIndex);
+        $nbt->setString("glacia_quest_type", $quest["type"]);
+        $nbt->setString("glacia_quest_progress", json_encode(array_fill(0, count($quest["objectives"]), 0)));
+        $item->setNamedTag($nbt);
+
+        QuestInstance::updateQuestLore($item);
+
+        return $item;
     }
 
     private static function template(string $template, array $args): string {

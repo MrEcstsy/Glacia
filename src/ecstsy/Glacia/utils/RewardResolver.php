@@ -174,6 +174,13 @@ final class RewardResolver {
             "sheep_spawner" => GlaciaItemFactory::mobSpawner("sheep"),
             'spider_spawner' => GlaciaItemFactory::mobSpawner("spider"),
 
+            'dormant_sigil' => GlaciaItemFactory::questSigil('dormant'),
+            'awakened_sigil' => GlaciaItemFactory::questSigil('awakened'),
+            'ascendent_sigil' => GlaciaItemFactory::questSigil('ascendent'),
+            'eternal_sigil' => GlaciaItemFactory::questSigil('eternal'),
+
+            'astral_devourer' => GlaciaItemFactory::boss("astral_devourer"),
+
             default => GlaciaItemFactory::create($id)
         };
     }
