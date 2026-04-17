@@ -16,3 +16,21 @@ mysterymobspawner:
       chance: 5
     - mob: iron_golem
       chance: 5
+heroic_mysterymobspawner:
+  pool:
+    - mob: slime
+      chance: 20
+    - mob: creeper
+      chance: 20
+    - mob: iron_golem
+      chance: 20
+    - mob: mooshroom
+      chance: 25
+    - mob: magma_cube
+      chance: 10
+    - mob: ghast
+      chance: 10
+    - mob: snowman
+      chance: 5
+bloodynotes:
+  pool: "{50000-500000}" # min-max amount of money to give from bloody notes

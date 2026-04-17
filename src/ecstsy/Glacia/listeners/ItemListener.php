@@ -192,8 +192,10 @@ final class ItemListener implements Listener {
         
         if ($itemTag === "bloodynote") {
             $event->cancel();
+            $config = GeneralUtils::getConfiguration(Loader::getInstance(), "items.yml");
+            
 
-            $amount = rand(50000, 500000);
+            $amount = GeneralUtils::parseRandomNumber($config->getNested("bloodynotes.pool"));
             $session = Loader::getPlayerManager()->getSession($player);
 
             $session->addBalance($amount);
@@ -310,6 +312,30 @@ final class ItemListener implements Listener {
             // Available spawners from this cache
             $itemsConfig = GeneralUtils::getConfiguration(Loader::getInstance(), "items.yml");
             $spawners = $itemsConfig->getNested("mysterymobspawner.pool");
+
+            $chosen = GlaciaUtils::getWeightedRandomSpawner($spawners);
+
+            $reward = StringToItemParser::getInstance()->parse($chosen . "_spawner");
+
+            if ($player->getInventory()->canAddItem($reward)) {
+                $player->getInventory()->addItem($reward);
+                PlayerUtils::playSound($player, "random.levelup");
+            } else {
+                $session->addItemToCollection($reward);
+            }
+
+            $player->sendMessage(C::colorize("&r&l&7* &r&fYou have examined a &dMystery Mob Spawner&r&f and found a &b" . str_replace("_", " ", ucfirst($chosen)) . " Spawner&r&f!"));
+            $item->pop();
+            $player->getInventory()->setItemInHand($item);
+            return;
+        }
+
+        if ($itemTag === "heroic_mysterymobspawner") {
+            $event->cancel();
+
+            // Available spawners from this cache
+            $itemsConfig = GeneralUtils::getConfiguration(Loader::getInstance(), "items.yml");
+            $spawners = $itemsConfig->getNested("heroic_mysterymobspawner.pool");
 
             $chosen = GlaciaUtils::getWeightedRandomSpawner($spawners);
 
