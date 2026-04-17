@@ -123,6 +123,7 @@ final class BlackMarketScreen extends BaseScreen {
         $nextBidAmount = $bah->getNextBidAmount();
         $timeLeft = $bah->getAuctionTimeLeft();
         $hasBids = $bah->hasBids();
+        $highestBidder = $bah->getHighestBidder();
 
         $extraLore[] = "";
         $extraLore[] = C::colorize("&r&f------------------------");
@@ -132,6 +133,7 @@ final class BlackMarketScreen extends BaseScreen {
 
         if ($hasBids) {
             $extraLore[] = C::colorize("&r&aCurrent Bid: &f$" . number_format($currentBid));
+            $extraLore[] = C::colorize("&r&eHighest Bidder: &f" . ($highestBidder !== "" ? $highestBidder : "Unknown"));
         } else {
             $extraLore[] = C::colorize("&r&cNo bids currently placed.");
         }

@@ -443,6 +443,13 @@ final class CustomEnchantments {
             'maxLevel' => 5,
             'flags' => [ItemEnchantmentTags::SWORD],
         ],
+        'killaura' => [
+            'display' => '{group-color}Kill Aura',
+            'description' => "Chance to kill multiple monsters in a\nstack each death event.",
+            'group' => 'LEGENDARY',
+            'maxLevel' => 5,
+            'flags' => [ItemEnchantmentTags::SWORD],
+        ],
 
         //mastery
         'iceaspect' => [

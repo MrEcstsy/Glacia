@@ -115,6 +115,7 @@ use ecstsy\Glacia\server\enchantments\enchants\sword\FeatherweightEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\GreatswordEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\InquisitiveEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\InsomniaEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\sword\KillAuraEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\LifestealEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\RageEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\SilenceEnchant;
@@ -405,6 +406,7 @@ final class GlaciaUtils
             'holy' => ['handler' => fn(...$args) => HolyEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'insomnia' => ['handler' => fn(...$args) => InsomniaEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'inquisitive' => ['handler' => fn(...$args) => InquisitiveEnchant::handle(...$args), 'event' => 'entity_death'],
+            'killaura' => ['handler' => fn(...$args) => KillAuraEnchant::handle(...$args), 'event' => 'entity_death'],
             'jellylegs' => ['handler' => fn(...$args) => JellyLegsEnchant::handle(...$args), 'event' => 'entity_damage'],
             'lifesteal' => ['handler' => fn(...$args) => LifestealEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'lucky' => ['handler' => fn(...$args) => LuckyEnchant::handle(...$args), 'event' => 'block_break'],
