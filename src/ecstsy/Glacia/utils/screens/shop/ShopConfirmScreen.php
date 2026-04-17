@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\utils\screens\shop;
 
-use ecstsy\Glacia\player\PlayerManager;
+use ecstsy\Glacia\server\economy\EconomyManager;
 use ecstsy\MartianUtilities\utils\screens\BaseScreen;
 use pocketmine\item\Item;
-use pocketmine\item\StringToItemParser;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
 use Vecnavium\FormsUI\CustomForm;
@@ -29,14 +28,8 @@ final class ShopConfirmScreen extends BaseScreen {
             $amount = (int) $data[1];
             $buyMax = (bool) $data[2];
             $customAmount = trim((string) $data[3]);
-            $session = PlayerManager::getInstance()->getSession($player);
 
-            if ($session === null) {
-                $player->sendMessage(C::RED . "Could not load your balance.");
-                return;
-            }
-
-            $item = StringToItemParser::getInstance()->parse($itemData["id"]);
+            $item = ShopRepository::createItem($itemData["id"]);
             if ($item === null) {
                 return;
             }
@@ -60,12 +53,15 @@ final class ShopConfirmScreen extends BaseScreen {
             $amount = min($amount, $maxFit);
             $totalCost = round($buy * $amount, 2);
 
-            if ($session->getBalance() < $totalCost) {
-                $player->sendMessage(C::RED . "Not enough money.");
+            if (!EconomyManager::has($player, $totalCost)) {
+                $player->sendMessage(C::RED . "Not enough money or your balance could not be loaded.");
                 return;
             }
 
-            $session->removeBalance($totalCost);
+            if (!EconomyManager::take($player, $totalCost)) {
+                $player->sendMessage(C::RED . "Could not process your purchase.");
+                return;
+            }
 
             $item->setCount($amount);
             $player->getInventory()->addItem($item);

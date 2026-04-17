@@ -6,7 +6,9 @@ namespace ecstsy\Glacia\utils\screens\shop;
 
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\economy\SellHandler;
+use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
+use pocketmine\item\Item;
 use pocketmine\item\StringToItemParser;
 use pocketmine\utils\TextFormat;
 
@@ -34,6 +36,50 @@ final class ShopRepository {
         return $items;
     }
 
+    public static function getAllItems(): array
+    {
+        $config = GeneralUtils::getConfiguration(Loader::getInstance(), "shop.yml");
+        $shopData = $config?->get("shop", []);
+
+        if (!is_array($shopData)) {
+            return [];
+        }
+
+        $items = [];
+        foreach (array_keys($shopData) as $category) {
+            foreach (self::getItemsForCategory((string) $category) as $item) {
+                $items[] = $item;
+            }
+        }
+
+        return $items;
+    }
+
+    public static function findItem(string $query): ?array
+    {
+        $normalizedQuery = self::normalizeLookup($query);
+
+        foreach (self::getAllItems() as $item) {
+            $id = strtolower((string) ($item["id"] ?? ""));
+            $name = self::normalizeLookup((string) ($item["name"] ?? ""));
+
+            if ($normalizedQuery === $id || $normalizedQuery === $name) {
+                return $item;
+            }
+        }
+
+        foreach (self::getAllItems() as $item) {
+            $id = strtolower((string) ($item["id"] ?? ""));
+            $name = self::normalizeLookup((string) ($item["name"] ?? ""));
+
+            if (str_contains($id, $normalizedQuery) || str_contains($name, $normalizedQuery)) {
+                return $item;
+            }
+        }
+
+        return null;
+    }
+
     private static function normalizeEntry(string $category, mixed $entry): ?array
     {
         if (is_string($entry)) {
@@ -51,7 +97,7 @@ final class ShopRepository {
             return null;
         }
 
-        $item = StringToItemParser::getInstance()->parse($id);
+        $item = self::createItem($id);
         if ($item === null) {
             Loader::getInstance()->getLogger()->warning("Shop item '$id' in category '$category' could not be parsed.");
             return null;
@@ -91,5 +137,31 @@ final class ShopRepository {
         }
 
         return $item->getVanillaName();
+    }
+
+    public static function createItem(string $id): ?Item
+    {
+        $parsed = StringToItemParser::getInstance()->parse($id);
+        if ($parsed !== null) {
+            return $parsed;
+        }
+
+        if (isset(GlaciaItemFactory::$definitions[$id])) {
+            try {
+                return GlaciaItemFactory::create($id);
+            } catch (\InvalidArgumentException) {
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    private static function normalizeLookup(string $value): string
+    {
+        $value = TextFormat::clean($value);
+        $value = strtolower(trim($value));
+        $value = str_replace([" ", "-"], "_", $value);
+        return preg_replace('/_+/', '_', $value) ?? $value;
     }
 }

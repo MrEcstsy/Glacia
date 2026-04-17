@@ -32,7 +32,7 @@ final class AstralDevourer extends BossEntity {
     }
 
     public static function getNetworkTypeId(): string {
-        return EntityIds::WITHER_SKELETON;
+        return EntityIds::IRON_GOLEM;
     }
 
     public function getName(): string {
@@ -40,7 +40,7 @@ final class AstralDevourer extends BossEntity {
     }
 
     protected function getInitialSizeInfo(): EntitySizeInfo {
-        return new EntitySizeInfo(2.4, 0.9);
+        return new EntitySizeInfo(2.9, 1.4);
     }
 
     protected function initEntity(CompoundTag $nbt): void {

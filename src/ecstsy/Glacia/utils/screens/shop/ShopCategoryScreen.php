@@ -10,7 +10,6 @@ use muqsit\invmenu\transaction\DeterministicInvMenuTransaction;
 use muqsit\invmenu\type\InvMenuTypeIds;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\block\utils\DyeColor;
-use pocketmine\item\StringToItemParser;
 use pocketmine\item\VanillaItems;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
@@ -73,7 +72,7 @@ final class ShopCategoryScreen extends BaseScreen {
         $pageItems = array_slice($this->items, $offset, self::ITEMS_PER_PAGE);
 
         foreach ($pageItems as $index => $data) {
-            $item = StringToItemParser::getInstance()->parse($data["id"]);
+            $item = ShopRepository::createItem($data["id"]);
             if ($item === null) {
                 continue;
             }

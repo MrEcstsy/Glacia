@@ -44,6 +44,9 @@ shop:
       buy: 1500000
     - id: "iron_golem_spawner"
       buy: 2000000
+    - id: "mysterymobspawner"
+      buy: 3000000
+
   blocks: []
   ores: []
   food: []
