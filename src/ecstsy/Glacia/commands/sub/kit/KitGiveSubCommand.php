@@ -44,7 +44,7 @@ final class KitGiveSubCommand extends BaseSubCommand {
             "admin" => $sender->getName(),
             "target" => $target->getName(),
             "kit" => (string) $kit["id"]
-        ]);
+        ]); 
     }
 
     public function getPermission(): string

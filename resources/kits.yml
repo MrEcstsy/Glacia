@@ -380,7 +380,7 @@ rank-kits:
       - chance: 8
         type: item
         id: "slime_spawner"
-      - chance: 8
+      - chance: 8 
         type: item
         id: "enderman_spawner"
       - chance: 8
