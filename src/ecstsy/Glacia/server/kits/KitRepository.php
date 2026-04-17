@@ -52,6 +52,19 @@ final class KitRepository {
         return self::getKits("rank-kits");
     }
 
+    public static function getKitById(string $kitId, string $section = "rank-kits"): ?array
+    {
+        $kitId = strtolower(trim($kitId));
+
+        foreach (self::getKits($section) as $kit) {
+            if (strtolower((string) ($kit["id"] ?? "")) === $kitId) {
+                return $kit;
+            }
+        }
+
+        return null;
+    }
+
     public static function createIcon(array $kit, ?Player $player = null): Item
     {
         $iconData = $kit["icon"] ?? null;
@@ -219,6 +232,43 @@ final class KitRepository {
         return true;
     }
 
+    public static function grantKit(Player $player, array $kit): bool
+    {
+        $session = PlayerManager::getInstance()->getSession($player);
+        if ($session === null) {
+            PlayerUtils::playSound($player, "note.bass", 1.0, 0.8);
+            $player->sendMessage(TextFormat::colorize("&r&cCould not load your profile."));
+            return false;
+        }
+
+        $items = self::resolveItems($kit);
+        if ($items === []) {
+            PlayerUtils::playSound($player, "note.bass", 1.0, 0.8);
+            $player->sendMessage(TextFormat::colorize("&r&cThis kit has no valid items configured."));
+            return false;
+        }
+
+        $overflow = [];
+        foreach ($items as $item) {
+            $leftovers = $player->getInventory()->addItem(clone $item);
+            foreach ($leftovers as $leftover) {
+                $overflow[] = $leftover;
+            }
+        }
+
+        foreach ($overflow as $item) {
+            $session->addItemToCollection($item);
+        }
+
+        PlayerUtils::playSound($player, "random.levelup");
+        $player->sendMessage(TextFormat::colorize("&r&aReceived &f" . ((string) $kit["display"]) . "&r&a."));
+        if ($overflow !== []) {
+            $player->sendMessage(TextFormat::colorize("&r&eSome items were sent to your collection because your inventory was full."));
+        }
+
+        return true;
+    }
+
     public static function getRemainingCooldown(Player $player, array $kit): int
     {
         $session = PlayerManager::getInstance()->getSession($player);
@@ -227,6 +277,17 @@ final class KitRepository {
         }
 
         return $session->getCooldown(self::getCooldownKey((string) $kit["id"])) ?? 0;
+    }
+
+    public static function clearKitCooldown(Player $player, array $kit): bool
+    {
+        $session = PlayerManager::getInstance()->getSession($player);
+        if ($session === null) {
+            return false;
+        }
+
+        $session->clearCooldown(self::getCooldownKey((string) $kit["id"]));
+        return true;
     }
 
     private static function getCooldownKey(string $kitId): string

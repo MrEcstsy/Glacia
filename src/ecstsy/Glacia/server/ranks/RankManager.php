@@ -134,7 +134,13 @@ final class RankManager {
     }
 
     public function updatePermission(Player $player): void {
-        $attachment = $this->getAttachment($player);
+        try {
+            $attachment = $this->getAttachment($player);
+        } catch (\RuntimeException) {
+            $attachment = $player->addAttachment(Loader::getInstance());
+            $this->setAttachment($player, $attachment);
+        }
+
         $session = Loader::getPlayerManager()->getSession($player);
         $rank = $session?->getRankObject();
 

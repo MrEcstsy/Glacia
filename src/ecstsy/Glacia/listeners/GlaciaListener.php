@@ -16,6 +16,7 @@ use ecstsy\Glacia\server\GraceInstance;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\server\items\GlaciaSpawnerItem;
 use ecstsy\Glacia\server\quests\QuestInstance;
+use ecstsy\Glacia\server\ranks\RankManager;
 use ecstsy\Glacia\server\spawners\SpawnerData;
 use ecstsy\Glacia\utils\ChatTypes;
 use ecstsy\Glacia\utils\GlaciaUtils;
@@ -87,6 +88,10 @@ final class GlaciaListener implements Listener {
         $session = Loader::getPlayerManager()->getSession($player);
 
         $session->setConnected(true);
+
+        $attachment = $player->addAttachment(Loader::getInstance());
+        RankManager::getInstance()->setAttachment($player, $attachment);
+        RankManager::getInstance()->updatePermission($player);
 
         GlaciaUtils::refreshNametagsForTarget($player);
         GlaciaUtils::updateScoreTag($player);

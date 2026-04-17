@@ -85,3 +85,12 @@ permissions:
   glacia.gamemode:
     description: Permission to use /gamemode command
     default: op
+  glacia.kit.give:
+    description: Permission to use /kit give command
+    default: op
+  glacia.kit.info:
+    description: Permission to use /kit info command
+    default: op
+  glacia.kit.resetcooldown:
+    description: Permission to use /kit resetcooldown command
+    default: op

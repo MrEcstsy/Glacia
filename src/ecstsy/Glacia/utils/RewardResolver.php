@@ -99,7 +99,7 @@ final class RewardResolver {
             return null;
         }
 
-        $countInput = $entry["count"] ?? $entry["amount"] ?? 1;
+        $countInput = $entry["count"] ?? self::getDefaultStackCount($entry);
         $count = GeneralUtils::parseRandomNumber($countInput);
         $item->setCount(max(1, $count));
 
@@ -321,5 +321,18 @@ final class RewardResolver {
 
     private static function parsePercentValue(int|string $input): int{
         return max(1, min(100, GeneralUtils::parseRandomNumber($input)));
+    }
+
+    /**
+     * @param array<string, mixed> $entry
+     */
+    private static function getDefaultStackCount(array $entry): int|string
+    {
+        $id = strtolower((string) ($entry["id"] ?? $entry["material"] ?? $entry["type"] ?? ""));
+
+        return match ($id) {
+            "money_note", "xp_note", "xpnote", "moneynote" => 1,
+            default => $entry["amount"] ?? 1
+        };
     }
 }

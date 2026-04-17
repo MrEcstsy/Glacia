@@ -283,6 +283,23 @@ final class GlaciaPlayer {
         return $remaining !== null && $remaining > 0;
     }
 
+    public function clearCooldown(string $cooldownName): void
+    {
+        $cooldowns = json_decode($this->cooldowns, true) ?? [];
+        $uuid = $this->getUuid()->toString();
+
+        if (isset($cooldowns[$uuid][$cooldownName])) {
+            unset($cooldowns[$uuid][$cooldownName]);
+        }
+
+        if (isset($cooldowns[$uuid]) && $cooldowns[$uuid] === []) {
+            unset($cooldowns[$uuid]);
+        }
+
+        $this->cooldowns = json_encode($cooldowns);
+        $this->updateDb();
+    }
+
     public static function createCollectionItem(string $category, array $storedItems): Item {
         $encodedItems = array_map(fn($item) => is_string($item) ? $item : ItemUtils::encodeItem($item), $storedItems);
 
