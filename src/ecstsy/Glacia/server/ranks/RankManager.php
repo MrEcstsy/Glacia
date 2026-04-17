@@ -71,6 +71,51 @@ final class RankManager {
             "permission" => $perm
         ]);
         $this->ranks[$key]?->addOwnPermission($perm);
+        $this->refreshPermissionsForOnlinePlayers();
+    }
+
+    public function removePermissionFromRank(string $key, string $perm): void {
+        Loader::getDatabase()->executeChange(QueryStmts::PLAYER_PERMISSIONS_DELETE, [
+            "rank_key" => $key,
+            "permission" => $perm
+        ]);
+        $this->ranks[$key]?->removeOwnPermission($perm);
+        $this->refreshPermissionsForOnlinePlayers();
+    }
+
+    public function deleteRank(string $key, string $fallbackRank = "frostborn"): void {
+        $rank = $this->ranks[$key] ?? null;
+        if ($rank === null) {
+            return;
+        }
+
+        $parentKey = $rank->getParentKey();
+
+        foreach ($this->ranks as $otherKey => $otherRank) {
+            if ($otherKey !== $key && $otherRank->getParentKey() === $key) {
+                $otherRank->setParentKey($parentKey);
+            }
+        }
+
+        foreach (Loader::getPlayerManager()->getSessions() as $session) {
+            if ($session->getRank() === $key) {
+                $session->setRank($fallbackRank);
+                $player = $session->getPlayer();
+                if ($player !== null) {
+                    $this->updatePermission($player);
+                }
+            }
+        }
+
+        Loader::getDatabase()->executeChange(QueryStmts::PLAYER_PERMISSIONS_DELETE_ALL_FOR_RANK, [
+            "rank_key" => $key
+        ]);
+        Loader::getDatabase()->executeChange(QueryStmts::PLAYER_RANK_DELETE, [
+            "rank_key" => $key
+        ]);
+
+        unset($this->ranks[$key]);
+        $this->refreshPermissionsForOnlinePlayers();
     }
 
     public function getAttachment(Player $player): PermissionAttachment {
@@ -102,9 +147,26 @@ final class RankManager {
                 foreach (PermissionManager::getInstance()->getPermissions() as $perm) {
                     $attachment->setPermission($perm->getName(), true);
                 }
+                continue;
             }
-            break;
+            $attachment->setPermission($permission, true);
         }
-        $attachment->setPermission($permission, true);
-    }     
+
+        $player->recalculatePermissions();
+    }
+
+    public function refreshPermissionsForOnlinePlayers(): void {
+        foreach (Loader::getPlayerManager()->getSessions() as $session) {
+            $player = $session->getPlayer();
+            if ($player === null) {
+                continue;
+            }
+
+            try {
+                $this->updatePermission($player);
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+    }
 }

@@ -8,8 +8,6 @@ use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\factions\FactionManager;
 use ecstsy\Glacia\server\factions\claims\ClaimManager;
-use ecstsy\Glacia\utils\AdminLogger;
-use ecstsy\Glacia\utils\DiscordLogger;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -48,14 +46,12 @@ final class ForceClaimSubCommand extends BaseSubCommand {
         $claimManager->createClaim($faction->getFactionId(), $sender->getWorld(), $chunkX, $chunkZ);
         $sender->sendMessage(C::colorize("&r&l&a(✓) &r&2You have force-claimed the chunk &a{$chunkX}, {$chunkZ} &2for the faction &a" . $faction->getName()));
 
-        $logMsg = GlaciaUtils::formatAdminLog("Force Claim", [
+        GlaciaUtils::logAdminAction("Force Claim", [
             "admin" => $sender->getName(),
             "faction" => $faction->getName(),
             "chunk" => "{$chunkX}, {$chunkZ}",
             "world" => $sender->getWorld()->getFolderName()
         ]);
-
-        DiscordLogger::send($logMsg);
     }
 
     public function getPermission(): string {

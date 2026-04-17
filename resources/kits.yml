@@ -1,0 +1,404 @@
+rank-kits:
+  starter:
+    display: "&r&7&lStarter Kit"
+    description: "&r&7A simple starter loadout for new players."
+    permission: "glacia.default"
+    cooldown: "1d"
+    slot: 2
+    icon:
+      material: "leather_tunic"
+      name: "&r&7&lStarter Kit"
+      color: light_gray
+    items:
+      - material: "diamond_helmet"
+        enchantments:
+          - enchant: "unbreaking"
+            level: 1
+      - material: "diamond_chestplate"
+        enchantments:
+          - enchant: "unbreaking"
+            level: 1
+      - material: "diamond_leggings"
+        enchantments:
+          - enchant: "unbreaking"
+            level: 1
+      - material: "diamond_boots"
+        enchantments:
+          - enchant: "unbreaking"
+            level: 1
+      - material: "diamond_sword"
+      - material: "diamond_pickaxe"
+      - material: "diamond_axe"
+      - material: "diamond_shovel"
+      - material: "cooked_beef"
+        amount: 16
+      - material: "golden_apple"
+        amount: 8
+      - material: "torch"
+        amount: 128
+      - material: "ender_pearl"
+        amount: 1
+      - material: "oak_log"
+        amount: 32
+      - material: "sand"
+        amount: 32
+      - material: "gravel"
+        amount: 32
+      - material: "bucket"
+      - material: 'bow'
+      - material: 'arrow'
+        amount: 64
+      - material: "simpledp"
+
+  cryoshield:
+    display: "&r&3&lCryoshield Kit"
+    description: "&r&7Your second rank kit."
+    permission: "glacia.kit.cryoshield"
+    cooldown: "1d"
+    slot: 3
+    icon:
+      material: "leather_tunic"
+      name: "&r&3&lCryoshield Kit"
+      color: cyan
+    items:
+      - material: "diamond_helmet"
+        enchantments:
+          - enchant: "protection"
+            level: 3
+          - enchant: "unbreaking"
+            level: 1
+      - material: "diamond_chestplate"
+        enchantments:
+          - enchant: "protection"
+            level: 3
+          - enchant: "unbreaking"
+            level: 1
+      - material: "diamond_leggings"
+        enchantments:
+          - enchant: "protection"
+            level: 3
+          - enchant: "unbreaking"
+            level: 1
+      - material: "diamond_boots"
+        enchantments:
+          - enchant: "protection"
+            level: 3
+          - enchant: "unbreaking"
+            level: 1
+      - material: "diamond_sword"
+        enchantments:
+          - enchant: "sharpness"
+            level: 3
+          - enchant: "unbreaking"
+            level: 1
+      - material: "diamond_pickaxe"
+        enchantments:
+          - enchant: "efficiency"
+            level: 3
+          - enchant: "unbreaking"
+            level: 1
+      - material: "diamond_axe"
+        enchantments:
+          - enchant: "efficiency"
+            level: 3
+          - enchant: "unbreaking"
+            level: 1
+      - material: "diamond_shovel"
+        enchantments:
+          - enchant: "efficiency"
+            level: 3
+          - enchant: "unbreaking"
+            level: 1
+      - material: "bow"
+        enchantments:
+          - enchant: "power"
+            level: 2
+      - material: "arrow"
+        amount: 128
+      - material: "golden_apple"
+        amount: 12
+      - material: "xpnote"
+        amount: 2000
+  winterborn:
+    display: "&r&b&lWinterborn Kit"
+    description: "&r&7Your third rank kit."
+    permission: "glacia.kit.winterborn"
+    cooldown: "1d"
+    slot: 4
+    icon:
+      material: "leather_tunic"
+      name: "&r&b&lWinterborn Kit"
+      color: light_blue
+    items:
+      - material: "diamond_helmet"
+        enchantments:
+          - enchant: "protection"
+            level: 4
+          - enchant: "unbreaking"
+            level: 2
+      - material: "diamond_chestplate"
+        enchantments:
+          - enchant: "protection"
+            level: 4
+          - enchant: "unbreaking"
+            level: 2
+      - material: "diamond_leggings"
+        enchantments:
+          - enchant: "protection"
+            level: 4
+          - enchant: "unbreaking"
+            level: 2
+      - material: "diamond_boots"
+        enchantments:
+          - enchant: "protection"
+            level: 4
+          - enchant: "unbreaking"
+            level: 2
+      - material: "diamond_sword"
+        enchantments:
+          - enchant: "sharpness"
+            level: 3
+          - enchant: "unbreaking"
+            level: 2
+          - enchant: "fire_aspect"
+            level: 1
+          - enchant: "looting"
+            level: 1
+      - material: "diamond_pickaxe"
+        enchantments:
+          - enchant: "efficiency"
+            level: 3
+          - enchant: "unbreaking"
+            level: 2
+      - material: "diamond_axe"
+        enchantments:
+          - enchant: "efficiency"
+            level: 3
+          - enchant: "unbreaking"
+            level: 2
+          - enchant: "fire_aspect"
+            level: 1
+          - enchant: "looting"
+            level: 1
+      - material: "diamond_shovel"
+        enchantments:
+          - enchant: "efficiency"
+            level: 3
+          - enchant: "unbreaking"
+            level: 2
+      - material: "bow"
+        enchantments:
+          - enchant: "power"
+            level: 3
+      - material: "arrow"
+        amount: 128
+      - material: "golden_apple"
+        amount: 16
+      - material: "xpnote"
+        amount: 4000
+  glacian:
+    display: "&r&a&lGlacian Kit"
+    description: "&r&7Your fourth rank kit."
+    permission: "glacia.kit.glacian"
+    cooldown: "1d"
+    slot: 5
+    icon:
+      material: "leather_tunic"
+      name: "&r&a&lGlacian Kit"
+      color: green
+    items:
+      - material: "diamond_helmet"
+        enchantments:
+          - enchant: "protection"
+            level: 4
+          - enchant: "unbreaking"
+            level: 3
+      - material: "diamond_chestplate"
+        enchantments:
+          - enchant: "protection"
+            level: 4
+          - enchant: "unbreaking"
+            level: 3
+      - material: "diamond_leggings"
+        enchantments:
+          - enchant: "protection"
+            level: 4
+          - enchant: "unbreaking"
+            level: 3
+      - material: "diamond_boots"
+        enchantments:
+          - enchant: "protection"
+            level: 4
+          - enchant: "unbreaking"
+            level: 3
+      - material: "diamond_sword"
+        enchantments:
+          - enchant: "sharpness"
+            level: 4
+          - enchant: "unbreaking"
+            level: 3
+          - enchant: "looting"
+            level: 2
+          - enchant: "fire_aspect"
+            level: 2
+      - material: "diamond_pickaxe"
+        enchantments:
+          - enchant: "efficiency"
+            level: 4
+          - enchant: "unbreaking"
+            level: 3
+      - material: "diamond_axe"
+        enchantments:
+          - enchant: "efficiency"
+            level: 4
+          - enchant: "unbreaking"
+            level: 3
+          - enchant: "looting"
+            level: 2
+          - enchant: "fire_aspect"
+            level: 2
+      - material: "diamond_shovel"
+        enchantments:
+          - enchant: "efficiency"
+            level: 4
+          - enchant: "unbreaking"
+            level: 3
+      - material: "bow"
+        enchantments:
+          - enchant: "power"
+            level: 4
+          - enchant: "flame"
+            level: 1
+      - material: "arrow"
+        amount: 128
+      - material: "golden_apple"
+        amount: 18
+      - material: "xpnote"
+        amount: 7500
+
+  iceheart:
+    display: "&r&9&lIceheart Kit"
+    description: "&r&7Your fifth rank kit."
+    permission: "glacia.kit.iceheart"
+    cooldown: "1d"
+    slot: 6
+    icon:
+      material: "leather_tunic"
+      name: "&r&9&lIceheart Kit"
+      color: blue
+    items:
+      - material: "diamond_helmet"
+        enchantments:
+          - enchant: "protection"
+            level: 4
+          - enchant: "unbreaking"
+            level: 3
+      - material: "diamond_chestplate"
+        enchantments:
+          - enchant: "protection"
+            level: 4
+          - enchant: "unbreaking"
+            level: 3
+      - material: "diamond_leggings"
+        enchantments:
+          - enchant: "protection"
+            level: 4
+          - enchant: "unbreaking"
+            level: 3
+      - material: "diamond_boots"
+        enchantments:
+          - enchant: "protection"
+            level: 4
+          - enchant: "unbreaking"
+            level: 3
+      - material: "diamond_sword"
+        enchantments:
+          - enchant: "sharpness"
+            level: 5
+          - enchant: "unbreaking"
+            level: 3
+          - enchant: "looting"
+            level: 3
+          - enchant: "fire_aspect"
+            level: 2
+      - material: "diamond_pickaxe"
+        enchantments:
+          - enchant: "efficiency"
+            level: 5
+      - material: "diamond_axe"
+        enchantments:
+          - enchant: "efficiency"
+            level: 4
+          - enchant: "sharpness"
+            level: 5
+          - enchant: "looting"
+            level: 3
+          - enchant: "fire_aspect"
+            level: 2
+      - material: "diamond_shovel"
+        enchantments:
+          - enchant: "efficiency"
+            level: 5
+      - material: "bow"
+        enchantments:
+          - enchant: "power"
+            level: 5
+          - enchant: "flame"
+            level: 2
+      - material: "arrow"
+        amount: 128
+      - material: "golden_apple"
+        amount: 20
+      - material: "xpnote"
+        amount: 10000
+
+  frostlord:
+    display: "&r&d&lFrostlord Kit"
+    description: "&r&7Your sixth rank kit."
+    permission: "glacia.kit.frostlord"
+    cooldown: "3d"
+    slot: 11
+    icon:
+      material: "leather_tunic"
+      name: "&r&d&lFrostlord Kit"
+      color: pink
+    random-rolls: 4
+    random-items:
+      - chance: 10
+        type: item
+        id: "max_home_increase"
+      - chance: 10
+        type: item
+        id: "xpnote"
+        amount: 100000
+      - chance: 8
+        type: item
+        id: "blaze_spawner"
+      - chance: 8
+        type: item
+        id: "creeper_spawner"
+      - chance: 8
+        type: item
+        id: "slime_spawner"
+      - chance: 8
+        type: item
+        id: "enderman_spawner"
+      - chance: 8
+        type: item
+        id: "zombie_pigman_spawner"
+      - chance: 8
+        type: item
+        id: "iron_golem_spawner"
+      - chance: 12
+        type: item
+        id: "mysterymobspawner"
+      - chance: 14
+        type: item
+        id: "whitescroll"
+      - chance: 14
+        type: item
+        id: "renametag"
+
+gkits: {}
+
+vkits: {}

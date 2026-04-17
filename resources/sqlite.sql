@@ -518,6 +518,11 @@ WHERE rank_key = :rank_key;
 -- #    :permission string
 DELETE FROM glacia_rank_permissions WHERE rank_key = :rank_key AND permission = :permission;
 -- #  }
+
+-- # { delete_all_for_rank
+-- #    :rank_key string
+DELETE FROM glacia_rank_permissions WHERE rank_key = :rank_key;
+-- #  }
 -- # }
 
 -- # { warps

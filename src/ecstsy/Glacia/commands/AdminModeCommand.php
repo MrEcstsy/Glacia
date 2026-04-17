@@ -28,9 +28,15 @@ final class AdminModeCommand extends BaseCommand {
         if ($session->isInAdminMode()) {
             $session->setInAdminMode(false);
             $sender->sendMessage(GlaciaUtils::format("admin-mode.disabled"));
+            GlaciaUtils::logAdminAction("Admin Mode Disabled", [
+                "admin" => $sender->getName()
+            ]);
         } else {
             $session->setInAdminMode(true);
             $sender->sendMessage(GlaciaUtils::format("admin-mode.enabled"));
+            GlaciaUtils::logAdminAction("Admin Mode Enabled", [
+                "admin" => $sender->getName()
+            ]);
         }
     }
 

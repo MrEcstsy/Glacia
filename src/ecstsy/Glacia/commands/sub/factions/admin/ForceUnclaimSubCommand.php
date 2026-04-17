@@ -4,10 +4,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\commands\sub\factions\admin;
 
 use CortexPE\Commando\BaseSubCommand;
-use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\factions\claims\ClaimManager;
-use ecstsy\Glacia\utils\AdminLogger;
-use ecstsy\Glacia\utils\DiscordLogger;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -38,14 +35,12 @@ final class ForceUnclaimSubCommand extends BaseSubCommand {
         $claimManager->deleteClaim($claim);
         $sender->sendMessage(C::colorize("&r&l&a(✓) &r&2You have force-unclaimed the chunk &a{$chunkX}, {$chunkZ} &2for the faction &a" . $faction->getName()));
 
-        $logMsg = GlaciaUtils::formatAdminLog("Force Unclaim", [
+        GlaciaUtils::logAdminAction("Force Unclaim", [
             "admin" => $sender->getName(),
             "faction" => $faction->getName(),
             "chunk" => "{$chunkX}, {$chunkZ}",
             "world" => $sender->getWorld()->getFolderName()
         ]);
-
-        DiscordLogger::send($logMsg);
     }
 
     public function getPermission(): string {
