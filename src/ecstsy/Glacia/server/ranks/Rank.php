@@ -27,9 +27,24 @@ final class Rank {
     public function getParentKey(): ?string { return $this->parentKey; }
     public function getChatFormat(): string { return $this->chatFormat; }
     public function getNametagFormat(): string { return $this->nametagFormat; }
+    public function getOwnPermissions(): array { return array_values(array_unique($this->ownPerms)); }
 
     public function addOwnPermission(string $perm): void {
-        $this->ownPerms[] = $perm;
+        if (!in_array($perm, $this->ownPerms, true)) {
+            $this->ownPerms[] = $perm;
+        }
+    }
+
+    public function removeOwnPermission(string $perm): void {
+        $this->ownPerms = array_values(array_filter(
+            $this->ownPerms,
+            static fn(string $existing): bool => $existing !== $perm
+        ));
+    }
+
+    public function setDisplayName(string $displayName): void {
+        $this->displayName = $displayName;
+        $this->updateDb();
     }
 
     /**

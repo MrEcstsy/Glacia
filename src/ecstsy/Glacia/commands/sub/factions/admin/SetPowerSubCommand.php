@@ -7,8 +7,6 @@ use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\args\IntegerArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
-use ecstsy\Glacia\utils\AdminLogger;
-use ecstsy\Glacia\utils\DiscordLogger;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\Glacia\utils\QueryStmts;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
@@ -37,13 +35,11 @@ final class SetPowerSubCommand extends BaseSubCommand {
             if ($session !== null) {
                 $session->setPower($amount);
                 $sender->sendMessage(C::colorize("&r&l&a(✓) &r&2You have set " . $targetPlayer->getName() . "'s power to &a" . $amount));
-                $logMsg = GlaciaUtils::formatAdminLog("Set Power", [
+                GlaciaUtils::logAdminAction("Set Power", [
                     "admin" => $sender->getName(),
                     "target" => $targetPlayer->getName(),
                     "amount" => $amount
                 ]);
-
-                DiscordLogger::send($logMsg);
                 return;
             }
         }

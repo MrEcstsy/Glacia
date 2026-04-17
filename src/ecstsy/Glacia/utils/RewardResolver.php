@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\utils;
 
+use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
+use ecstsy\Glacia\server\enchantments\CustomEnchantments;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
+use pocketmine\color\Color;
+use pocketmine\item\Armor;
 use pocketmine\item\Item;
 use pocketmine\item\StringToItemParser;
 use pocketmine\item\enchantment\EnchantmentInstance;
 use pocketmine\item\enchantment\StringToEnchantmentParser;
+use pocketmine\item\VanillaItems;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
 
@@ -82,14 +87,20 @@ final class RewardResolver {
         }
 
         if($item === null && isset($entry["material"])){
-            $item = StringToItemParser::getInstance()->parse((string)$entry["material"]);
+            $material = (string)$entry["material"];
+            $item = StringToItemParser::getInstance()->parse($material);
+
+            if($item === null){
+                $item = self::resolveFactoryItem($material, $entry, $player);
+            }
         }
 
         if($item === null){
             return null;
         }
 
-        $count = GeneralUtils::parseRandomNumber($entry["count"] ?? 1);
+        $countInput = $entry["count"] ?? $entry["amount"] ?? 1;
+        $count = GeneralUtils::parseRandomNumber($countInput);
         $item->setCount(max(1, $count));
 
         if(isset($entry["name"])){
@@ -105,6 +116,10 @@ final class RewardResolver {
 
         if(isset($entry["enchantments"]) && is_array($entry["enchantments"])){
             self::applyEnchantments($item, $entry["enchantments"]);
+        }
+
+        if(isset($entry["color"])){
+            self::applyColor($item, $entry["color"]);
         }
 
         return $item;
@@ -137,7 +152,7 @@ final class RewardResolver {
             "legendarybook" => GlaciaItemFactory::randomEnchantBook("legendary"),
 
             "whitescroll" => GlaciaItemFactory::whitescroll(),
-            "blackscroll" => GlaciaItemFactory::blackscroll((int)($entry["success"] ?? 100)),
+            "blackscroll" => GlaciaItemFactory::blackscroll(self::parsePercentValue($entry["success"] ?? "{90-100}")),
             "renametag", "itemnametag" => GlaciaItemFactory::renametag(),
 
             "simpledp" => GlaciaItemFactory::dropPackage("simple_chest"),
@@ -147,11 +162,11 @@ final class RewardResolver {
             "legendarydp" => GlaciaItemFactory::dropPackage("legendary_chest"),
             "goddp" => GlaciaItemFactory::dropPackage("godly_chest"),
 
-            "simpledust" => GlaciaItemFactory::randomMagicDust("simple"),
-            "uniquedust" => GlaciaItemFactory::randomMagicDust("unique"),
-            "elitedust" => GlaciaItemFactory::randomMagicDust("elite"),
-            "ultimatedust" => GlaciaItemFactory::randomMagicDust("exotic"),
-            "legendarydust" => GlaciaItemFactory::randomMagicDust("legendary"),
+            "simpledust" => self::resolveDustItem("simple", $entry),
+            "uniquedust" => self::resolveDustItem("unique", $entry),
+            "elitedust" => self::resolveDustItem("elite", $entry),
+            "ultimatedust" => self::resolveDustItem("exotic", $entry),
+            "legendarydust" => self::resolveDustItem("legendary", $entry),
 
             "mysterymobspawner" => GlaciaItemFactory::mysteryMobSpawner(),
             'heroicmysterymobspawner' => GlaciaItemFactory::heroicMysteryMobSpawner(),
@@ -209,6 +224,17 @@ final class RewardResolver {
     }
 
     /**
+     * @param array<string, mixed> $entry
+     */
+    private static function resolveDustItem(string $group, array $entry): Item{
+        if(isset($entry["percent"])){
+            return GlaciaItemFactory::magicDust($group, self::parsePercentValue($entry["percent"]));
+        }
+
+        return GlaciaItemFactory::randomMagicDust($group);
+    }
+
+    /**
      * @param array<int, array<string, mixed>> $enchantments
      */
     private static function applyEnchantments(Item $item, array $enchantments): void{
@@ -227,14 +253,73 @@ final class RewardResolver {
                 continue;
             }
 
-            // TODO: hook your custom enchant parser/registry here if needed
-            // Example:
-            // $custom = CustomEnchantments::getByName($enchantName);
-            // if($custom !== null){
-            //     CustomEnchantments::applyToItem($item, $custom, $level);
-            // }
+            $custom = CustomEnchantments::getEnchantmentByName($enchantName);
+            if($custom !== null){
+                CustomEnchantmentManager::applyEnchantment($item, $custom, $level);
+            }
 
             continue;
         }
+    }
+
+    private static function applyColor(Item $item, mixed $colorData): void{
+        $color = self::parseColor($colorData);
+        if($color === null){
+            return;
+        }
+
+        if ($item instanceof Armor) {
+            $item->setCustomColor($color);
+        }
+        
+    }
+
+    private static function parseColor(mixed $colorData): ?Color{
+        if(is_string($colorData)){
+            $colorKey = strtolower(trim($colorData));
+
+            $named = match($colorKey){
+                "white" => [255, 255, 255],
+                "silver", "light_gray", "lightgrey" => [157, 157, 151],
+                "gray", "grey" => [71, 79, 82],
+                "black" => [29, 29, 33],
+                "red" => [176, 46, 38],
+                "orange" => [249, 128, 29],
+                "yellow" => [254, 216, 61],
+                "lime" => [128, 199, 31],
+                "green" => [94, 124, 22],
+                "light_blue" => [58, 179, 218],
+                "cyan" => [22, 156, 156],
+                "blue" => [60, 68, 170],
+                "purple" => [137, 50, 184],
+                "magenta" => [199, 78, 189],
+                "pink" => [243, 139, 170],
+                "brown" => [131, 84, 50],
+                default => null
+            };
+
+            if($named !== null){
+                return new Color($named[0], $named[1], $named[2]);
+            }
+
+            $hex = ltrim($colorKey, "#");
+            if(preg_match('/^[0-9a-f]{6}$/i', $hex) === 1){
+                return Color::fromRGB((int) hexdec($hex));
+            }
+        }
+
+        if(is_array($colorData) && isset($colorData["r"], $colorData["g"], $colorData["b"])){
+            return new Color(
+                (int) $colorData["r"],
+                (int) $colorData["g"],
+                (int) $colorData["b"]
+            );
+        }
+
+        return null;
+    }
+
+    private static function parsePercentValue(int|string $input): int{
+        return max(1, min(100, GeneralUtils::parseRandomNumber($input)));
     }
 }

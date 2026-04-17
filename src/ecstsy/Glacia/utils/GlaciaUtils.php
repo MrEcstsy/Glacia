@@ -10,6 +10,7 @@ use ecstsy\Glacia\commands\AdminModeCommand;
 use ecstsy\Glacia\commands\SellCommand;
 use ecstsy\Glacia\commands\BalanceCommand;
 use ecstsy\Glacia\commands\BalTopCommand;
+use ecstsy\Glacia\commands\BanCommand;
 use ecstsy\Glacia\commands\BlackMarketCommand;
 use ecstsy\Glacia\commands\CreateHomeCommand;
 use ecstsy\Glacia\commands\CreateWarpCommand;
@@ -24,6 +25,7 @@ use ecstsy\Glacia\commands\GiveItemCommand;
 use ecstsy\Glacia\commands\GraceCommand;
 use ecstsy\Glacia\commands\HomeCommand;
 use ecstsy\Glacia\commands\HomesCommand;
+use ecstsy\Glacia\commands\KickCommand;
 use ecstsy\Glacia\commands\ListWarpsCommand;
 use ecstsy\Glacia\commands\PayCommand;
 use ecstsy\Glacia\commands\RankCommand;
@@ -52,6 +54,7 @@ use ecstsy\Glacia\commands\SeeItemCommand;
 use ecstsy\Glacia\commands\SettingsCommand;
 use ecstsy\Glacia\commands\ShopCommand;
 use ecstsy\Glacia\commands\GlaciaReloadCommand;
+use ecstsy\Glacia\commands\KitCommand;
 use ecstsy\Glacia\entity\boss\bosses\AstralDevourer;
 use ecstsy\Glacia\entity\CombatLoggerEntity;
 use ecstsy\Glacia\entity\FloatingTextEntity;
@@ -198,7 +201,7 @@ final class GlaciaUtils
             $loader->getRegionManager()->addRegion($region);
         }
 
-        $unregisterCommands = ["ban", "xp", "gamemode"];
+        $unregisterCommands = ["ban", "kick", "xp", "gamemode"];
 
         foreach ($unregisterCommands as $command) {
             $loader->getServer()->getCommandMap()->unregister($loader->getServer()->getCommandMap()->getCommand($command));
@@ -226,6 +229,8 @@ final class GlaciaUtils
             new TPAHereCommand($loader, "tpahere", "Request another player to teleport to you"),
             new TPADenyCommand($loader, "tpadeny", "Deny a teleport request"),
             new AdminModeCommand($loader, "adminmode", "Toggle admin mode"),
+            new KickCommand($loader, "kick", "Kick a player from the server"),
+            new BanCommand($loader, "ban", "Ban a player from the server"),
             new GraceCommand($loader, "grace", "Grace commands"),
             new GiveItemCommand($loader, "giveitem", "Give yourself a Glacia item", ["gi"]),
             new FlySpeedCommand($loader, "flyspeed", "Set your fly speed", ["fs"]),
@@ -251,6 +256,7 @@ final class GlaciaUtils
             new CollectCommand($loader, "collect", "Collect items"),
             new ShopCommand($loader, "shop", "Open the shop"),
             new GlaciaReloadCommand($loader, "greload", "Reload Glacia configs"),
+            new KitCommand($loader, "kit", "Open the kit screen"),
         ]);
 
         $listeners = [ 
@@ -432,7 +438,7 @@ final class GlaciaUtils
         Loader::getInstance()->getScheduler()->scheduleRepeatingTask($autoPlantTask, 5  );
         AutoPlanterEnchant::setTask($autoPlantTask);
 
-        $files = ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml"];
+        $files = ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml", "kits.yml"];
 
         foreach ($files as $file) {
             $loader->saveResource($file);
@@ -928,6 +934,11 @@ final class GlaciaUtils
         }
 
         return implode("\n", $lines);
+    }
+
+    public static function logAdminAction(string $action, array $data): void
+    {
+        DiscordLogger::send(self::formatAdminLog($action, $data));
     }
 
     /**

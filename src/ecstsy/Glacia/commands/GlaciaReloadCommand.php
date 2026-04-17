@@ -16,10 +16,11 @@ use pocketmine\utils\TextFormat as C;
 final class GlaciaReloadCommand extends BaseCommand {
 
     private const TARGETS = [
-        "all" => ["items.yml", "shop.yml", "sell.yml", "blackmarket.yml", "dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "config.yml"],
+        "all" => ["items.yml", "shop.yml", "sell.yml", "kits.yml", "blackmarket.yml", "dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "config.yml"],
         "items" => ["items.yml"],
         "shop" => ["shop.yml"],
         "sell" => ["sell.yml"],
+        "kits" => ["kits.yml"],
         "blackmarket" => ["blackmarket.yml"],
         "dps" => ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml"],
         "config" => ["config.yml"],
@@ -29,6 +30,7 @@ final class GlaciaReloadCommand extends BaseCommand {
         "items.yml",
         "shop.yml",
         "sell.yml",
+        "kits.yml",
         "blackmarket.yml",
         "dps/Simple.yml",
         "dps/Unique.yml",
@@ -50,7 +52,7 @@ final class GlaciaReloadCommand extends BaseCommand {
         $target = strtolower((string) ($args["target"] ?? "all"));
 
         if (!isset(self::TARGETS[$target])) {
-            $sender->sendMessage(C::colorize("&r&cUnknown target. Use: all, items, shop, sell, blackmarket, dps, config"));
+            $sender->sendMessage(C::colorize("&r&cUnknown target. Use: all, items, shop, sell, kits, blackmarket, dps, config"));
             return;
         }
 
@@ -70,7 +72,7 @@ final class GlaciaReloadCommand extends BaseCommand {
                 return;
         }
 
-        $sender->sendMessage(C::colorize("&r&cUsage: /greload <reload|restore> [all|items|shop|sell|blackmarket|dps|config]"));
+        $sender->sendMessage(C::colorize("&r&cUsage: /greload <reload|restore> [all|items|shop|sell|kits|blackmarket|dps|config]"));
     }
 
     private function restoreFiles(array $files): int {

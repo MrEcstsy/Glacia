@@ -7,8 +7,8 @@ namespace ecstsy\Glacia\commands\sub\rank;
 use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\args\TextArgument;
 use CortexPE\Commando\BaseSubCommand;
-use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\ranks\RankManager;
+use ecstsy\Glacia\utils\GlaciaUtils;
 use pocketmine\utils\TextFormat as C;
 use pocketmine\command\CommandSender;
 
@@ -42,6 +42,11 @@ final class SetChatFormatSubCommand extends BaseSubCommand {
         $rank->setChatFormat($format);
 
         $sender->sendMessage(C::colorize("&r&aChat format for rank '$key' set."));
+        GlaciaUtils::logAdminAction("Set Rank Chat Format", [
+            "admin" => $sender->getName(),
+            "target" => $key,
+            "format" => $format
+        ]);
     }   
 
     public function getPermission(): string {

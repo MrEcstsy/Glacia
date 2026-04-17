@@ -26,6 +26,7 @@ final class QueryStmts {
     public const PLAYER_PERMISSIONS_CREATE = "glacia_rank_permissions.create";
     public const PLAYER_PERMISSIONS_UPDATE = "glacia_rank_permissions.update";
     public const PLAYER_PERMISSIONS_DELETE = "glacia_rank_permissions.delete";
+    public const PLAYER_PERMISSIONS_DELETE_ALL_FOR_RANK = "glacia_rank_permissions.delete_all_for_rank";
 
     // SERVER
     public const SERVER_HOMES_INIT = "homes.init";

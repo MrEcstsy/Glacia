@@ -8,7 +8,6 @@ use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\factions\FactionManager;
-use ecstsy\Glacia\utils\DiscordLogger;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\Glacia\utils\QueryStmts;
 use pocketmine\command\CommandSender;
@@ -72,13 +71,11 @@ final class ForceDisbandSubCommand extends BaseSubCommand {
 
         $sender->sendMessage(C::colorize("&r&c&l(✘) &r&cFaction '&b{$faction->getName()}&c' has been disbanded by &b{$sender->getName()}&c."));
 
-        $logMsg = GlaciaUtils::formatAdminLog("Force Disband", [
+        GlaciaUtils::logAdminAction("Force Disband", [
             "admin" => $sender->getName(),
             "faction" => $faction->getName(),
             "world" => $sender->getWorld()->getFolderName()
         ]);
-        DiscordLogger::send($logMsg);
-        
     }
 
     public function getPermission(): string {
