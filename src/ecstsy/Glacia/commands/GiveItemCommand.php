@@ -12,6 +12,7 @@ use ecstsy\Glacia\commands\sub\items\ListGlaciaItemsSubCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
+use ecstsy\Glacia\server\lootboxes\LootboxRepository;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -44,6 +45,32 @@ class GiveItemCommand extends BaseCommand {
 
         try {
             switch($itemName) {
+                case 'bank_note':
+                case 'money_note':
+                case 'moneynote':
+                case 'econote':
+                    $noteAmount = isset($args['extra1']) ? (int) GeneralUtils::parseRandomNumber((string) $args['extra1']) : 0;
+                    if ($noteAmount <= 0) {
+                        $sender->sendMessage(C::RED . "Usage: /giveitem {$itemName} <amount> <value> [signer|default]");
+                        return;
+                    }
+
+                    $signer = $this->resolveSigner($sender, $args['extra2'] ?? null);
+                    $item = GlaciaItemFactory::bankNoteSigned($signer, $noteAmount);
+                    break;
+
+                case 'xpnote':
+                case 'xp_note':
+                    $noteAmount = isset($args['extra1']) ? (int) GeneralUtils::parseRandomNumber((string) $args['extra1']) : 0;
+                    if ($noteAmount <= 0) {
+                        $sender->sendMessage(C::RED . "Usage: /giveitem {$itemName} <amount> <value> [signer|default]");
+                        return;
+                    }
+
+                    $signer = $this->resolveSigner($sender, $args['extra2'] ?? null);
+                    $item = GlaciaItemFactory::xpNoteSigned($signer, $noteAmount);
+                    break;
+
                 case 'enchantment_book':
                     $enchantName = $args['extra1'] ?? null;
                     $level = isset($args['extra2']) ? (int)$args['extra2'] : 1;
@@ -111,6 +138,17 @@ class GiveItemCommand extends BaseCommand {
 
                     $item = GlaciaItemFactory::factionXpBooster($multiplier, $durationInput);
                     break;
+                case 'lootbox':
+                case 'loot_box':
+                case 'lb':
+                    $boxLookup = $args['extra1'] ?? null;
+                    if ($boxLookup === null) {
+                        $sender->sendMessage(C::RED . "Usage: /giveitem {$itemName} <amount> <box>");
+                        return;
+                    }
+
+                    $item = GlaciaItemFactory::lootbox((string) $boxLookup);
+                    break;
 
                     case 'customarmor':
                         $set = $args['extra1'] ?? null;
@@ -146,7 +184,11 @@ class GiveItemCommand extends BaseCommand {
                         $item = GlaciaItemFactory::customWeapon($set, $type);
                         break;
                 default:
-                    $item = GlaciaItemFactory::create($itemName);
+                    if (LootboxRepository::getBoxByLookup($itemName) !== null) {
+                        $item = GlaciaItemFactory::lootbox($itemName);
+                    } else {
+                        $item = GlaciaItemFactory::create($itemName);
+                    }
                     break;
             }
         } catch (\InvalidArgumentException $e) {
@@ -175,5 +217,19 @@ class GiveItemCommand extends BaseCommand {
         $normalized = str_replace("x", "", $normalized);
 
         return (float) $normalized;
+    }
+
+    private function resolveSigner(Player $sender, mixed $value): string
+    {
+        if (!is_string($value) || trim($value) === "") {
+            return $sender->getName();
+        }
+
+        $normalized = strtolower(trim($value));
+        if (in_array($normalized, ["default", "server", "hub"], true)) {
+            return "Ethereal Hub";
+        }
+
+        return trim($value);
     }
 }

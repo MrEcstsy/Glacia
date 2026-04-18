@@ -589,8 +589,11 @@ final class CustomEnchantments {
         $item = TypeConverter::getInstance()->netItemStackToCore($itemStack);
         $root = $item->getNamedTag();
         $martianCES = $root->getCompoundTag("GlaciaCES");
+        $glaciaTag = $root->getCompoundTag("Glacia");
+        $hasTransmog = $glaciaTag?->getByte("transmog", 0) === 1;
 
         $customEnchantLore = [];
+        $customEnchantEntries = [];
 
         if ($martianCES !== null) {
             foreach ($martianCES->getValue() as $enchantName => $levelTag) {
@@ -608,9 +611,19 @@ final class CustomEnchantments {
                 $groupId = $enchantment->getRarity();
                 $color = Groups::translateGroupToColor($groupId);
                 $displayName = self::getEnchantmentDisplayName($enchantment->getName(), $color);
-
-                $customEnchantLore[] = TextFormat::RESET . $displayName . " " . GeneralUtils::getRomanNumeral($level);
+                $customEnchantEntries[] = [
+                    "rarity" => $groupId,
+                    "display" => TextFormat::RESET . $displayName . " " . GeneralUtils::getRomanNumeral($level)
+                ];
             }
+        }
+
+        if ($hasTransmog) {
+            usort($customEnchantEntries, static fn(array $a, array $b): int => $b["rarity"] <=> $a["rarity"]);
+        }
+
+        foreach ($customEnchantEntries as $entry) {
+            $customEnchantLore[] = $entry["display"];
         }
 
         self::preserveOriginalDisplayTag($item);
@@ -622,6 +635,12 @@ final class CustomEnchantments {
             $item->setLore(array_merge($customEnchantLore, $existingLore));
         } else {
             $item->setLore($existingLore);
+        }
+
+        if ($hasTransmog) {
+            $baseName = $item->getCustomName() !== "" ? $item->getCustomName() : $item->getName();
+            $baseName = preg_replace('/\s*(?:(?:§|&).)?\[\d+\]\s*$/u', '', $baseName) ?? $baseName;
+            $item->setCustomName($baseName . TextFormat::colorize(" &r&l&b[&f" . count($customEnchantLore) . "&b]"));
         }
 
         GlaciaUtils::updateGlowEffect($item);

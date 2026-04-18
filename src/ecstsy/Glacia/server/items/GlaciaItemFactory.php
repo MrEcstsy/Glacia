@@ -9,6 +9,7 @@ use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
 use ecstsy\Glacia\server\enchantments\Groups;
 use ecstsy\Glacia\server\items\armor\ArmorSetEnchants;
+use ecstsy\Glacia\server\lootboxes\LootboxRepository;
 use ecstsy\Glacia\server\quests\QuestInstance;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\item\enchantment\EnchantmentInstance;
@@ -188,6 +189,34 @@ final class GlaciaItemFactory {
     public static function mysteryDust(): Item {
         return self::create('mysterydust');
     } 
+
+    public static function lootbox(string $lookup): Item {
+        $box = LootboxRepository::getBoxByLookup($lookup);
+        if ($box === null) {
+            throw new \InvalidArgumentException("Unknown lootbox: {$lookup}");
+        }
+
+        $icon = StringToItemParser::getInstance()->parse((string) ($box["icon"] ?? "chest")) ?? StringToItemParser::getInstance()->parse("chest");
+        $item = clone $icon;
+        $item->setCustomName(C::colorize((string) ($box["item-name"] ?? $box["name"] ?? "&r&l&dLootbox")));
+
+        $lore = $box["item-lore"] ?? [
+            "&r&7Right-click to open this lootbox.",
+            "&r&7Contains randomized rewards."
+        ];
+        if (is_array($lore)) {
+            $item->setLore(array_map(static fn(string $line): string => C::colorize($line), $lore));
+        }
+
+        $root = $item->getNamedTag();
+        $tag = new CompoundTag();
+        $tag->setString("glaciaItem", "lootbox");
+        $tag->setString("lootbox", (string) $box["id"]);
+        $root->setTag("Glacia", $tag);
+        $item->setNamedTag($root);
+
+        return $item;
+    }
 
     public static function tnt(string $type): Item {
         return self::create($type, [

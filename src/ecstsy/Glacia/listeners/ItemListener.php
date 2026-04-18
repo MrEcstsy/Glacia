@@ -18,9 +18,11 @@ use ecstsy\Glacia\server\factions\FactionXpBoosterManager;
 use ecstsy\Glacia\server\homes\HomeManager;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\server\items\rename\ItemRenameManager;
+use ecstsy\Glacia\server\lootboxes\LootboxRepository;
 use ecstsy\Glacia\server\ranks\RankManager;
 use ecstsy\Glacia\server\ranks\RankProgressionManager;
 use ecstsy\Glacia\utils\GlaciaUtils;
+use ecstsy\Glacia\utils\screens\lootboxes\LootboxAnimationScreen;
 use ecstsy\Glacia\utils\screens\slotbot\SlotbotMenuScreen;
 use ecstsy\Glacia\utils\screens\droppackages\DropPackageScreen;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
@@ -90,6 +92,23 @@ final class ItemListener implements Listener {
         if ($itemTag === "slot_ticket") {
             $event->cancel();
             (new SlotbotMenuScreen($player))->display($player);
+            return;
+        }
+
+        if ($itemTag === "lootbox") {
+            $event->cancel();
+
+            $lootboxId = $glaciaTag->getString("lootbox", "");
+            $box = LootboxRepository::getBoxByLookup($lootboxId);
+            if ($box === null) {
+                $player->sendMessage(C::colorize("&r&cThis lootbox is invalid."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $item->pop();
+            $player->getInventory()->setItemInHand($item);
+            (new LootboxAnimationScreen($player, $box))->display($player);
             return;
         }
 
@@ -822,7 +841,7 @@ final class ItemListener implements Listener {
             $itemTag = $glaciaTag->getString("glaciaItem");
             $player = $transaction->getSource();
 
-            if ($itemTag !== "whitescroll" && $itemTag !== "blackscroll" && !str_contains($itemTag, "orb")) {
+            if ($itemTag !== "whitescroll" && $itemTag !== "blackscroll" && $itemTag !== "transmog" && !str_contains($itemTag, "orb")) {
                 continue;
             }
 
@@ -863,6 +882,25 @@ final class ItemListener implements Listener {
                 $player->sendMessage(C::colorize("&aWhite Scroll applied! Your item is now protected."));
                 PlayerUtils::playSound($player, "random.levelup");
                 $action->getInventory()->setItem($action->getSlot(), $itemClicked);
+                return;
+            }
+
+            if ($itemTag === "transmog") {
+                $itemRoot = $itemClicked->getNamedTag()->getCompoundTag("Glacia") ?? new CompoundTag();
+
+                if ($itemRoot->getByte("transmog", 0) === 1) {
+                    $player->sendMessage(C::colorize("&cThis item already has a Transmog Scroll applied."));
+                    return;
+                }
+
+                $itemRoot->setByte("transmog", 1);
+                $itemClicked->getNamedTag()->setTag("Glacia", $itemRoot);
+
+                $otherAction->getInventory()->setItem($otherAction->getSlot(), VanillaItems::AIR());
+                $action->getInventory()->setItem($action->getSlot(), $itemClicked);
+
+                $player->sendMessage(C::colorize("&aTransmog Scroll applied! This item's enchants will now be ordered by rarity."));
+                PlayerUtils::playSound($player, "random.levelup");
                 return;
             }
 

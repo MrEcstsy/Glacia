@@ -127,6 +127,28 @@ final class GlaciaItems {
                 ],
                 'nbt' => ['glaciaItem' => 'renametag'],
             ],
+            'transmog_scroll' => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&e&lTransmog Scroll',
+                'lore' => [
+                    '&r&7Organizes enchants by &erarity &7on item',
+                    '&r&7and adds the lore &bcount &7to name.',
+                    '',
+                    '&r&ePlace scroll on item to apply.',
+                ],
+                'nbt' => ['glaciaItem' => 'transmog'],
+            ],
+            'transmog' => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&e&lTransmog Scroll',
+                'lore' => [
+                    '&r&7Organizes enchants by &erarity &7on item',
+                    '&r&7and adds the &dlore &bcount &7to name.',
+                    '',
+                    '&r&ePlace scroll on item to apply.',
+                ],
+                'nbt' => ['glaciaItem' => 'transmog'],
+            ],
             'random_book' => [
                 'material' => VanillaItems::BOOK(),
                 'name' => '&r{group-color}{group-name}&l Enchantment Book &r&7(Right Click)',
@@ -442,13 +464,13 @@ final class GlaciaItems {
         GlaciaItemFactory::$definitions += [
             "phantom_helmet" => [
                 'material' => VanillaItems::DIAMOND_HELMET(),
-                'name' => '&r&l&cPhantom Hood',
+                'name' => '&r&l&5Dreadveil Hood',
                 'lore' => [
-                    '&r&c&oThe fabled hood of the phantom.',
+                    '&r&5&oThe fabled hood of the Dreadveil.',
                     '',
-                    '&r&l&cPHANTOM SET BONUS',
-                    '&r&l&c* &r&cDeal +15% damage to all enemies.',
-                    '&r&7&o(Requires all 4 phantom items.)'
+                    '&r&l&5DREADVEIL SET BONUS',
+                    '&r&l&5* &r&5Deal +15% damage to all enemies.',
+                    '&r&7&o(Requires all 4 Dreadveil items.)'
                 ],
                 'nbt' => [
                     'glaciaItem' => 'phantom_helmet',
@@ -459,13 +481,13 @@ final class GlaciaItems {
             ],
             "phantom_chestplate" => [
                 'material' => VanillaItems::DIAMOND_CHESTPLATE(),
-                'name' => '&r&l&cPhantom Shroud',
+                'name' => '&r&l&5Dreadveil Shroud',
                 'lore' => [
-                    '&r&c&oThe legendary shroud of the phantom.',
+                    '&r&5&oThe legendary shroud of the Dreadveil.',
                     '',
-                    '&r&l&cPHANTOM SET BONUS',
-                    '&r&l&c* &r&cDeal +15% damage to all enemies.',
-                    '&r&7&o(Requires all 4 phantom items.)'
+                    '&r&l&5DREADVEIL SET BONUS',
+                    '&r&l&5* &r&5Deal +15% damage to all enemies.',
+                    '&r&7&o(Requires all 4 Dreadveil items.)'
                 ],
                 'nbt' => [
                     'glaciaItem' => 'phantom_chestplate',
@@ -476,13 +498,13 @@ final class GlaciaItems {
             ],
             'phantom_leggings' => [
                 'material' => VanillaItems::DIAMOND_LEGGINGS(),
-                'name' => '&r&l&cPhantom Robeset',
+                'name' => '&r&l&5Dreadveil Legwraps',
                 'lore' => [
-                    '&r&c&oThe demonic robe of the phantom.',
+                    '&r&5&oThe shadowwoven legwraps of the Dreadveil.',
                     '',
-                    '&r&l&cPHANTOM SET BONUS',
-                    '&r&l&c* &r&cDeal +15% damage to all enemies.',
-                    '&r&7&o(Requires all 4 phantom items.)'
+                    '&r&l&5DREADVEIL SET BONUS',
+                    '&r&l&5* &r&5Deal +15% damage to all enemies.',
+                    '&r&7&o(Requires all 4 Dreadveil items.)'
                 ],
                 'nbt' => [
                     'glaciaItem' => 'phantom_leggings',
@@ -493,13 +515,13 @@ final class GlaciaItems {
             ],
             'phantom_boots' => [
                 'material' => VanillaItems::DIAMOND_BOOTS(),
-                'name' => '&r&l&cPhantom Sandals',
+                'name' => '&r&l&5Dreadveil Treads',
                 'lore' => [
-                    '&r&c&oThe silent sandals of the phantom.',
+                    '&r&5&oThe silent treads of the Dreadveil.',
                     '',
-                    '&r&l&cPHANTOM SET BONUS',
-                    '&r&l&c* &r&cDeal +15% damage to all enemies.',
-                    '&r&7&o(Requires all 4 phantom items.)'
+                    '&r&l&5DREADVEIL SET BONUS',
+                    '&r&l&5* &r&5Deal +15% damage to all enemies.',
+                    '&r&7&o(Requires all 4 Dreadveil items.)'
                 ],
                 'nbt' => [
                     'glaciaItem' => 'phantom_boots',
@@ -510,14 +532,14 @@ final class GlaciaItems {
             ],
             'phantom_sword' => [
                 'material' => VanillaItems::DIAMOND_SWORD(),
-                'name' => '&r&l&cPhantom Scythe',
+                'name' => '&r&l&5Dreadveil Reaper',
                 'lore' => [
-                    '&r&c&oAn eerie blade designed to',
-                    '&r&c&ocut through the enemies.',
+                    '&r&5&oAn eerie blade forged to',
+                    '&r&5&ocleave through the living.',
                     '',
-                    '&r&l&cPHANTOM WEAPON BONUS',
-                    '&r&l&c* &r&cDeal +5% damage to all enemies.',
-                    '&r&7&o(Requires all 4 phantom items.)'
+                    '&r&l&5DREADVEIL WEAPON BONUS',
+                    '&r&l&5* &r&5Deal +5% damage to all enemies.',
+                    '&r&7&o(Requires all 4 Dreadveil items.)'
                 ],
                 'nbt' => [
                     'glaciaItem' => 'phantom_weapon',
@@ -528,14 +550,14 @@ final class GlaciaItems {
             ],
             "yeti_helmet" => [
                 'material' => VanillaItems::DIAMOND_HELMET(),
-                'name' => '&r&l&bYeti Facemask',
+                'name' => '&r&l&bFrostbound Visage',
                 'lore' => [
-                    '&r&b&oThe savage mask of the yeti.',
+                    '&r&b&oThe savage visage of the Frostbound.',
                     '',
-                    '&r&l&bYETI SET BONUS',
+                    '&r&l&bFROSTBOUND SET BONUS',
                     '&r&l&b* &r&bDeal +10% damage to all enemies.',
                     '&r&l&b* &r&bEnemies Deal 5% less damage to you.',
-                    '&r&7&o(Requires all 4 yeti items.)'
+                    '&r&7&o(Requires all 4 Frostbound items.)'
                 ],
                 'nbt' => [
                     'glaciaItem' => 'yeti_helmet',
@@ -546,14 +568,14 @@ final class GlaciaItems {
             ],
             "yeti_chestplate" => [
                 'material' => VanillaItems::DIAMOND_CHESTPLATE(),
-                'name' => '&r&l&bBloody Yeti Torso',
+                'name' => '&r&l&bFrostbound Carapace',
                 'lore' => [
-                    '&r&bThe Impermeable chestplate of the yeti.',
+                    '&r&b&oThe impermeable chestplate of the Frostbound.',
                     '',
-                    '&r&l&bYETI SET BONUS',
+                    '&r&l&bFROSTBOUND SET BONUS',
                     '&r&l&b* &r&bDeal +10% damage to all enemies.',
                     '&r&l&b* &r&bEnemies Deal 5% less damage to you.',
-                    '&r&7&o(Requires all 4 yeti items.)'
+                    '&r&7&o(Requires all 4 Frostbound items.)'
                 ],
                 'nbt' => [
                     'glaciaItem' => 'yeti_chestplate',
@@ -564,14 +586,14 @@ final class GlaciaItems {
             ],
             'yeti_leggings' => [
                 'material' => VanillaItems::DIAMOND_LEGGINGS(),
-                'name' => '&r&l&bFuzzy Yeti Leggings',
+                'name' => '&r&l&bFrostbound Leggings',
                 'lore' => [
-                    '&r&b&oThe cozy yet monstrous legs of the yeti.',
+                    '&r&b&oThe frost-lined leggings of the Frostbound.',
                     '',
-                    '&r&l&bYETI SET BONUS',
+                    '&r&l&bFROSTBOUND SET BONUS',
                     '&r&l&b* &r&bDeal +10% damage to all enemies.',
                     '&r&l&b* &r&bEnemies Deal 5% less damage to you.',
-                    '&r&7&o(Requires all 4 yeti items.)'
+                    '&r&7&o(Requires all 4 Frostbound items.)'
                 ],
                 'nbt' => [
                     'glaciaItem' => 'yeti_leggings',
@@ -582,14 +604,14 @@ final class GlaciaItems {
             ],
             'yeti_boots' => [
                 'material' => VanillaItems::DIAMOND_BOOTS(),
-                'name' => '&r&l&bBig-Yeti Boots',
+                'name' => '&r&l&bFrostbound Greaves',
                 'lore' => [
-                    '&r&b&oBigfoot has nothing on these boots.',
+                    '&r&b&oBoots hardened by the deepest frost.',
                     '',
-                    '&r&l&bYETI SET BONUS',
+                    '&r&l&bFROSTBOUND SET BONUS',
                     '&r&l&b* &r&bDeal +10% damage to all enemies.',
                     '&r&l&b* &r&bEnemies Deal 5% less damage to you.',
-                    '&r&7&o(Requires all 4 yeti items.)'
+                    '&r&7&o(Requires all 4 Frostbound items.)'
                 ],
                 'nbt' => [
                     'glaciaItem' => 'yeti_boots',
@@ -600,13 +622,13 @@ final class GlaciaItems {
             ],
             'yeti_sword' => [
                 'material' => VanillaItems::DIAMOND_AXE(),
-                'name' => '&r&l&bYeti Maul',
+                'name' => '&r&l&bFrostbound Maul',
                 'lore' => [
-                    '&r&b&oA Penetrating axe used by a Yeti.',
+                    '&r&b&oA crushing maul wielded by the Frostbound.',
                     '',
-                    '&r&l&bYETI SET BONUS',
+                    '&r&l&bFROSTBOUND WEAPON BONUS',
                     '&r&l&b* &r&bDeal +15% durability damage.',
-                    '&r&7&o(Requires all 4 yeti items.)'
+                    '&r&7&o(Requires all 4 Frostbound items.)'
                 ],
                 'nbt' => [
                     'glaciaItem' => 'yeti_sword',
@@ -617,15 +639,15 @@ final class GlaciaItems {
             ],
             "yijki_helmet" => [
                 'material' => VanillaItems::DIAMOND_HELMET(),
-                'name' => '&r&l&fMask of Yijki',
+                'name' => '&r&l&3Stormcaller Mask',
                 'lore' => [
-                    '&r&f&oThe god-mask of Yijki, imbued with',
-                    '&r&f&othe power of absolute destruction.',
+                    '&r&3&oThe thunderbound mask of the Stormcaller,',
+                    '&r&3&oimbued with the force of the heavens.',
                     '',
-                    '&r&l&fYIJKI SET BONUS',
-                    '&r&l&f* &r&fEnemies deal 20% less damage to you',
-                    '&r&l&f* &r&fRevenge of Yijki Passive Ability',
-                    '&r&7&o(Requires all 4 yijki items.)'
+                    '&r&l&3STORMCALLER SET BONUS',
+                    '&r&l&3* &r&3Enemies deal 20% less damage to you',
+                    '&r&l&3* &r&3Tempest Surge Passive Ability',
+                    '&r&7&o(Requires all 4 Stormcaller items.)'
                 ],
                 'nbt' => [
                     'glaciaItem' => 'yijki_helmet',
@@ -636,15 +658,15 @@ final class GlaciaItems {
             ],
             "yijki_chestplate" => [
                 'material' => VanillaItems::DIAMOND_CHESTPLATE(),
-                'name' => '&r&l&fMantel of Yijki',
+                'name' => '&r&l&3Stormcaller Mantle',
                 'lore' => [
-                    '&r&f&oThe forbidden mantel of Yijki,',
-                    '&r&f&owoven from the dust of fallen stars.',
+                    '&r&3&oThe charged mantle of the Stormcaller,',
+                    '&r&3&owoven from stormglass and fallen stars.',
                     '',
-                    '&r&l&fYIJKI SET BONUS',
-                    '&r&l&f* &r&fEnemies deal 20% less damage to you',
-                    '&r&l&f* &r&fRevenge of Yijki Passive Ability',
-                    '&r&7&o(Requires all 4 yijki items.)'
+                    '&r&l&3STORMCALLER SET BONUS',
+                    '&r&l&3* &r&3Enemies deal 20% less damage to you',
+                    '&r&l&3* &r&3Tempest Surge Passive Ability',
+                    '&r&7&o(Requires all 4 Stormcaller items.)'
                 ],
                 'nbt' => [
                     'glaciaItem' => 'yijki_chestplate',
@@ -655,15 +677,15 @@ final class GlaciaItems {
             ],
             'yijki_leggings' => [
                 'material' => VanillaItems::DIAMOND_LEGGINGS(),
-                'name' => '&r&l&fRobeset of Yijki',
+                'name' => '&r&l&3Stormcaller Vestments',
                 'lore' => [
-                    '&r&f&oThe fabled robes of Yijki,',
-                    '&r&f&ohalf angelic, half demonic.',
+                    '&r&3&oThe crackling vestments of the Stormcaller,',
+                    '&r&3&odraped in living static.',
                     '',
-                    '&r&l&fYIJKI SET BONUS',
-                    '&r&l&f* &r&fEnemies deal 20% less damage to you',
-                    '&r&l&f* &r&fRevenge of Yijki Passive Ability',
-                    '&r&7&o(Requires all 4 yijki items.)'
+                    '&r&l&3STORMCALLER SET BONUS',
+                    '&r&l&3* &r&3Enemies deal 20% less damage to you',
+                    '&r&l&3* &r&3Tempest Surge Passive Ability',
+                    '&r&7&o(Requires all 4 Stormcaller items.)'
                 ],
                 'nbt' => [
                     'glaciaItem' => 'yijki_leggings',
@@ -674,15 +696,15 @@ final class GlaciaItems {
             ],
             'yijki_boots' => [
                 'material' => VanillaItems::DIAMOND_BOOTS(),
-                'name' => '&r&l&fFootwraps of Yijki',
+                'name' => '&r&l&3Stormcaller Striders',
                 'lore' => [
-                    '&r&f&oLight as a feather, heavy as',
-                    '&r&f&oas a mountain. - the footwraps of Yijki.',
+                    '&r&3&oSwift as lightning, steady as thunder.',
+                    '&r&3&oThe striders of the Stormcaller endure all.',
                     '',
-                    '&r&l&fYIJKI SET BONUS',
-                    '&r&l&f* &r&fEnemies deal 20% less damage to you',
-                    '&r&l&f* &r&fRevenge of Yijki Passive Ability',
-                    '&r&7&o(Requires all 4 yijki items.)'
+                    '&r&l&3STORMCALLER SET BONUS',
+                    '&r&l&3* &r&3Enemies deal 20% less damage to you',
+                    '&r&l&3* &r&3Tempest Surge Passive Ability',
+                    '&r&7&o(Requires all 4 Stormcaller items.)'
                 ],
                 'nbt' => [
                     'glaciaItem' => 'yijki_boots',
@@ -693,16 +715,16 @@ final class GlaciaItems {
             ],
             'yijki_sword' => [
                 'material' => VanillaItems::DIAMOND_SWORD(),
-                'name' => "&r&l&fYijki's World Ender",
+                'name' => "&r&l&3Stormcaller's Worldsplitter",
                 'lore' => [
-                    '&r&f&oAn absolutely massive, corrupted',
-                    '&r&f&oexecutioner blade imbued with',
-                    '&r&f&ohighly destrutive dark magic.',
+                    '&r&3&oAn immense blade humming with',
+                    '&r&3&oraging skies and catastrophic force.',
+                    '&r&3&oEach swing carries the storm.',
                     '',
-                    '&r&l&fYIJKI WEAPON BONUS',
-                    '&r&l&f* &r&fDeal +10% damage to all enemies',
-                    '&r&l&f* &r&f125% Revenge Of Yijki Ability',
-                    '&r&7&o(Requires all 4 yijki items.)'
+                    '&r&l&3STORMCALLER WEAPON BONUS',
+                    '&r&l&3* &r&3Deal +10% damage to all enemies',
+                    '&r&l&3* &r&3125% Tempest Surge Ability',
+                    '&r&7&o(Requires all 4 Stormcaller items.)'
                 ],
                 'nbt' => [
                     'glaciaItem' => 'yijki_sword',

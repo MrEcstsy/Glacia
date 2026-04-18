@@ -87,7 +87,12 @@ final class BragScreen
 
     public static function display(Player $player): void
     {
-        (new self($player))->getMenu()->send($player);
+        self::displayTo($player, $player);
+    }
+
+    public static function displayTo(Player $viewer, Player $target): void
+    {
+        (new self($target))->getMenu()->send($viewer);
     }
 
     public function getMenu(): InvMenu

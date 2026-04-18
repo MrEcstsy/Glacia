@@ -417,7 +417,7 @@ final class GlaciaListener implements Listener {
 
     public function onPlayerDeath(PlayerDeathEvent $event): void {
         $player = $event->getPlayer();
-        BackLocationManager::store($player, $player->getPosition(), $player->getLocation()->getYaw(), $player->getLocation()->getPitch());
+        BackLocationManager::store($player, $player->getLocation());
         $xpDrop = $player->getXpDropAmount();
         $xpBottle = GlaciaItemFactory::xpNote($player, $xpDrop);
 
@@ -435,7 +435,7 @@ final class GlaciaListener implements Listener {
             return;
         }
 
-        BackLocationManager::store($entity, $event->getFrom(), $event->getFrom()->getYaw(), $event->getFrom()->getPitch());
+        BackLocationManager::store($entity, $event->getFrom());
     }
 
     public function onSpawnerPlace(BlockPlaceEvent $event) : void {

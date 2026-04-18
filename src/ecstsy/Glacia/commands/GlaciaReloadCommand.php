@@ -9,6 +9,7 @@ use CortexPE\Commando\args\RawStringArgument;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\blackmarket\BlackMarketAuctionManager;
 use ecstsy\Glacia\server\economy\SellHandler;
+use ecstsy\Glacia\server\lootboxes\LootboxRepository;
 use ecstsy\Glacia\server\quests\QuestInstance;
 use ecstsy\Glacia\server\spawners\SpawnerWorthManager;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
@@ -18,7 +19,7 @@ use pocketmine\utils\TextFormat as C;
 final class GlaciaReloadCommand extends BaseCommand {
 
     private const TARGETS = [
-        "all" => ["items.yml", "shop.yml", "sell.yml", "kits.yml", "blackmarket.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml", "dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "config.yml"],
+        "all" => ["items.yml", "shop.yml", "sell.yml", "kits.yml", "blackmarket.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml", "lootboxes/example.yml", "dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "config.yml"],
         "items" => ["items.yml"],
         "shop" => ["shop.yml"],
         "sell" => ["sell.yml"],
@@ -29,6 +30,7 @@ final class GlaciaReloadCommand extends BaseCommand {
         "quests" => ["quests.yml"],
         "spawners" => ["spawners.yml"],
         "misc" => ["misc.yml"],
+        "lootboxes" => ["lootboxes/example.yml"],
         "dps" => ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml"],
         "config" => ["config.yml"],
     ];
@@ -44,6 +46,7 @@ final class GlaciaReloadCommand extends BaseCommand {
         "quests.yml",
         "spawners.yml",
         "misc.yml",
+        "lootboxes/example.yml",
         "dps/Simple.yml",
         "dps/Unique.yml",
         "dps/Elite.yml",
@@ -64,7 +67,7 @@ final class GlaciaReloadCommand extends BaseCommand {
         $target = strtolower((string) ($args["target"] ?? "all"));
 
         if (!isset(self::TARGETS[$target])) {
-            $sender->sendMessage(C::colorize("&r&cUnknown target. Use: all, items, shop, sell, kits, blackmarket, enchanter, auctionhouse, quests, spawners, misc, dps, config"));
+            $sender->sendMessage(C::colorize("&r&cUnknown target. Use: all, items, shop, sell, kits, blackmarket, enchanter, auctionhouse, quests, spawners, misc, lootboxes, dps, config"));
             return;
         }
 
@@ -84,7 +87,7 @@ final class GlaciaReloadCommand extends BaseCommand {
                 return;
         }
 
-        $sender->sendMessage(C::colorize("&r&cUsage: /greload <reload|restore> [all|items|shop|sell|kits|blackmarket|enchanter|auctionhouse|quests|spawners|misc|dps|config]"));
+        $sender->sendMessage(C::colorize("&r&cUsage: /greload <reload|restore> [all|items|shop|sell|kits|blackmarket|enchanter|auctionhouse|quests|spawners|misc|lootboxes|dps|config]"));
     }
 
     private function restoreFiles(array $files): int {
@@ -129,6 +132,10 @@ final class GlaciaReloadCommand extends BaseCommand {
         if (in_array("spawners.yml", $files, true)) {
             SpawnerWorthManager::loadFromConfig();
             Loader::getFactionManager()->recalculateSpawnerWorths();
+        }
+
+        if (array_filter($files, static fn(string $file): bool => str_starts_with($file, "lootboxes/")) !== []) {
+            LootboxRepository::reload();
         }
     }
 

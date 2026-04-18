@@ -1,0 +1,75 @@
+name: "&r&l&dArcane Cache"
+title: "&r&8Arcane Cache"
+aliases:
+  - "arcane"
+  - "cache"
+  - "ac"
+icon: "ender_chest"
+item-name: "&r&l&dArcane Cache"
+item-lore:
+  - "&r&7Right-click to open this lootbox."
+  - "&r&7Contains main, bonus, and jackpot loot."
+
+rolls:
+  - pool: "rewards"
+    count: 1
+    chance: 100
+  - pool: "bonus-rewards"
+    count: 1
+    chance: 35
+  - pool: "jackpot-rewards"
+    count: 1
+    chance: 8
+
+rewards:
+  - chance: 40
+    type: item
+    id: "xpnote"
+    amount: 25000
+
+  - chance: 30
+    type: item
+    id: "money_note"
+    amount: 500000
+
+  - chance: 15
+    type: item
+    id: "whitescroll"
+    count: 1
+
+  - chance: 15
+    type: item
+    id: "renametag"
+    count: 1
+
+bonus-rewards:
+  - chance: 50
+    type: item
+    id: "simplebook"
+    count: 1
+
+  - chance: 30
+    type: item
+    id: "uniquebook"
+    count: 1
+
+  - chance: 20
+    type: item
+    id: "elitedp"
+    count: 1
+
+jackpot-rewards:
+  - chance: 50
+    type: item
+    id: "mysterymobspawner"
+    count: 1
+
+  - chance: 30
+    type: item
+    id: "legendarydp"
+    count: 1
+
+  - chance: 20
+    type: item
+    id: "heroic_mysterymobspawner"
+    count: 1

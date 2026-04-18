@@ -7,6 +7,7 @@ namespace ecstsy\Glacia\commands\sub\items;
 use CortexPE\Commando\args\IntegerArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
+use ecstsy\Glacia\server\lootboxes\LootboxRepository;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
@@ -27,12 +28,16 @@ final class ListGlaciaItemsSubCommand extends BaseSubCommand {
         }
 
         $defs = GlaciaItemFactory::$definitions;
-        if (empty($defs)) {
+        $lootboxes = LootboxRepository::getLookupMap();
+        if (empty($defs) && empty($lootboxes)) {
             $sender->sendMessage(C::YELLOW . "No Glacia custom items are registered.");
             return;
         }
 
         $itemKeys = array_keys($defs);
+        foreach (array_keys($lootboxes) as $lootboxId) {
+            $itemKeys[] = "lootbox:" . $lootboxId;
+        }
         sort($itemKeys, SORT_NATURAL | SORT_FLAG_CASE);
 
         $totalItems = count($itemKeys);
@@ -55,6 +60,13 @@ final class ListGlaciaItemsSubCommand extends BaseSubCommand {
         $sender->sendMessage(C::GOLD . "=== Glacia Custom Items (Page {$page}/{$totalPages}) ===");
 
         foreach ($pageItems as $id) {
+            if (str_starts_with($id, "lootbox:")) {
+                $lootboxId = substr($id, 8);
+                $aliases = $lootboxes[$lootboxId] ?? [];
+                $sender->sendMessage(C::LIGHT_PURPLE . $lootboxId . C::GRAY . " - " . C::AQUA . "/gi lootbox 1 {$lootboxId}" . (count($aliases) > 1 ? C::GRAY . " [" . implode(", ", array_slice($aliases, 1)) . "]" : ""));
+                continue;
+            }
+
             $def = $defs[$id];
             $displayName = C::colorize((string) ($def["name"] ?? $id));
             $sender->sendMessage(C::AQUA . $id . C::GRAY . " - " . $displayName);

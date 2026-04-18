@@ -19,6 +19,7 @@ use ecstsy\Glacia\commands\CreateWarpCommand;
 use ecstsy\Glacia\commands\EcoCommand;
 use ecstsy\Glacia\commands\EnchanterCommand;
 use ecstsy\Glacia\commands\EnderChestCommand;
+use ecstsy\Glacia\commands\EnderSeeCommand;
 use ecstsy\Glacia\commands\EnchantmentsCommand;
 use ecstsy\Glacia\commands\ExpCommand;
 use ecstsy\Glacia\commands\FactionCommand;
@@ -29,8 +30,10 @@ use ecstsy\Glacia\commands\GiveItemCommand;
 use ecstsy\Glacia\commands\GraceCommand;
 use ecstsy\Glacia\commands\HomeCommand;
 use ecstsy\Glacia\commands\HomesCommand;
+use ecstsy\Glacia\commands\InvSeeCommand;
 use ecstsy\Glacia\commands\KickCommand;
 use ecstsy\Glacia\commands\ListWarpsCommand;
+use ecstsy\Glacia\commands\LootboxTestCommand;
 use ecstsy\Glacia\commands\PayCommand;
 use ecstsy\Glacia\commands\NearCommand;
 use ecstsy\Glacia\commands\PlayerVaultCommand;
@@ -44,17 +47,26 @@ use ecstsy\Glacia\commands\TPAAcceptCommand;
 use ecstsy\Glacia\commands\TPACommand;
 use ecstsy\Glacia\commands\TPADenyCommand;
 use ecstsy\Glacia\commands\TPAHereCommand;
+use ecstsy\Glacia\commands\TrashCommand;
+use ecstsy\Glacia\commands\ReapplyCommand;
+use ecstsy\Glacia\commands\WithdrawCommand;
 use ecstsy\Glacia\commands\WarpCommand;
 use ecstsy\Glacia\commands\XpBottleCommand;
 use ecstsy\Glacia\commands\BlessCommand;
 use ecstsy\Glacia\commands\CoinFlipCommand;
 use ecstsy\Glacia\commands\CollectCommand;
+use ecstsy\Glacia\commands\BroadcastCommand;
 use ecstsy\Glacia\commands\DupeCommand;
+use ecstsy\Glacia\commands\ClearChatCommand;
+use ecstsy\Glacia\commands\ClearInventoryCommand;
 use ecstsy\Glacia\commands\FeedCommand;
 use ecstsy\Glacia\commands\FlyCommand;
 use ecstsy\Glacia\commands\GamemodeCommand;
+use ecstsy\Glacia\commands\HatCommand;
 use ecstsy\Glacia\commands\HealCommand;
 use ecstsy\Glacia\commands\JackpotCommand;
+use ecstsy\Glacia\commands\MoreCommand;
+use ecstsy\Glacia\commands\PingCommand;
 use ecstsy\Glacia\commands\SeeBragCommand;
 use ecstsy\Glacia\commands\SeeItemCommand;
 use ecstsy\Glacia\commands\SettingsCommand;
@@ -138,6 +150,7 @@ use ecstsy\Glacia\server\FloatingTextInstance;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\server\items\GlaciaItems;
 use ecstsy\Glacia\server\items\GlaciaSpawnerItem;
+use ecstsy\Glacia\server\lootboxes\LootboxRepository;
 use ecstsy\Glacia\server\quests\QuestInstance;
 use ecstsy\Glacia\server\ranks\RankManager;
 use ecstsy\Glacia\server\ranks\RankProgressionManager;
@@ -225,10 +238,14 @@ final class GlaciaUtils
             new BalanceCommand($loader, "balance", "View your balance or another player's balance", ["bal"]),
             new BalTopCommand($loader, "baltop", "View the richest players on the server"),
             new PayCommand($loader, "pay", "Pay another player", ["p"]),
+            new WithdrawCommand($loader, "withdraw", "Withdraw money into a bank note", ["wd"]),
             new BackCommand($loader, "back", "Teleport to your previous location"),
             new NearCommand($loader, "near", "View nearby players"),
             new EnderChestCommand($loader, "enderchest", "Open your ender chest", ["ec"]),
+            new EnderSeeCommand($loader, "endersee", "View another player's ender chest", ["ecsee"]),
             new PlayerVaultCommand($loader, "pv", "Open a player vault", ["vault", "playervault"]),
+            new TrashCommand($loader, "trash", "Open a trash menu", ["bin", "dispose"]),
+            new InvSeeCommand($loader, "invsee", "View another player's inventory"),
             new EcoCommand($loader, "eco", "Economy commands", ["economy"]),
             new HomeCommand($loader, "home", "Home commands"),
             new HomesCommand($loader, "homes", "List your homes"),
@@ -255,6 +272,7 @@ final class GlaciaUtils
             new XpBottleCommand($loader, "xpbottle", "Xp bottle commands", ["xpb"]),
             new FixAllCommand($loader, "fixall", "Repair all damaged items in your inventory", ["repairall"]),
             new FixCommand($loader, "fix", "Repair the item in your hand", ["repair"]),
+            new ReapplyCommand($loader, "reapply", "Reapply equipped item effects"),
             new BlessCommand($loader, "bless", "Remove all negative effects"),
             new CoinFlipCommand($loader, "coinflip", "Flip a coin against another player", ["cf"]),
             new JackpotCommand($loader, "jackpot", "Jackpot commands", ["jp"]),
@@ -266,12 +284,19 @@ final class GlaciaUtils
             new FlyCommand($loader, "fly", "Toggle flight"),
             new GamemodeCommand($loader, "gamemode", "Change your gamemode", ["gm", "gms", "gmc", "gma", "gmsp"]),
             new FeedCommand($loader, "feed", "Feed yourself or another player"),
+            new PingCommand($loader, "ping", "View your ping or another player's ping"),
+            new HatCommand($loader, "hat", "Wear the item in your hand as a hat"),
+            new MoreCommand($loader, "more", "Set your held stack size"),
+            new BroadcastCommand($loader, "broadcast", "Broadcast a message", ["bc"]),
+            new ClearChatCommand($loader, "clearchat", "Clear the chat", ["cc"]),
+            new ClearInventoryCommand($loader, "clearinventory", "Clear a player's inventory", ["ci", "clearinv"]),
             new BlackMarketCommand($loader, "blackmarket", "Black market commands", ["bah"]),
             new AuctionHouseCommand($loader, "auctionhouse", "Auction house commands", ["ah"]),
             new CollectCommand($loader, "collect", "Collect items"),
             new ShopCommand($loader, "shop", "Open the shop"),
             new EnchanterCommand($loader, "enchanter", "Open the enchanter", ["ce"]),
             new SlotbotCommand($loader, "slotbot", "Open the slot bot", ["bot", "slot"]),
+            new LootboxTestCommand($loader, "lootboxtest", "Test a configured lootbox animation", ["lbtest"]),
             new GlaciaReloadCommand($loader, "greload", "Reload Glacia configs"),
             new KitCommand($loader, "kit", "Open the kit screen"),
         ]);
@@ -466,13 +491,14 @@ final class GlaciaUtils
         Loader::getInstance()->getScheduler()->scheduleRepeatingTask($autoPlantTask, 5  );
         AutoPlanterEnchant::setTask($autoPlantTask);
 
-        $files = ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml", "kits.yml", "slotbot.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml"];
+        $files = ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml", "kits.yml", "slotbot.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml", "lootboxes/example.yml"];
 
         foreach ($files as $file) {
             $loader->saveResource($file);
         }
 
         QuestInstance::loadFromConfig();
+        LootboxRepository::reload();
 
         SellHandler::registerDefaults();
         SpawnerWorthManager::loadFromConfig();
