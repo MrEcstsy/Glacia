@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\homes;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\player\GlaciaPlayer;
 use ecstsy\Glacia\utils\QueryStmts;
 use pocketmine\player\Player;
 use pocketmine\utils\SingletonTrait;
@@ -18,6 +19,8 @@ final class HomeManager
 
     /** @var Home[] */
     private array $homes = [];
+    /** @var array<string, int> */
+    private array $maxHomesByUuid = [];
 
     public function __construct(
         public Loader $plugin,
@@ -37,8 +40,10 @@ final class HomeManager
     {
         Loader::getDatabase()->executeSelect(QueryStmts::SERVER_HOMES_SELECT, [], function (array $rows) : void {
             foreach ($rows as $row) {
+                $uuid = (string) $row["uuid"];
+                $this->maxHomesByUuid[$uuid] = max((int) ($this->maxHomesByUuid[$uuid] ?? $this->limit), (int) $row["max_homes"]);
                 $this->homes[] = new Home(
-                    Uuid::fromString($row["uuid"]),
+                    Uuid::fromString($uuid),
                     $row["home_name"],
                     $row["world_name"],
                     $row["x"],
@@ -60,15 +65,25 @@ final class HomeManager
      */
     public function createHome(Player $player, string $home_name) : void
     {
+        $uuid = $player->getUniqueId()->toString();
+        $currentHomes = $this->getHomeList($player->getUniqueId()) ?? [];
+        if (count($currentHomes) >= $this->getMaxHomes($player->getUniqueId())) {
+            throw new \RuntimeException("You have reached your max home limit.");
+        }
+
+        if ($this->getPlayerHome($player->getUniqueId(), $home_name) !== null) {
+            throw new \RuntimeException("A home with that name already exists.");
+        }
+
         $pos  = $player->getPosition();
         $args = [
-            "uuid"       => $player->getUniqueId()->toString(),
+            "uuid"       => $uuid,
             "home_name"  => $home_name,
             "world_name" => $player->getWorld()->getFolderName(),
             "x"          => $pos->getFloorX(),
             "y"          => $pos->getFloorY(),
             "z"          => $pos->getFloorZ(),
-            "max_homes"      => $this->limit
+            "max_homes"      => $this->getMaxHomes($player->getUniqueId())
         ];
 
         Loader::getDatabase()->executeInsert(QueryStmts::SERVER_HOMES_CREATE, $args);
@@ -166,27 +181,50 @@ final class HomeManager
 
     public function addMaxHomes(UuidInterface $uuid, int $amount = 1): void
     {
-        $this->limit += $amount;
-        $this->updateDb($uuid);
+        $current = $this->getMaxHomes($uuid);
+        $this->setMaxHomes($uuid, $current + $amount);
     }
 
     public function setMaxHomes(UuidInterface $uuid, int $amount = 3): void
     {
-        $this->limit = $amount;
+        $maxHomes = max(1, $amount);
+        $this->maxHomesByUuid[$uuid->toString()] = $maxHomes;
+        if (($session = $this->getSession($uuid)) !== null) {
+            $session->setSetting("max_homes", $maxHomes);
+        }
         $this->updateDb($uuid);
     }
 
 
-    public function getMaxHomes() : int {
-        return $this->limit;
+    public function getMaxHomes(UuidInterface $uuid) : int {
+        if (($session = $this->getSession($uuid)) !== null) {
+            $setting = $session->getSetting("max_homes");
+            if (is_int($setting) || is_float($setting) || (is_string($setting) && is_numeric($setting))) {
+                return max(1, (int) $setting);
+            }
+        }
+
+        return $this->maxHomesByUuid[$uuid->toString()] ?? $this->limit;
     }
 
     private function updateDb(UuidInterface $uuid): void
     {
+        $maxHomes = $this->getMaxHomes($uuid);
         Loader::getDatabase()->executeChange(QueryStmts::SERVER_HOMES_UPDATE, [
             "uuid" => $uuid->toString(),
-            "max_homes" => $this->limit
+            "max_homes" => $maxHomes
         ]);
+
+        foreach ($this->homes as $home) {
+            if ($home->getUuid()->equals($uuid)) {
+                $home->limit = $maxHomes;
+            }
+        }
+    }
+
+    private function getSession(UuidInterface $uuid) : ?GlaciaPlayer
+    {
+        return Loader::getPlayerManager()->getSessionByUuid($uuid);
     }
 
 }

@@ -1,6 +1,7 @@
 settings:
   interval: 1800
   anti-snipe-seconds: 10
+  history-limit: 50
   bid-increments:
     default: 100000
     thresholds:
@@ -82,7 +83,8 @@ pool:
   mysteryspawner:
     chance: 6
     reward:
-      type: mysteryspawner
+      type: item
+      id: "mysterymobspawner"
       count: 1
     listing:
       name: "&dMystery Mob Spawner"

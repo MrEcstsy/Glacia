@@ -72,10 +72,16 @@ final class BlackMarketScreen extends BaseScreen {
 
             switch ($slot) {
                 case 0:
-                    $player->sendMessage(C::colorize("&r&7History screen soon!"));
+                    $player->removeCurrentWindow();
+                    $transaction->then(function() use ($player): void {
+                        BlackMarketHistoryScreen::display($player);
+                    });
                     break;
                 case 8:
-                    $player->sendMessage(C::colorize("&r&7Table screen soon!"));
+                    $player->removeCurrentWindow();
+                    $transaction->then(function() use ($player): void {
+                        BlackMarketLootTableScreen::display($player);
+                    });
                     break;
                 CASE self::CENTER_SLOT:
                     if(!Loader::getBlackMarketAuctionInstance()->isEnabled() || !Loader::getBlackMarketAuctionInstance()->hasStarted()){

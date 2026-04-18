@@ -17,6 +17,7 @@ use ecstsy\Glacia\entity\mobs\Pig;
 use ecstsy\Glacia\entity\mobs\Sheep;
 use ecstsy\Glacia\entity\mobs\Skeleton;
 use ecstsy\Glacia\entity\mobs\Slime;
+use ecstsy\Glacia\entity\mobs\SnowGolem;
 use ecstsy\Glacia\entity\mobs\Squid;
 use ecstsy\Glacia\entity\mobs\Zombie;
 use ecstsy\Glacia\entity\mobs\ZombiePigman;
@@ -50,6 +51,7 @@ final class EntityManager
         Zombie::class,
         ZombiePigman::class,
         Sheep::class,
+        SnowGolem::class,
     ];
 
     private array $entityIds = [];
@@ -100,6 +102,8 @@ final class EntityManager
                 return new ZombiePigman($location, $nbt);
             case Sheep::getNetworkTypeId():
                 return new Sheep($location, $nbt);
+            case SnowGolem::getNetworkTypeId():
+                return new SnowGolem($location, $nbt);
             default:
                 throw new GlobalRuntimeException("Invalid entity type id: $entityTypeId");
         }

@@ -188,6 +188,7 @@ final class RewardResolver {
             "chicken_spawner" => GlaciaItemFactory::mobSpawner("chicken"),
             "sheep_spawner" => GlaciaItemFactory::mobSpawner("sheep"),
             'spider_spawner' => GlaciaItemFactory::mobSpawner("spider"),
+            'snowman_spawner', 'snow_golem_spawner' => GlaciaItemFactory::mobSpawner("snowman"),
 
             'dormant_sigil' => GlaciaItemFactory::questSigil('dormant'),
             'awakened_sigil' => GlaciaItemFactory::questSigil('awakened'),

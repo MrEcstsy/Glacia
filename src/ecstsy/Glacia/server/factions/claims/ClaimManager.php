@@ -78,6 +78,7 @@ final class ClaimManager
 
         $claim = new FactionClaim($factionId, $chunkX, $chunkZ, $worldName);
         $this->claims[$key] = $claim;
+        Loader::getFactionManager()->recalculateSpawnerWorths();
         return $claim;
     }
 
@@ -92,6 +93,8 @@ final class ClaimManager
             "chunkX"     => $claim->getChunkX(),
             "chunkZ"     => $claim->getChunkZ(),
         ]);
+
+        Loader::getFactionManager()->recalculateSpawnerWorths();
     }
 
     public function deleteAllForFaction(string $factionId): void {
@@ -105,6 +108,8 @@ final class ClaimManager
         Loader::getDatabase()->executeChange(QueryStmts::FACTION_CLAIM_DELETE_FACTION, [
             "faction_id" => $factionId,
         ]);
+
+        Loader::getFactionManager()->recalculateSpawnerWorths();
     }
 
     private function makeKey(string $world, int $x, int $z): string {

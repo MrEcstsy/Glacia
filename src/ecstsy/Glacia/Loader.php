@@ -6,10 +6,12 @@ namespace ecstsy\Glacia;
 
 use CortexPE\Commando\PacketHooker;
 use ecstsy\Glacia\player\PlayerManager;
+use ecstsy\Glacia\server\auctionhouse\AuctionHouseManager;
 use ecstsy\Glacia\server\BlackMarketAuctionInstance;
 use ecstsy\Glacia\server\CoinFlipInstance;
 use ecstsy\Glacia\server\CombatManagerInstance;
 use ecstsy\Glacia\server\factions\FactionManager;
+use ecstsy\Glacia\server\factions\FactionXpBoosterManager;
 use ecstsy\Glacia\server\factions\relations\RelationManager;
 use ecstsy\Glacia\server\factions\role\FactionRoleManager;
 use ecstsy\Glacia\server\GraceInstance;
@@ -17,6 +19,7 @@ use ecstsy\Glacia\server\homes\HomeManager;
 use ecstsy\Glacia\server\JackpotInstance;
 use ecstsy\Glacia\server\ranks\RankManager;
 use ecstsy\Glacia\server\regions\RegionManager;
+use ecstsy\Glacia\server\vaults\PlayerVaultManager;
 use ecstsy\Glacia\server\warps\WarpManager;
 use ecstsy\Glacia\utils\ExtraVanillaBlocks;
 use ecstsy\Glacia\utils\GlaciaUtils;
@@ -46,6 +49,7 @@ final class Loader extends PluginBase {
     private static DataConnector $connector;
     private static PlayerManager $playerManager;
     private static FactionManager $factionManager;
+    private static FactionXpBoosterManager $factionXpBoosterManager;
     private static RankManager $rankManager;
     private static RelationManager $relationManager;
     private static FactionRoleManager $factionRoleManager;
@@ -57,6 +61,8 @@ final class Loader extends PluginBase {
     private static CombatManagerInstance $combatManager;
     private static JackpotInstance $jackpotInstance;
     private static CoinFlipInstance $coinFlipInstance;
+    private static AuctionHouseManager $auctionHouseManager;
+    private static PlayerVaultManager $playerVaultManager;
     private static BlockData $blockData;
 
     public function onLoad(): void {
@@ -82,11 +88,15 @@ final class Loader extends PluginBase {
         self::$connector->executeGeneric(QueryStmts::JACKPOT_INIT);
         self::$connector->executeGeneric(QueryStmts::JACKPOT_STATS_INIT);
         self::$connector->executeGeneric(QueryStmts::COMBAT_LOGGER_INIT);
+        self::$connector->executeGeneric(QueryStmts::AUCTION_HOUSE_LISTINGS_INIT);
+        self::$connector->executeGeneric(QueryStmts::AUCTION_HOUSE_COLLECTION_INIT);
+        self::$connector->executeGeneric(QueryStmts::PLAYER_VAULTS_INIT);
         self::$connector->waitAll();
 
         self::$regionManager = new RegionManager();
         self::$playerManager = new PlayerManager($this);
         self::$factionManager = new FactionManager($this);
+        self::$factionXpBoosterManager = new FactionXpBoosterManager();
         self::$relationManager = new RelationManager();
         self::$factionRoleManager = new FactionRoleManager();
         self::$rankManager = new RankManager();
@@ -97,6 +107,8 @@ final class Loader extends PluginBase {
         self::$combatManager = new CombatManagerInstance();
         self::$jackpotInstance = new JackpotInstance();
         self::$coinFlipInstance = new CoinFlipInstance($this);
+        self::$auctionHouseManager = new AuctionHouseManager();
+        self::$playerVaultManager = new PlayerVaultManager();
 
         GlaciaUtils::initAll($this);
 
@@ -150,6 +162,10 @@ final class Loader extends PluginBase {
         return self::$factionManager;
     }
 
+    public static function getFactionXpBoosterManager(): FactionXpBoosterManager {
+        return self::$factionXpBoosterManager;
+    }
+
     public static function getRelationManager(): RelationManager {
         return self::$relationManager;
     }
@@ -192,5 +208,13 @@ final class Loader extends PluginBase {
 
     public static function getBlackMarketAuctionInstance(): BlackMarketAuctionInstance {
         return self::$blackMarketAuctionInstance;
+    }
+
+    public static function getAuctionHouseManager(): AuctionHouseManager {
+        return self::$auctionHouseManager;
+    }
+
+    public static function getPlayerVaultManager(): PlayerVaultManager {
+        return self::$playerVaultManager;
     }
 }

@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\listeners;
 
-use ecstsy\Glacia\entity\mobs\Zombie;
 use ecstsy\Glacia\server\quests\QuestInstance;
-use ecstsy\Glacia\server\quests\QuestManager;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\block\utils\DyeColor;
 use pocketmine\data\bedrock\FireworkRocketTypeIdMap;
@@ -20,6 +18,8 @@ use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerItemUseEvent;
 use pocketmine\item\FireworkRocketExplosion;
 use pocketmine\item\FireworkRocketType;
+use pocketmine\nbt\tag\ByteTag;
+use pocketmine\nbt\tag\IntTag;
 use pocketmine\player\Player;
 use pocketmine\world\particle\LavaDripParticle;
 use pocketmine\world\particle\LavaParticle;
@@ -34,7 +34,8 @@ final class QuestListener implements Listener {
         if ($nbt === null || !$nbt->getTag("glacia_quest_tier")) return;
 
         $tier = $nbt->getString("glacia_quest_tier");
-        $isComplete = $nbt->getByte("glacia_quest_complete", 0) === 1;
+        $completeTag = $nbt->getTag("glacia_quest_complete");
+        $isComplete = ($completeTag instanceof ByteTag || $completeTag instanceof IntTag) && $completeTag->getValue() === 1;
 
         if (!$isComplete) {
             $player->sendMessage("§cThis quest is not complete yet!");
@@ -50,13 +51,12 @@ final class QuestListener implements Listener {
             return;
         }
 
-        $rewards = $tierData['rewards'] ?? [];
-        if (empty($rewards)) {
+        $reward = QuestInstance::rollReward($tier, $player);
+        if ($reward === null) {
             $player->sendMessage("§cNo rewards configured for this tier.");
             return;
         }
 
-        $reward = clone $rewards[array_rand($rewards)];
         $player->getInventory()->addItem($reward);
 
         $item->pop();
@@ -107,14 +107,24 @@ final class QuestListener implements Listener {
     }
 
     public function onEntityDeath(EntityDeathEvent $event): void {
-        QuestManager::get("kill")?->onEntityDeath($event);
+        $entity = $event->getEntity();
+        $cause = $entity->getLastDamageCause();
+
+        if (!$cause instanceof EntityDamageByEntityEvent) {
+            return;
+        }
+
+        $damager = $cause->getDamager();
+        if ($damager instanceof Player) {
+            QuestInstance::addProgress($damager, "kill", $entity, 1);
+        }
     }
 
     public function onBlockBreak(BlockBreakEvent $event): void {
-        QuestManager::get("mining")?->onBlockBreak($event);
+        QuestInstance::addProgress($event->getPlayer(), "mine", $event->getBlock()->asItem(), 1);
     }
 
     public function onBlockPlace(BlockPlaceEvent $event): void {
-        QuestManager::get("placing")?->onBlockPlace($event);
+        QuestInstance::addProgress($event->getPlayer(), "place", $event->getItem(), 1);
     }
 }

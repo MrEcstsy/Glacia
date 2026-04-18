@@ -1,0 +1,6 @@
+books:
+  simple: 5000
+  unique: 10000
+  elite: 25000
+  exotic: 50000
+  legendary: 100000

@@ -175,4 +175,26 @@ final class RankManager {
             }
         }
     }
+
+    public function isSameOrHigherThan(string $currentRank, string $targetRank): bool
+    {
+        $currentRank = strtolower($currentRank);
+        $targetRank = strtolower($targetRank);
+
+        if ($currentRank === $targetRank) {
+            return true;
+        }
+
+        $cursor = $this->getRank($currentRank);
+        while ($cursor !== null && $cursor->getParentKey() !== null) {
+            $parent = strtolower($cursor->getParentKey());
+            if ($parent === $targetRank) {
+                return true;
+            }
+
+            $cursor = $this->getRank($parent);
+        }
+
+        return false;
+    }
 }

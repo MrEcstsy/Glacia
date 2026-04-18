@@ -55,6 +55,10 @@ final class GlaciaItemFactory {
 
     public static function bankNote(?Player $player, int $amount): Item {
         $signer = $player?->getName() ?? 'Ethereal Hub';
+        return self::bankNoteSigned($signer, $amount);
+    }
+
+    public static function bankNoteSigned(string $signer, int $amount): Item {
         return self::create('bank_note', [
             'amount' => number_format($amount),
             'rawAmount' => $amount,
@@ -64,6 +68,10 @@ final class GlaciaItemFactory {
 
     public static function xpNote(?Player $player, int $amount): Item {
         $signer = $player?->getName() ?? 'Ethereal Hub';
+        return self::xpNoteSigned($signer, $amount);
+    }
+
+    public static function xpNoteSigned(string $signer, int $amount): Item {
         return self::create('xpnote', [
             'amount' => number_format($amount),
             'rawAmount' => $amount,
@@ -342,6 +350,15 @@ final class GlaciaItemFactory {
 
     public static function slotTicket(): Item {
         return self::create("slot_ticket");
+    }
+
+    public static function factionXpBooster(float $multiplier, string $duration): Item
+    {
+        $formattedMultiplier = rtrim(rtrim(number_format($multiplier, 2), "0"), ".");
+        return self::create("faction_xp_booster", [
+            "multiplier" => $formattedMultiplier,
+            "duration" => $duration
+        ]);
     }
 
     public static function getGlaciaIdentifier(Item $item): string

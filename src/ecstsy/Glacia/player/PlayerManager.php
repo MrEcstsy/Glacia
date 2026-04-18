@@ -61,7 +61,7 @@ final class PlayerManager {
             "power" => 100,
             "rank" => "frostborn",
             "settings" => json_encode([
-                'chest_inventories' => true, 'broadcasts' => true, 'loot_announcer' => true, 'quick_claim' => true
+                'chest_inventories' => true, 'broadcasts' => true, 'loot_announcer' => true, 'quick_claim' => true, 'max_homes' => 3
             ]),
             "buffs" => json_encode([]),
             "sell_multiplier" => 1,

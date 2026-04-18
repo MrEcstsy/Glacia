@@ -8,6 +8,7 @@ use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\factions\Faction;
 use ecstsy\Glacia\server\ranks\Rank;
 use ecstsy\Glacia\server\ranks\RankManager;
+use ecstsy\Glacia\server\scoreboard\ScoreboardHelper;
 use ecstsy\Glacia\utils\ChatTypes;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\Glacia\utils\QueryStmts;
@@ -86,6 +87,10 @@ final class GlaciaPlayer {
     public function setCurrentChat(string $chat): void
     {
         $this->chat = $chat;
+        $player = $this->getPlayer();
+        if ($player !== null) {
+            ScoreboardHelper::updateChatLine($player);
+        }
     }
 
     public function getBalance(): float {
@@ -106,16 +111,27 @@ final class GlaciaPlayer {
 
         $this->balance += $amountToAdd;
         $this->updateDb();
+        if ($player !== null) {
+            ScoreboardHelper::updateBalanceLine($player);
+        }
     }
 
     public function removeBalance(float $amount): void {
         $this->balance -= $amount;
         $this->updateDb();
+        $player = $this->getPlayer();
+        if ($player !== null) {
+            ScoreboardHelper::updateBalanceLine($player);
+        }
     }
 
     public function setBalance(float $amount): void {
         $this->balance = $amount;
         $this->updateDb();
+        $player = $this->getPlayer();
+        if ($player !== null) {
+            ScoreboardHelper::updateBalanceLine($player);
+        }
     }
 
     public function getFactionId(): ?string {
@@ -125,6 +141,10 @@ final class GlaciaPlayer {
     public function setFactionId(?string $factioId): void {
         $this->faction_id = $factioId;
         $this->updateDb();
+        $player = $this->getPlayer();
+        if ($player !== null) {
+            ScoreboardHelper::updateFactionLines($player);
+        }
     }
 
     public function getFactionRole(): ?string {
@@ -138,6 +158,10 @@ final class GlaciaPlayer {
     public function setFactionRole(?string $factionRole): void {
         $this->faction_role = $factionRole ?? null;
         $this->updateDb();
+        $player = $this->getPlayer();
+        if ($player !== null) {
+            ScoreboardHelper::updateFactionLines($player);
+        }
     }
 
     public function getFaction(): ?Faction {
@@ -162,6 +186,7 @@ final class GlaciaPlayer {
         $player = $this->getPlayer();
         if ($player !== null) {
             GlaciaUtils::refreshNametagsForTarget($player);
+            ScoreboardHelper::updateRankLine($player);
         }
     }
 
@@ -173,6 +198,7 @@ final class GlaciaPlayer {
         $player = $this->getPlayer();
         if ($player !== null) {
             GlaciaUtils::refreshNametagsForTarget($player);
+            ScoreboardHelper::updateFactionLines($player);
         }
     }
 
@@ -183,6 +209,11 @@ final class GlaciaPlayer {
     public function setPower(int $power): void {
         $this->power = $power;
         $this->updateDb();
+        $player = $this->getPlayer();
+        if ($player !== null) {
+            ScoreboardHelper::updatePowerLine($player);
+            ScoreboardHelper::updateFactionLines($player);
+        }
     }
 
     /**
@@ -408,15 +439,32 @@ final class GlaciaPlayer {
     public function setKills(int $kills): void {
         $this->kills = $kills;
         $this->updateDb();
+        $player = $this->getPlayer();
+        if ($player !== null) {
+            ScoreboardHelper::updateKDRLine($player);
+        }
     }
 
     public function getDeaths(): int {
         return $this->deaths;
     }
 
+    public function getKDRRatio(): float
+    {
+        if ($this->deaths <= 0) {
+            return (float) $this->kills;
+        }
+
+        return $this->kills / $this->deaths;
+    }
+
     public function setDeaths(int $deaths): void {
         $this->deaths = $deaths;
         $this->updateDb();
+        $player = $this->getPlayer();
+        if ($player !== null) {
+            ScoreboardHelper::updateKDRLine($player);
+        }
     }
 
     public function getSlotCredits(): int

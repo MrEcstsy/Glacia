@@ -163,6 +163,41 @@ final class BlackMarketAuctionManager {
         return (int)($this->config["settings"]["duration"] ?? 1800);
     }
 
+    public function getHistoryLimit(): int {
+        return max(1, (int) ($this->config["settings"]["history-limit"] ?? 50));
+    }
+
+    public function getPoolEntries(?Player $player = null): array {
+        $entries = [];
+
+        foreach (($this->config["pool"] ?? []) as $key => $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+
+            $rewardData = $entry["reward"] ?? null;
+            $listingData = $entry["listing"] ?? null;
+            if (!is_array($rewardData) || !is_array($listingData)) {
+                continue;
+            }
+
+            $reward = RewardResolver::resolveItem($rewardData, $player);
+            if (!$reward instanceof Item) {
+                continue;
+            }
+
+            $entries[] = [
+                "key" => (string) $key,
+                "chance" => (int) ($entry["chance"] ?? 0),
+                "name" => (string) ($listingData["name"] ?? $reward->getName()),
+                "item" => $reward,
+                "starting_bid" => max(1, GeneralUtils::parseRandomNumber($listingData["starting-bid"] ?? 100000))
+            ];
+        }
+
+        return $entries;
+    }
+
     public function formatBroadcast(string $key, array $replacements = []): string {
         $message = $this->getBroadcast($key);
 

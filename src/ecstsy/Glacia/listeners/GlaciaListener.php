@@ -15,8 +15,11 @@ use ecstsy\Glacia\server\factions\relations\RelationManager;
 use ecstsy\Glacia\server\GraceInstance;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\server\items\GlaciaSpawnerItem;
+use ecstsy\Glacia\server\player\BackLocationManager;
+use ecstsy\Glacia\server\items\rename\ItemRenameManager;
 use ecstsy\Glacia\server\quests\QuestInstance;
 use ecstsy\Glacia\server\ranks\RankManager;
+use ecstsy\Glacia\server\scoreboard\ScoreboardHelper;
 use ecstsy\Glacia\server\spawners\SpawnerData;
 use ecstsy\Glacia\utils\ChatTypes;
 use ecstsy\Glacia\utils\GlaciaUtils;
@@ -40,6 +43,7 @@ use pocketmine\event\player\PlayerItemConsumeEvent;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerLoginEvent;
 use pocketmine\event\player\PlayerQuitEvent;
+use pocketmine\event\entity\EntityTeleportEvent;
 use pocketmine\event\server\CommandEvent;
 use pocketmine\event\server\DataPacketReceiveEvent;
 use pocketmine\event\world\ChunkLoadEvent;
@@ -55,12 +59,20 @@ use pocketmine\Server;
 use pocketmine\utils\AssumptionFailedError;
 use pocketmine\utils\TextFormat as C;
 use pocketmine\world\sound\XpCollectSound;
+use Yanoox\ScoreBoardAPI;
 
 final class GlaciaListener implements Listener {
 
     private array $blockedDotSlashCmds = [
         "./f disband",
+        "./faction disband",
+        "./factions disband",
         "./cf",
+        "./coinflip",
+        "./settings",
+        "./glaciasettings",
+        "./ah sell",
+        "./auctionhouse sell",
     ];
 
     /** @var Player[] */
@@ -95,6 +107,7 @@ final class GlaciaListener implements Listener {
 
         GlaciaUtils::refreshNametagsForTarget($player);
         GlaciaUtils::updateScoreTag($player);
+        ScoreboardHelper::initScoreboard($player);
 
         $combatManager = Loader::getCombatManager();
         $combatManager->register($player);
@@ -113,6 +126,7 @@ final class GlaciaListener implements Listener {
     public function onLeave(PlayerQuitEvent $event): void {
         $player = $event->getPlayer();
         unset($this->online[$player->getUniqueId()->toString()]);
+        ItemRenameManager::abort($player);
 
         PlayerManager::getInstance()->getSession($player)->setConnected(false);
 
@@ -123,6 +137,10 @@ final class GlaciaListener implements Listener {
         }
 
         $combatManager->unregister($player);
+
+        if (ScoreBoardAPI::hasScore($player)) {
+            ScoreBoardAPI::removeScore($player);
+        }
 
         $event->setQuitMessage("");
     }
@@ -135,6 +153,10 @@ final class GlaciaListener implements Listener {
 
         $sender = $event->getPlayer();
         $message = $event->getMessage();
+
+        if (ItemRenameManager::handleChat($sender, $message)) {
+            return;
+        }
 
         $session = Loader::getPlayerManager()->getSession($sender);
 
@@ -395,6 +417,7 @@ final class GlaciaListener implements Listener {
 
     public function onPlayerDeath(PlayerDeathEvent $event): void {
         $player = $event->getPlayer();
+        BackLocationManager::store($player, $player->getPosition(), $player->getLocation()->getYaw(), $player->getLocation()->getPitch());
         $xpDrop = $player->getXpDropAmount();
         $xpBottle = GlaciaItemFactory::xpNote($player, $xpDrop);
 
@@ -404,6 +427,15 @@ final class GlaciaListener implements Listener {
         } elseif ($player->getXpManager()->getCurrentTotalXp() === 0) {
             return;
         }
+    }
+
+    public function onTeleport(EntityTeleportEvent $event): void {
+        $entity = $event->getEntity();
+        if (!$entity instanceof Player) {
+            return;
+        }
+
+        BackLocationManager::store($entity, $event->getFrom(), $event->getFrom()->getYaw(), $event->getFrom()->getPitch());
     }
 
     public function onSpawnerPlace(BlockPlaceEvent $event) : void {
@@ -539,6 +571,7 @@ final class GlaciaListener implements Listener {
         foreach ($chunk->getTiles() as $tile) {
             if ($tile instanceof SpawnerTile) {
                 $world->scheduleDelayedBlockUpdate($tile->getPosition(), 1);
+                $tile->refreshFactionWorthContribution();
             }
         }
     }

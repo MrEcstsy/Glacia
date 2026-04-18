@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\factions;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\blocks\tiles\SpawnerTile;
 use ecstsy\Glacia\server\factions\claims\ClaimManager;
 use ecstsy\Glacia\server\factions\member\FactionMember;
 use ecstsy\Glacia\utils\QueryStmts;
@@ -16,6 +17,7 @@ final class Faction {
 
     /** @var FactionMember[] */
     private array $members = [];
+    private int $spawnerWorth = 0;
 
     public function __construct(
         private string $factionId,
@@ -96,6 +98,59 @@ final class Faction {
 
     public function getClaimCount(): int {
         return count($this->getClaims());
+    }
+
+    public function getSpawnerWorth(): int
+    {
+        return max(0, $this->spawnerWorth);
+    }
+
+    public function getFactionValue(): int
+    {
+        return $this->getSpawnerWorth();
+    }
+
+    public function setSpawnerWorth(int $worth): void
+    {
+        $this->spawnerWorth = max(0, $worth);
+        $this->refreshFactionScoreboards();
+    }
+
+    public function adjustSpawnerWorth(int $delta): void
+    {
+        $this->spawnerWorth = max(0, $this->spawnerWorth + $delta);
+        $this->refreshFactionScoreboards();
+    }
+
+    public function recalculateSpawnerWorth(): void
+    {
+        $total = 0;
+
+        foreach ($this->getClaims() as $claim) {
+            $world = $claim->getWorld();
+            if ($world === null) {
+                continue;
+            }
+
+            if (!$world->isChunkLoaded($claim->getChunkX(), $claim->getChunkZ())) {
+                $world->loadChunk($claim->getChunkX(), $claim->getChunkZ());
+            }
+
+            $chunk = $world->getChunk($claim->getChunkX(), $claim->getChunkZ());
+            if ($chunk === null) {
+                continue;
+            }
+
+            foreach ($chunk->getTiles() as $tile) {
+                if ($tile instanceof SpawnerTile) {
+                    $total += $tile->getSpawnerValue() * $tile->getStackCount();
+                    $tile->refreshFactionWorthContribution();
+                }
+            }
+        }
+
+        $this->spawnerWorth = max(0, $total);
+        $this->refreshFactionScoreboards();
     }
 
     public function isOverclaimable(): bool {
@@ -256,5 +311,12 @@ final class Faction {
             "max_members" => $this->maxMembers,
             "base_power_cap" => $this->basePowerCap
         ]);
+    }
+
+    private function refreshFactionScoreboards(): void
+    {
+        foreach ($this->getOnlineMembers() as $member) {
+            \ecstsy\Glacia\server\scoreboard\ScoreboardHelper::updateFactionLines($member);
+        }
     }
 }

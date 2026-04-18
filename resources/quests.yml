@@ -1,0 +1,180 @@
+tiers:
+  dormant:
+    display: "Dormant"
+    material: "amethyst_shard"
+    color: "&b"
+    symbol: "*"
+    quests:
+      - type: "mine"
+        name: "Coal Miner I"
+        objectives:
+          - block: "coal_ore"
+            amount: 20
+      - type: "mine"
+        name: "Iron Miner I"
+        objectives:
+          - block: "iron_ore"
+            amount: 20
+      - type: "place"
+        name: "Builder I"
+        objectives:
+          - block: "stone"
+            amount: 25
+      - type: "kill"
+        name: "Zombie Slayer I"
+        objectives:
+          - entity: "zombie"
+            amount: 10
+      - type: "sell"
+        name: "Farmers Market I"
+        objectives:
+          - item: "wheat"
+            amount: 15
+    rewards:
+      - material: "iron_ingot"
+        count: 8
+      - material: "amethyst_shard"
+        count: 4
+      - id: "money_note"
+        amount: 5000
+      - id: "xpnote"
+        amount: 2500
+
+  awakened:
+    display: "Awakened"
+    material: "echo_shard"
+    color: "&5"
+    symbol: "*"
+    quests:
+      - type: "mine"
+        name: "Iron Miner II"
+        objectives:
+          - block: "iron_ore"
+            amount: 50
+      - type: "mine"
+        name: "Gold Miner I"
+        objectives:
+          - block: "gold_ore"
+            amount: 20
+      - type: "place"
+        name: "Builder II"
+        objectives:
+          - block: "oak_planks"
+            amount: 50
+      - type: "kill"
+        name: "Mob Slayer II"
+        objectives:
+          - entity: "zombie"
+            amount: 25
+      - type: "sell"
+        name: "Farmers Market II"
+        objectives:
+          - item: "wheat"
+            amount: 25
+          - item: "carrot"
+            amount: 32
+    rewards:
+      - material: "gold_ingot"
+        count: 6
+      - material: "emerald"
+        count: 2
+      - id: "money_note"
+        amount: 15000
+      - id: "xpnote"
+        amount: 7500
+
+  ascendent:
+    display: "Ascendent"
+    material: "nether_star"
+    color: "&e"
+    symbol: "*"
+    quests:
+      - type: "mine"
+        name: "Diamond Hunter"
+        objectives:
+          - block: "diamond_ore"
+            amount: 30
+          - block: "gold_ore"
+            amount: 50
+      - type: "place"
+        name: "Fortress Builder"
+        objectives:
+          - block: "obsidian"
+            amount: 50
+          - block: "stone_bricks"
+            amount: 50
+      - type: "kill"
+        name: "Elite Slayer"
+        objectives:
+          - entity: "zombie"
+            amount: 50
+          - entity: "blaze"
+            amount: 20
+      - type: "sell"
+        name: "Market Expert"
+        objectives:
+          - item: "carrot"
+            amount: 50
+          - item: "potato"
+            amount: 40
+    rewards:
+      - material: "diamond"
+        count: 5
+      - material: "gold_ingot"
+        count: 12
+      - id: "money_note"
+        amount: 50000
+      - id: "xpnote"
+        amount: 20000
+
+  eternal:
+    display: "Eternal"
+    material: "dragon_egg"
+    color: "&c"
+    symbol: "*"
+    quests:
+      - type: "mine"
+        name: "Master Miner"
+        objectives:
+          - block: "diamond_ore"
+            amount: 100
+          - block: "emerald_ore"
+            amount: 50
+          - block: "nether_quartz_ore"
+            amount: 75
+      - type: "place"
+        name: "Grand Architect"
+        objectives:
+          - block: "obsidian"
+            amount: 100
+          - block: "nether_bricks"
+            amount: 75
+          - block: "stone_bricks"
+            amount: 100
+      - type: "kill"
+        name: "Ultimate Slayer"
+        objectives:
+          - entity: "zombie"
+            amount: 100
+          - entity: "blaze"
+            amount: 50
+          - entity: "skeleton"
+            amount: 50
+      - type: "sell"
+        name: "Tycoon"
+        objectives:
+          - item: "carrot"
+            amount: 100
+          - item: "potato"
+            amount: 100
+          - item: "wheat"
+            amount: 150
+    rewards:
+      - material: "diamond"
+        count: 20
+      - material: "emerald"
+        count: 10
+      - id: "money_note"
+        amount: 250000
+      - id: "xpnote"
+        amount: 100000

@@ -77,10 +77,10 @@ final class FactionManager {
             $maxMembers,
             2500
         );
-        
-        $faction->addMember($id, Uuid::fromString($leaderUuid), "leader");
 
         $this->factions[$id] = $faction;
+
+        $faction->addMember($id, Uuid::fromString($leaderUuid), "leader");
         return $faction;
     }
 
@@ -103,5 +103,16 @@ final class FactionManager {
         Loader::getDatabase()->executeChange(QueryStmts::FACTIONS_DELETE, [
             "faction_id" => $id
         ]);
+    }
+
+    public function recalculateSpawnerWorths(): void
+    {
+        foreach ($this->factions as $faction) {
+            $faction->setSpawnerWorth(0);
+        }
+
+        foreach ($this->factions as $faction) {
+            $faction->recalculateSpawnerWorth();
+        }
     }
 }

@@ -77,6 +77,7 @@ final class GlaciaSpawnerItem {
             13 => "sheep",
             17 => "squid",
             20 => "iron_golem",
+            21 => "snowman",
             32 => "zombie",
             36 => "zombie_pigman",
             34 => "skeleton",
@@ -105,6 +106,22 @@ final class GlaciaSpawnerItem {
 
                 return $item;
             });
+
+            if ($shortName === "snowman") {
+                StringToItemParser::getInstance()->override("snow_golem_spawner", function() use ($legacyId, $shortName) {
+                    $item = clone self::MONSTER_SPAWNER()->asItem();
+                    $item = self::setSpawnerEntityId($item, $legacyId);
+
+                    $display = C::colorize("&r&b&l❄ Snowman &r&fSpawner ❄");
+                    $item->setCustomName($display);
+                    $item->setLore([
+                        C::colorize("&r&7Place this down to spawn"),
+                        C::colorize("&r&bSnowman&7 mobs!"),
+                    ]);
+
+                    return $item;
+                });
+            }
         }
     }
 

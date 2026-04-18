@@ -1,0 +1,16 @@
+sell-fee-percent: 1.0
+listing-duration: "60m"
+max-price: 9000000000
+guide-lines:
+  - "&r&7This is the auction house, here you can"
+  - "&r&7list items for sale and purchase items"
+  - "&r&7that others have listed for sale."
+  - ""
+  - "&r&7The auction is also a great way to make"
+  - "&r&7money by selling farmable items other"
+  - "&r&7players may be interested in buying."
+  - ""
+  - "&r&7All sell listings last for a max of &e{duration}"
+  - "&r&7unsold items are sent to your collection bin."
+  - ""
+  - "&r&7For more help, use &e/ah sell <price>"

@@ -12,6 +12,7 @@ use ecstsy\Glacia\commands\sub\items\ListGlaciaItemsSubCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
+use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
@@ -92,6 +93,24 @@ class GiveItemCommand extends BaseCommand {
                         'magicdust' => GlaciaItemFactory::magicDust($group, $percent),
                     };
                     break;
+                case 'faction_xp_booster':
+                    $multiplierInput = $args['extra1'] ?? null;
+                    $durationInput = $args['extra2'] ?? null;
+
+                    if ($multiplierInput === null || $durationInput === null) {
+                        $sender->sendMessage(C::RED . "Usage: /giveitem faction_xp_booster <amount> <multiplier> <duration>");
+                        return;
+                    }
+
+                    $multiplier = $this->parseMultiplier($multiplierInput);
+                    $durationSeconds = GeneralUtils::parseTimeString($durationInput);
+                    if ($multiplier <= 0 || $durationSeconds <= 0) {
+                        $sender->sendMessage(C::RED . "Multiplier and duration must both be greater than 0.");
+                        return;
+                    }
+
+                    $item = GlaciaItemFactory::factionXpBooster($multiplier, $durationInput);
+                    break;
 
                     case 'customarmor':
                         $set = $args['extra1'] ?? null;
@@ -148,5 +167,13 @@ class GiveItemCommand extends BaseCommand {
         } else {
             $sender->sendMessage(C::RED . "Could not create item: " . $itemName);
         }
+    }
+
+    private function parseMultiplier(string $input): float
+    {
+        $normalized = strtolower(trim($input));
+        $normalized = str_replace("x", "", $normalized);
+
+        return (float) $normalized;
     }
 }

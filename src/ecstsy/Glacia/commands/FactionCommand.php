@@ -32,6 +32,7 @@ use ecstsy\Glacia\commands\sub\factions\RenameSubCommand;
 use ecstsy\Glacia\commands\sub\factions\admin\SetPowerSubCommand;
 use ecstsy\Glacia\commands\sub\factions\MapSubCommand;
 use ecstsy\Glacia\commands\sub\factions\TransferSubCommand;
+use ecstsy\Glacia\commands\sub\factions\TopSubCommand;
 use ecstsy\Glacia\commands\sub\factions\WhoSubCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\utils\GlaciaUtils;
@@ -65,6 +66,7 @@ final class FactionCommand extends BaseCommand {
         $this->registerSubCommand(new DescriptionSubCommand($plugin, "description", "Set your faction's description"));
         $this->registerSubCommand(new RenameSubCommand($plugin, "rename", "Rename your faction"));
         $this->registerSubCommand(new TransferSubCommand($plugin, "transfer", "Transfer leadership of your faction"));
+        $this->registerSubCommand(new TopSubCommand($plugin, "top", "View the top factions"));
         $this->registerSubCommand(new AllyDenySubCommand($plugin, "allydeny", "Deny an alliance request from another faction", ["allyno", "allycancel"]));
         $this->registerSubCommand(new ForceClaimSubCommand($plugin, "forceclaim", "Force claim a chunk"));
         $this->registerSubCommand(new ForceUnclaimSubCommand($plugin, "forceunclaim", "Force unclaim a chunk"));

@@ -9,7 +9,9 @@ use ecstsy\Glacia\entity\EntityManager;
 use ecstsy\Glacia\entity\SpawnerEntity;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\items\GlaciaSpawnerItem;
+use ecstsy\Glacia\server\factions\claims\ClaimManager;
 use ecstsy\Glacia\server\spawners\SpawnerData;
+use ecstsy\Glacia\server\spawners\SpawnerWorthManager;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use pocketmine\block\tile\Spawnable;
 use pocketmine\data\bedrock\LegacyEntityIdToStringIdMap;
@@ -48,6 +50,7 @@ class SpawnerTile extends Spawnable
     private int $requiredPlayerRange = 16;
     private int $stackCount = 1;
     private int $maxStack = 10;
+    private int $recordedFactionWorth = 0;
 
     protected int $legacyEntityTypeId = 0;
     protected string $entityTypeId = ":";
@@ -138,6 +141,7 @@ class SpawnerTile extends Spawnable
 
         $world = $this->getPosition()->getWorld();
         $world->scheduleDelayedBlockUpdate($this->getPosition(), 1);
+        $this->refreshFactionWorthContribution();
     }
 
     public function canUpdate(): Bool
@@ -191,27 +195,14 @@ class SpawnerTile extends Spawnable
 
     public function getSpawnerValue(): int
     {
-        $values = [
-            "minecraft:chicken" => 500,
-            "minecraft:cow" => 1000,
-            "minecraft:pig" => 750,
-            "minecraft:squid" => 1000,
-            "minecraft:iron_golem" => 25000,
-            "minecraft:zombie" => 2000,
-            "minecraft:zombie_pigman" => 2000,
-            "minecraft:skeleton" => 2500,
-            "minecraft:slime" => 6000,
-            "minecraft:mooshroom" => 2000,
-            "minecraft:blaze" => 10000,
-        ];
-
-        return $values[$this->entityTypeId] ?? 0;
+        return SpawnerWorthManager::getWorth($this->entityTypeId);
     }
 
     public function setLegacyEntityId(int $id): self
     {
         $this->legacyEntityTypeId = $id;
         $this->entityTypeId = LegacyEntityIdToStringIdMap::getInstance()->legacyToString($id) ?? ':';
+        $this->refreshFactionWorthContribution();
         return $this;
     }
 
@@ -227,11 +218,14 @@ class SpawnerTile extends Spawnable
         if ($block instanceof CustomSpawner) {
             $block->setLegacyEntityId($this->legacyEntityTypeId);
         }
+
+        $this->refreshFactionWorthContribution();
     }
 
     public function setStackCount(int $count): void
     {
         $this->stackCount = max(1, min($count, $this->maxStack));
+        $this->refreshFactionWorthContribution();
     }
 
     public function setDelay(int $delay): void
@@ -253,6 +247,39 @@ class SpawnerTile extends Spawnable
     public function changeStackBy(int $delta): void
     {
         $this->setStackCount($this->stackCount + $delta);
+    }
+
+    public function refreshFactionWorthContribution(): void
+    {
+        if ($this->closed) {
+            return;
+        }
+
+        $claim = ClaimManager::getInstance()->getClaimAtPosition($this->getPosition());
+        $faction = $claim?->getFaction();
+        $currentWorth = $faction !== null ? ($this->getSpawnerValue() * $this->getStackCount()) : 0;
+
+        if ($faction === null) {
+            $this->recordedFactionWorth = 0;
+            return;
+        }
+
+        $delta = $currentWorth - $this->recordedFactionWorth;
+        if ($delta !== 0) {
+            $faction->adjustSpawnerWorth($delta);
+            $this->recordedFactionWorth = $currentWorth;
+        }
+    }
+
+    public function close(): void
+    {
+        if ($this->recordedFactionWorth > 0) {
+            $claim = ClaimManager::getInstance()->getClaimAtPosition($this->getPosition());
+            $claim?->getFaction()?->adjustSpawnerWorth(-$this->recordedFactionWorth);
+            $this->recordedFactionWorth = 0;
+        }
+
+        parent::close();
     }
 
     public function addToStackFromPlayerInventory(Player $player, int $count): int

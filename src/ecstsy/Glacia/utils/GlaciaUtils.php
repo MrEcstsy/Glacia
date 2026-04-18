@@ -7,6 +7,8 @@ namespace ecstsy\Glacia\utils;
 use CortexPE\Commando\PacketHooker;
 use ecstsy\Glacia\blocks\tiles\SpawnerTile;
 use ecstsy\Glacia\commands\AdminModeCommand;
+use ecstsy\Glacia\commands\AuctionHouseCommand;
+use ecstsy\Glacia\commands\BackCommand;
 use ecstsy\Glacia\commands\SellCommand;
 use ecstsy\Glacia\commands\BalanceCommand;
 use ecstsy\Glacia\commands\BalTopCommand;
@@ -15,6 +17,8 @@ use ecstsy\Glacia\commands\BlackMarketCommand;
 use ecstsy\Glacia\commands\CreateHomeCommand;
 use ecstsy\Glacia\commands\CreateWarpCommand;
 use ecstsy\Glacia\commands\EcoCommand;
+use ecstsy\Glacia\commands\EnchanterCommand;
+use ecstsy\Glacia\commands\EnderChestCommand;
 use ecstsy\Glacia\commands\EnchantmentsCommand;
 use ecstsy\Glacia\commands\ExpCommand;
 use ecstsy\Glacia\commands\FactionCommand;
@@ -28,6 +32,8 @@ use ecstsy\Glacia\commands\HomesCommand;
 use ecstsy\Glacia\commands\KickCommand;
 use ecstsy\Glacia\commands\ListWarpsCommand;
 use ecstsy\Glacia\commands\PayCommand;
+use ecstsy\Glacia\commands\NearCommand;
+use ecstsy\Glacia\commands\PlayerVaultCommand;
 use ecstsy\Glacia\commands\RankCommand;
 use ecstsy\Glacia\commands\RemoveHomeCommand;
 use ecstsy\Glacia\commands\RemoveWarpCommand;
@@ -134,8 +140,11 @@ use ecstsy\Glacia\server\items\GlaciaItems;
 use ecstsy\Glacia\server\items\GlaciaSpawnerItem;
 use ecstsy\Glacia\server\quests\QuestInstance;
 use ecstsy\Glacia\server\ranks\RankManager;
+use ecstsy\Glacia\server\ranks\RankProgressionManager;
 use ecstsy\Glacia\server\regions\Region;
 use ecstsy\Glacia\server\regions\RegionPermissions;
+use ecstsy\Glacia\server\scoreboard\ScoreboardHelper;
+use ecstsy\Glacia\server\spawners\SpawnerWorthManager;
 use ecstsy\Glacia\tasks\AutoPlanterTask;
 use ecstsy\Glacia\tasks\BlackMarketAuctionTickTask;
 use ecstsy\Glacia\tasks\CombatTickTask;
@@ -212,10 +221,14 @@ final class GlaciaUtils
             new FactionCommand($loader, "faction", "Faction commands", ["f", "factions"]),
             new RankCommand($loader, "glaciaranks", "Rank commands", ["r", "ranks"]),
             new SpawnCommand($loader, "spawn", "Teleport to spawn"),
-            new ExpCommand($loader, "exp", "Experience commands"),
+            new ExpCommand($loader, "exp", "Experience commands", ["xp"]),
             new BalanceCommand($loader, "balance", "View your balance or another player's balance", ["bal"]),
             new BalTopCommand($loader, "baltop", "View the richest players on the server"),
             new PayCommand($loader, "pay", "Pay another player", ["p"]),
+            new BackCommand($loader, "back", "Teleport to your previous location"),
+            new NearCommand($loader, "near", "View nearby players"),
+            new EnderChestCommand($loader, "enderchest", "Open your ender chest", ["ec"]),
+            new PlayerVaultCommand($loader, "pv", "Open a player vault", ["vault", "playervault"]),
             new EcoCommand($loader, "eco", "Economy commands", ["economy"]),
             new HomeCommand($loader, "home", "Home commands"),
             new HomesCommand($loader, "homes", "List your homes"),
@@ -254,8 +267,10 @@ final class GlaciaUtils
             new GamemodeCommand($loader, "gamemode", "Change your gamemode", ["gm", "gms", "gmc", "gma", "gmsp"]),
             new FeedCommand($loader, "feed", "Feed yourself or another player"),
             new BlackMarketCommand($loader, "blackmarket", "Black market commands", ["bah"]),
+            new AuctionHouseCommand($loader, "auctionhouse", "Auction house commands", ["ah"]),
             new CollectCommand($loader, "collect", "Collect items"),
             new ShopCommand($loader, "shop", "Open the shop"),
+            new EnchanterCommand($loader, "enchanter", "Open the enchanter", ["ce"]),
             new SlotbotCommand($loader, "slotbot", "Open the slot bot", ["bot", "slot"]),
             new GlaciaReloadCommand($loader, "greload", "Reload Glacia configs"),
             new KitCommand($loader, "kit", "Open the kit screen"),
@@ -294,6 +309,17 @@ final class GlaciaUtils
         }
 
         $loader->getScheduler()->scheduleRepeatingTask(new CombatTickTask(), 20);
+        $loader->getScheduler()->scheduleRepeatingTask(new class extends Task {
+            public function onRun() : void
+            {
+                Loader::getFactionXpBoosterManager()->tick();
+                Loader::getAuctionHouseManager()->tick();
+                foreach (Server::getInstance()->getOnlinePlayers() as $player) {
+                    RankProgressionManager::tickPlayer($player);
+                    ScoreboardHelper::refreshScoreboard($player);
+                }
+            }
+        }, 20);
 
         GlaciaSpawnerItem::getAll();
         GlaciaSpawnerItem::initHack();
@@ -440,13 +466,23 @@ final class GlaciaUtils
         Loader::getInstance()->getScheduler()->scheduleRepeatingTask($autoPlantTask, 5  );
         AutoPlanterEnchant::setTask($autoPlantTask);
 
-        $files = ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml", "kits.yml", "slotbot.yml"];
+        $files = ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml", "kits.yml", "slotbot.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml"];
 
         foreach ($files as $file) {
             $loader->saveResource($file);
         }
 
+        QuestInstance::loadFromConfig();
+
         SellHandler::registerDefaults();
+        SpawnerWorthManager::loadFromConfig();
+
+        Loader::getInstance()->getScheduler()->scheduleDelayedTask(new class extends Task {
+            public function onRun(): void
+            {
+                Loader::getFactionManager()->recalculateSpawnerWorths();
+            }
+        }, 40);
 
         Loader::getInstance()->getScheduler()->scheduleRepeatingTask(new BlackMarketAuctionTickTask(), 20);
     }
@@ -957,6 +993,7 @@ final class GlaciaUtils
             13 => "sheep",
             17 => "squid",
             20 => "iron_golem",
+            21 => "snowman",
             32 => "zombie",
             36 => "zombie_pigman",
             34 => "skeleton",
@@ -977,6 +1014,8 @@ final class GlaciaUtils
             "minecraft:sheep" => 13,
             "minecraft:squid" => 17,
             "minecraft:iron_golem" => 20,
+            "minecraft:snow_golem" => 21,
+            "minecraft:snowman" => 21,
             "minecraft:zombie" => 32,
             "minecraft:zombie_pigman" => 36,
             "minecraft:skeleton" => 34,

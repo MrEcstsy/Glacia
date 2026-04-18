@@ -1,0 +1,19 @@
+worths:
+  chicken: 500
+  cow: 1000
+  pig: 750
+  sheep: 900
+  squid: 1000
+  snow_golem: 2500
+  zombie: 2000
+  zombie_pigman: 2000
+  skeleton: 2500
+  spider: 2500
+  creeper: 4000
+  slime: 6000
+  mooshroom: 2000
+  enderman: 8000
+  blaze: 10000
+  ghast: 12000
+  magma_cube: 7000
+  iron_golem: 25000

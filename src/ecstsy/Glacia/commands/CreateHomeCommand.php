@@ -29,7 +29,17 @@ final class CreateHomeCommand extends BaseCommand {
 
         $homeName = isset($args["home"]) ? $args["home"] : null;
 
-        Loader::getHomeManager()->createHome($sender, $homeName);
+        if ($homeName === null || trim($homeName) === "") {
+            $sender->sendMessage(C::colorize("&r&cUsage: /sethome <name>"));
+            return;
+        }
+
+        try {
+            Loader::getHomeManager()->createHome($sender, $homeName);
+        } catch (\RuntimeException $exception) {
+            $sender->sendMessage(C::colorize("&r&c" . $exception->getMessage()));
+            return;
+        }
 
         $sender->sendMessage(GlaciaUtils::format("home.created", ["home" => $homeName], "success"));
     }

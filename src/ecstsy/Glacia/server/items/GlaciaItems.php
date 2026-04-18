@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\server\items;
 
+use ecstsy\Glacia\server\ranks\RankProgressionManager;
+use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\item\StringToItemParser;
 use pocketmine\item\VanillaItems;
@@ -21,6 +23,7 @@ final class GlaciaItems {
         self::initDustItems();
         self::initExplosives();
         self::initHomesAndMisc();
+        self::initRankItems();
         self::initCustomArmor(); 
     }
 
@@ -36,7 +39,7 @@ final class GlaciaItems {
                     "&r&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬",
                     "&r&7Redeem this note to receive money.",
                 ],
-                'nbt' => ['glaciaItem' => 'econote', 'worth' => '{rawAmount}'],
+                'nbt' => ['glaciaItem' => 'econote', 'worth' => '{rawAmount}', 'signer' => '{signer}'],
             ],
             'xpnote' => [
                 'material' => VanillaItems::EXPERIENCE_BOTTLE(),
@@ -48,7 +51,7 @@ final class GlaciaItems {
                     "&r&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬",
                     "&r&7Redeem this note to receive exp.",
                 ],
-                'nbt' => ['glaciaItem' => 'xpnote', 'worth' => '{rawAmount}'],
+                'nbt' => ['glaciaItem' => 'xpnote', 'worth' => '{rawAmount}', 'signer' => '{signer}'],
             ],
             'bloody_note' => [
                 'material' => VanillaItems::PAPER(),
@@ -415,6 +418,23 @@ final class GlaciaItems {
                 ],
                 'nbt' => ['glaciaItem' => 'slot_ticket'],
             ],
+            "faction_xp_booster" => [
+                "material" => VanillaItems::EMERALD(), 
+                'name' => "&r&l&bFaction XP Booster &r&7(Right Click)",
+                'lore' => [
+                    '&r&7Multiplies XP gained by all faction',
+                    '&r&7members from killing mobs while active.',
+                    "",
+                    "&r&7Right-Click to activate.",
+                    "",
+                    "&r&l&dMULTIPLIER",
+                    "&r&7x{multiplier}",
+                    "",
+                    "&r&l&dDURATION",
+                    "&r&7{duration}",
+                ],
+                'nbt' => ['glaciaItem' => 'faction_xp_booster', 'multiplier' => "{multiplier}", 'duration' => "{duration}"],
+            ],
         ];
     }
 
@@ -692,5 +712,37 @@ final class GlaciaItems {
                 ],
             ],
         ];
+    }
+
+    private static function initRankItems(): void {
+        foreach (RankProgressionManager::getTiers() as $rank => $data) {
+            GlaciaItemFactory::$definitions[$rank . "_quest"] = [
+                'material' => VanillaItems::MAGMA_CREAM(),
+                'name' => '&r&l' . $data["color"] . $data["display"] . ' Rank Quest&r&f: &f&l<&r&f' . GeneralUtils::translateTime($data["duration"]) . '&l&f>',
+                'lore' => RankProgressionManager::getQuestLore($rank, $data["duration"], false),
+                'nbt' => [
+                    'glaciaItem' => $rank . '_quest',
+                    'rank' => $rank,
+                    'remaining' => (string) $data["duration"],
+                    'complete' => '0'
+                ],
+            ];
+
+            GlaciaItemFactory::$definitions[$rank . "_voucher"] = [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&l&eRANK "&r&f' . $data["display"] . '&r&l&e"',
+                'lore' => [
+                    '&r&7Right-Click this item to unlock',
+                    '&r&7the ' . $data["display"] . ' Rank on this server.',
+                    '',
+                    '&r&7Only works if your current rank',
+                    '&r&7is lower than this promotion.',
+                ],
+                'nbt' => [
+                    'glaciaItem' => $rank . '_voucher',
+                    'rank' => $rank
+                ],
+            ];
+        }
     }
 }

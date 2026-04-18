@@ -102,6 +102,104 @@ WHERE uuid = :uuid;
 -- #  }
 -- # }
 
+-- # { glacia_auction_house_listings
+-- #    { init
+CREATE TABLE IF NOT EXISTS glacia_auction_house_listings (
+    listing_id VARCHAR(36) PRIMARY KEY,
+    seller_uuid VARCHAR(36) NOT NULL,
+    seller_name VARCHAR(16) NOT NULL,
+    item_data TEXT NOT NULL,
+    price INT NOT NULL,
+    created_at INT NOT NULL,
+    expires_at INT NOT NULL
+);
+-- # }
+
+-- # { select
+SELECT * FROM glacia_auction_house_listings;
+-- # }
+
+-- # { create
+-- #    :listing_id string
+-- #    :seller_uuid string
+-- #    :seller_name string
+-- #    :item_data string
+-- #    :price int
+-- #    :created_at int
+-- #    :expires_at int
+INSERT OR REPLACE INTO glacia_auction_house_listings (listing_id, seller_uuid, seller_name, item_data, price, created_at, expires_at)
+VALUES (:listing_id, :seller_uuid, :seller_name, :item_data, :price, :created_at, :expires_at);
+-- # }
+
+-- # { delete
+-- #    :listing_id string
+DELETE FROM glacia_auction_house_listings WHERE listing_id = :listing_id;
+-- # }
+-- # }
+
+-- # { glacia_auction_house_collection
+-- #    { init
+CREATE TABLE IF NOT EXISTS glacia_auction_house_collection (
+    entry_id VARCHAR(36) PRIMARY KEY,
+    owner_uuid VARCHAR(36) NOT NULL,
+    item_data TEXT NOT NULL,
+    reason VARCHAR(32) NOT NULL,
+    created_at INT NOT NULL
+);
+-- # }
+
+-- # { select
+SELECT * FROM glacia_auction_house_collection;
+-- # }
+
+-- # { create
+-- #    :entry_id string
+-- #    :owner_uuid string
+-- #    :item_data string
+-- #    :reason string
+-- #    :created_at int
+INSERT OR REPLACE INTO glacia_auction_house_collection (entry_id, owner_uuid, item_data, reason, created_at)
+VALUES (:entry_id, :owner_uuid, :item_data, :reason, :created_at);
+-- # }
+
+-- # { delete
+-- #    :entry_id string
+DELETE FROM glacia_auction_house_collection WHERE entry_id = :entry_id;
+-- # }
+-- # }
+
+-- # { glacia_player_vaults
+-- #    { init
+CREATE TABLE IF NOT EXISTS glacia_player_vaults (
+    owner_uuid VARCHAR(36) NOT NULL,
+    vault_number INT NOT NULL,
+    contents TEXT NOT NULL,
+    updated_at INT NOT NULL,
+    PRIMARY KEY (owner_uuid, vault_number)
+);
+-- # }
+
+-- # { select
+SELECT * FROM glacia_player_vaults;
+-- # }
+
+-- # { create
+-- #    :owner_uuid string
+-- #    :vault_number int
+-- #    :contents string
+-- #    :updated_at int
+INSERT OR REPLACE INTO glacia_player_vaults (owner_uuid, vault_number, contents, updated_at)
+VALUES (:owner_uuid, :vault_number, :contents, :updated_at);
+-- # }
+
+-- # { delete
+-- #    :owner_uuid string
+-- #    :vault_number int
+DELETE FROM glacia_player_vaults
+WHERE owner_uuid = :owner_uuid AND vault_number = :vault_number;
+-- # }
+-- # }
+
 -- # { glacia_factions
 -- #    { init
 CREATE TABLE IF NOT EXISTS glacia_factions (

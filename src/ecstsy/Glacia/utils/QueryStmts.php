@@ -111,4 +111,21 @@ final class QueryStmts {
     public const COMBAT_LOGGER_CREATE = "glacia_combat_loggers.create";
     public const COMBAT_LOGGER_DELETE = "glacia_combat_loggers.delete";
     public const COMBAT_LOGGER_UPDATE_DEAD = "glacia_combat_loggers.update_dead";
+
+    // AUCTION HOUSE
+    public const AUCTION_HOUSE_LISTINGS_INIT = "glacia_auction_house_listings.init";
+    public const AUCTION_HOUSE_LISTINGS_SELECT = "glacia_auction_house_listings.select";
+    public const AUCTION_HOUSE_LISTINGS_CREATE = "glacia_auction_house_listings.create";
+    public const AUCTION_HOUSE_LISTINGS_DELETE = "glacia_auction_house_listings.delete";
+
+    public const AUCTION_HOUSE_COLLECTION_INIT = "glacia_auction_house_collection.init";
+    public const AUCTION_HOUSE_COLLECTION_SELECT = "glacia_auction_house_collection.select";
+    public const AUCTION_HOUSE_COLLECTION_CREATE = "glacia_auction_house_collection.create";
+    public const AUCTION_HOUSE_COLLECTION_DELETE = "glacia_auction_house_collection.delete";
+
+    // PLAYER VAULTS
+    public const PLAYER_VAULTS_INIT = "glacia_player_vaults.init";
+    public const PLAYER_VAULTS_SELECT = "glacia_player_vaults.select";
+    public const PLAYER_VAULTS_CREATE = "glacia_player_vaults.create";
+    public const PLAYER_VAULTS_DELETE = "glacia_player_vaults.delete";
 }

@@ -22,7 +22,6 @@ final class WhoSubCommand extends BaseSubCommand {
 
     public function prepare(): void {
         $this->setPermission($this->getPermission());
-
         $this->registerArgument(0, new RawStringArgument("target", true));
     }
 
@@ -36,33 +35,30 @@ final class WhoSubCommand extends BaseSubCommand {
 
         if ($target === null) {
             $session = Loader::getPlayerManager()->getSession($sender);
-            $faction = $session->getFaction();
+            $faction = $session?->getFaction();
 
             if ($faction === null) {
                 $sender->sendMessage(GlaciaUtils::format("player.error.no_faction"));
                 return;
             }
+
             $this->displayFactionInfo($sender, $faction);
             return;
         }
-        
-        /** @var ?Faction $faction */
-        $faction = null;
 
-        foreach (FactionManager::getInstance()->getAllFactions() as $f) {
-            if (strcasecmp($f->getName(), $target) === 0) {
-                $faction = $f;
+        $faction = null;
+        foreach (FactionManager::getInstance()->getAllFactions() as $candidate) {
+            if (strcasecmp($candidate->getName(), (string) $target) === 0) {
+                $faction = $candidate;
                 break;
             }
         }
 
         if ($faction === null) {
-            $player = PlayerUtils::getPlayerByPrefix($target);
-            if ($player !== null) {
-                $session = Loader::getPlayerManager()->getSession($player);
-            } else {
-                $session = Loader::getPlayerManager()->getSessionByName($target);
-            }
+            $player = PlayerUtils::getPlayerByPrefix((string) $target);
+            $session = $player !== null
+                ? Loader::getPlayerManager()->getSession($player)
+                : Loader::getPlayerManager()->getSessionByName((string) $target);
             $faction = $session?->getFaction();
         }
 
@@ -74,9 +70,10 @@ final class WhoSubCommand extends BaseSubCommand {
         $this->displayFactionInfo($sender, $faction);
     }
 
-    private function displayFactionInfo(CommandSender $sender, Faction $f): void {
-        $pm = PlayerManager::getInstance();
-        $allSessions = $pm->getSessions();
+    private function displayFactionInfo(CommandSender $sender, Faction $faction): void
+    {
+        $playerManager = PlayerManager::getInstance();
+        $allSessions = $playerManager->getSessions();
 
         $memberEntries = [
             "leader" => [],
@@ -85,70 +82,63 @@ final class WhoSubCommand extends BaseSubCommand {
             "recruit" => [],
         ];
 
-        foreach ($allSessions as $sess) {
-            /** @var ?GlaciaPlayer $sess */ 
-            if ($sess->getFactionId() !== $f->getFactionId()) {
+        foreach ($allSessions as $session) {
+            /** @var GlaciaPlayer $session */
+            if ($session->getFactionId() !== $faction->getFactionId()) {
                 continue;
             }
-            
-            $role = $sess->getFactionRole() ?? "recruit";
+
+            $role = $session->getFactionRole() ?? "recruit";
             $symbol = GlaciaUtils::getFactionRoleSymbol($role);
-            $color = $sess->isConnected() ? "&a" : "&c";
-
-            $entry = "{$color}{$symbol}{$sess->getUsername()}";
-            $memberEntries[$role][] = $entry;
+            $color = $session->isConnected() ? "&a" : "&c";
+            $memberEntries[$role][] = "{$color}{$symbol}{$session->getUsername()}";
         }
 
-        $ordered = [];
-
+        $orderedMembers = [];
         foreach (["leader", "officer", "member", "recruit"] as $role) {
-            if (isset($memberEntries[$role])) {
-                $ordered = array_merge($ordered, $memberEntries[$role]);
-            }
+            $orderedMembers = array_merge($orderedMembers, $memberEntries[$role] ?? []);
         }
 
-        $ownId = $f->getFactionId();
-        $rm = RelationManager::getInstance();
-        $allyIds = array_keys($rm->getRelationsFor($ownId, "ally", true));
-        $enemyIds = array_keys($rm->getRelationsFor($ownId, "enemy", true));
+        $ownId = $faction->getFactionId();
+        $relationManager = RelationManager::getInstance();
+        $allyIds = array_keys($relationManager->getRelationsFor($ownId, "ally", true));
+        $enemyIds = array_keys($relationManager->getRelationsFor($ownId, "enemy", true));
 
-        $fm = Loader::getFactionManager();
-        $allyNames = array_map(fn(string $id) => $fm->getFaction($id)?->getName(), $allyIds);
-        $enemyNames = array_map(fn(string $id) => $fm->getFaction($id)?->getName(), $enemyIds);
+        $factionManager = Loader::getFactionManager();
+        $allyNames = array_values(array_filter(array_map(
+            static fn(string $id): ?string => $factionManager->getFaction($id)?->getName(),
+            $allyIds
+        )));
+        $enemyNames = array_values(array_filter(array_map(
+            static fn(string $id): ?string => $factionManager->getFaction($id)?->getName(),
+            $enemyIds
+        )));
 
         $relation = "neutral";
         if ($sender instanceof Player) {
-            $viewerSession = Loader::getPlayerManager()->getSession($sender);
-            $viewerFaction = $viewerSession?->getFaction();
-
+            $viewerFaction = Loader::getPlayerManager()->getSession($sender)?->getFaction();
             if ($viewerFaction !== null) {
-                if ($viewerFaction->getFactionId() === $f->getFactionId()) {
-                    $relation = "own";
-                } else {
-                    $relation = RelationManager::getInstance()->getRelation($viewerFaction->getFactionId(), $f->getFactionId());
-                }
+                $relation = $viewerFaction->getFactionId() === $faction->getFactionId()
+                    ? "own"
+                    : RelationManager::getInstance()->getRelation($viewerFaction->getFactionId(), $faction->getFactionId());
             }
         }
 
         $relationColor = GlaciaUtils::getRelationColor($relation);
-
         $lines = [];
-        $lines[] = "&r&b―――――― {$relationColor}{$f->getName()} &3――――――";
-        $lines[] = "&r&b» &fDescription: &7{$f->getDescription()}";
-        $lines[] = "&r&b» &fLeader: &7{$f->getLeaderName()}";
+        $lines[] = "&r&b------ {$relationColor}{$faction->getName()} &3------";
+        $lines[] = "&r&b> &fDescription: &7{$faction->getDescription()}";
+        $lines[] = "&r&b> &fLeader: &7{$faction->getLeaderName()}";
+        $lines[] = C::colorize("&r&b> &fMembers: &7" . count($orderedMembers));
 
-        $totalMembers = count($ordered);
-        $lines[] = C::colorize("&r&b» &fMembers: &7{$totalMembers}");
-        if (!empty($ordered)) {
-            $lines[] = "   " . implode("&7, ", $ordered);
+        if ($orderedMembers !== []) {
+            $lines[] = "   " . implode("&7, ", $orderedMembers);
         }
-        $currentPower = $f->getFactionPower();
-        $maxPower = $f->getMaxPower();
-        $claimCount = $f->getClaimCount();
-        $lines[] = C::colorize("&r&b» &fPower/Max/Claims: &7{$currentPower}/{$maxPower}/{$claimCount}");
 
-        $lines[] = "&r&b» &fAllies: &7" . (empty($allyNames) ? "None" : implode("&7, ", $allyNames));
-        $lines[] = "&r&b» &fEnemies: &7" . (empty($enemyNames)  ? "None" : implode("&7, ", $enemyNames));
+        $lines[] = C::colorize("&r&b> &fPower/Max/Claims: &7{$faction->getFactionPower()}/{$faction->getMaxPower()}/{$faction->getClaimCount()}");
+        $lines[] = C::colorize("&r&b> &fFaction Value: &7$" . number_format($faction->getFactionValue()));
+        $lines[] = "&r&b> &fAllies: &7" . ($allyNames === [] ? "None" : implode("&7, ", $allyNames));
+        $lines[] = "&r&b> &fEnemies: &7" . ($enemyNames === [] ? "None" : implode("&7, ", $enemyNames));
 
         foreach ($lines as $line) {
             $sender->sendMessage(C::colorize($line));

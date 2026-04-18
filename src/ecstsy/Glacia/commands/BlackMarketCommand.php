@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\commands;
 
 use CortexPE\Commando\BaseCommand;
+use ecstsy\Glacia\commands\sub\blackmarket\BlackMarketClearHistorySubCommand;
 use ecstsy\Glacia\commands\sub\blackmarket\BlackMarketTimeSubCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\utils\screens\blackmarket\BlackMarketScreen;
@@ -17,6 +18,7 @@ final class BlackMarketCommand extends BaseCommand {
         $this->setPermission($this->getPermission());
 
         $this->registerSubCommand(new BlackMarketTimeSubCommand(Loader::getInstance(), "time", "Set the time of the black market"));
+        $this->registerSubCommand(new BlackMarketClearHistorySubCommand(Loader::getInstance(), "clearhistory", "Clear the black market history"));
     }
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void

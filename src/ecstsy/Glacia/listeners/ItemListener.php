@@ -14,7 +14,12 @@ use ecstsy\Glacia\server\droppackages\DropPackageSession;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
 use ecstsy\Glacia\server\enchantments\Groups;
+use ecstsy\Glacia\server\factions\FactionXpBoosterManager;
+use ecstsy\Glacia\server\homes\HomeManager;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
+use ecstsy\Glacia\server\items\rename\ItemRenameManager;
+use ecstsy\Glacia\server\ranks\RankManager;
+use ecstsy\Glacia\server\ranks\RankProgressionManager;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\Glacia\utils\screens\slotbot\SlotbotMenuScreen;
 use ecstsy\Glacia\utils\screens\droppackages\DropPackageScreen;
@@ -39,7 +44,9 @@ use pocketmine\item\Shovel;
 use pocketmine\item\StringToItemParser;
 use pocketmine\item\Sword;
 use pocketmine\item\VanillaItems;
+use pocketmine\nbt\tag\ByteTag;
 use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\nbt\tag\IntTag;
 use pocketmine\player\Player;
 use pocketmine\world\sound\XpCollectSound;
 use pocketmine\utils\TextFormat as C;
@@ -83,6 +90,75 @@ final class ItemListener implements Listener {
         if ($itemTag === "slot_ticket") {
             $event->cancel();
             (new SlotbotMenuScreen($player))->display($player);
+            return;
+        }
+
+        if (RankProgressionManager::isRankVoucher($itemTag)) {
+            $event->cancel();
+
+            $rank = RankProgressionManager::extractRankFromIdentifier($itemTag);
+            if ($rank === null) {
+                $player->sendMessage(C::colorize("&r&cThis rank voucher is invalid."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            if (!RankProgressionManager::canUseVoucher($session->getRank(), $rank)) {
+                $player->sendMessage(C::colorize("&r&cYou already have this rank or a higher one."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $session->setRank($rank);
+            RankManager::getInstance()->updatePermission($player);
+
+            $item->pop();
+            $player->getInventory()->setItemInHand($item);
+            $player->sendMessage(C::colorize("&r&l&a[!] &r&aYou unlocked the &f" . ucfirst($rank) . " &arank."));
+            PlayerUtils::playSound($player, "random.levelup");
+            return;
+        }
+
+        if (RankProgressionManager::isRankQuest($itemTag)) {
+            $event->cancel();
+
+            $rank = RankProgressionManager::extractRankFromIdentifier($itemTag);
+            if ($rank === null) {
+                $player->sendMessage(C::colorize("&r&cThis rank quest is invalid."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $glaciaTag = $item->getNamedTag()->getCompoundTag("Glacia");
+            $remaining = $glaciaTag?->getInt("remaining", 0) ?? 0;
+            $completeTag = $glaciaTag?->getTag("complete");
+            $complete = ($completeTag instanceof ByteTag || $completeTag instanceof IntTag) && $completeTag->getValue() === 1;
+
+            if (!$complete) {
+                $warzone = Loader::getRegionManager()->getRegionByName("Warzone");
+                $currentRegion = Loader::getRegionManager()->getRegionAt($player->getPosition());
+                if ($warzone === null || $currentRegion !== $warzone) {
+                    $player->sendMessage(C::colorize("&r&cYou must be standing in the &4Warzone&r&c for this quest to progress."));
+                    PlayerUtils::playSound($player, "note.bass");
+                    return;
+                }
+
+                $player->sendMessage(C::colorize("&r&7Warzone survival progress: &f" . GeneralUtils::translateTime($remaining) . " &7remaining."));
+                PlayerUtils::playSound($player, "random.click");
+                return;
+            }
+
+            RankProgressionManager::claimQuestRewards($player, $rank);
+            $item->pop();
+            $player->getInventory()->setItemInHand($item);
+            $player->sendMessage(C::colorize("&r&l&a[!] &r&aYou claimed your " . ucfirst($rank) . " quest rewards."));
+            PlayerUtils::playSound($player, "random.levelup");
+            return;
+        }
+
+        if ($itemTag === "renametag") {
+            $event->cancel();
+            ItemRenameManager::start($player);
             return;
         }
 
@@ -131,6 +207,69 @@ final class ItemListener implements Listener {
                     $player->getInventory()->setItemInHand($item);
                 }
             }
+            return;
+        }
+
+        if ($itemTag === "max_home_increase") {
+            $event->cancel();
+            $config = GeneralUtils::getConfiguration(Loader::getInstance(), "misc.yml");
+            $requiredPermission = (string) ($config?->get("home-increaser-permission", "glacia.home.increaser.use") ?? "glacia.home.increaser.use");
+            $maxCap = max(1, (int) ($config?->get("home-max-cap", 50) ?? 50));
+            $homeManager = Loader::getHomeManager();
+            $currentMax = $homeManager->getMaxHomes($player->getUniqueId());
+
+            if (!$player->hasPermission($requiredPermission)) {
+                $player->sendMessage(C::colorize("&r&cYou cannot use this item yet."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            if ($currentMax >= $maxCap) {
+                $player->sendMessage(C::colorize("&r&cYou have already reached the max home cap of &f{$maxCap}&r&c."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $homeManager->setMaxHomes($player->getUniqueId(), min($maxCap, $currentMax + 1));
+            $item->pop();
+            $player->getInventory()->setItemInHand($item);
+            $player->sendMessage(C::colorize("&r&aYour max homes increased to &f" . $homeManager->getMaxHomes($player->getUniqueId()) . "&r&a."));
+            PlayerUtils::playSound($player, "random.levelup");
+            return;
+        }
+
+        if ($itemTag === "faction_xp_booster") {
+            $event->cancel();
+
+            $faction = $session?->getFaction();
+            if ($faction === null) {
+                $player->sendMessage(C::colorize("&r&cYou must be in a faction to activate this booster."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $manager = Loader::getFactionXpBoosterManager();
+            if ($manager->hasActiveBooster($faction)) {
+                $player->sendMessage(C::colorize("&r&cYour faction already has an active XP booster."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $multiplierRaw = $glaciaTag->getTag("multiplier");
+            $multiplier = $multiplierRaw !== null ? (float) $multiplierRaw->getValue() : 1.0;
+            $durationText = $glaciaTag->getString("duration", "");
+            $durationSeconds = GeneralUtils::parseTimeString($durationText);
+
+            if ($multiplier <= 0 || $durationSeconds <= 0) {
+                $player->sendMessage(C::colorize("&r&cThis booster is invalid and could not be activated."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $manager->activate($faction, $multiplier, $durationSeconds, $player);
+            PlayerUtils::playSound($player, "random.levelup");
+            $item->pop();
+            $player->getInventory()->setItemInHand($item);
             return;
         }
 
@@ -970,5 +1109,84 @@ final class ItemListener implements Listener {
             "legendary" => 5,
             default => 0
         };
+    }
+
+    /**
+     * @priority HIGHEST
+     */
+    public function onCombineNotes(InventoryTransactionEvent $event): void {
+        $actions = array_values($event->getTransaction()->getActions());
+        if (count($actions) !== 2) {
+            return;
+        }
+
+        foreach ($actions as $i => $action) {
+            if (!$action instanceof SlotChangeAction) {
+                continue;
+            }
+
+            $otherAction = $actions[($i + 1) % 2];
+            if (!$otherAction instanceof SlotChangeAction) {
+                continue;
+            }
+
+            $targetItem = $action->getTargetItem();
+            $sourceItem = $action->getSourceItem();
+
+            if ($targetItem->isNull() || $sourceItem->isNull()) {
+                continue;
+            }
+
+            $targetGlacia = $targetItem->getNamedTag()->getCompoundTag("Glacia");
+            $sourceGlacia = $sourceItem->getNamedTag()->getCompoundTag("Glacia");
+            if ($targetGlacia === null || $sourceGlacia === null) {
+                continue;
+            }
+
+            $targetType = $targetGlacia->getString("glaciaItem", "");
+            $sourceType = $sourceGlacia->getString("glaciaItem", "");
+            if ($targetType === "" || $targetType !== $sourceType || !in_array($targetType, ["econote", "xpnote"], true)) {
+                continue;
+            }
+
+            $event->cancel();
+
+            $sourceWorth = $sourceGlacia->getInt("worth", 0);
+            $targetWorth = $targetGlacia->getInt("worth", 0);
+            $sourceCount = max(1, $sourceItem->getCount());
+            $targetCount = max(1, $targetItem->getCount());
+            $mergedWorth = ($sourceWorth * $sourceCount) + ($targetWorth * $targetCount);
+            $signer = $targetGlacia->getString("signer", $this->extractSigner($targetItem));
+
+            $merged = $targetType === "econote"
+                ? GlaciaItemFactory::bankNoteSigned($signer, $mergedWorth)
+                : GlaciaItemFactory::xpNoteSigned($signer, $mergedWorth);
+
+            $action->getInventory()->setItem($action->getSlot(), $merged);
+            $otherAction->getInventory()->setItem($otherAction->getSlot(), VanillaItems::AIR());
+            $event->getTransaction()->getSource()->sendMessage(C::colorize("&r&aMerged your notes into one."));
+            PlayerUtils::playSound($event->getTransaction()->getSource(), "random.anvil_use");
+            return;
+        }
+    }
+
+    private function extractSigner(\pocketmine\item\Item $item): string
+    {
+        $glacia = $item->getNamedTag()->getCompoundTag("Glacia");
+        if ($glacia !== null) {
+            $signer = $glacia->getString("signer", "");
+            if ($signer !== "") {
+                return $signer;
+            }
+        }
+
+        foreach ($item->getLore() as $line) {
+            $clean = C::clean($line);
+            if (str_starts_with($clean, "Signer: ")) {
+                return substr($clean, 8);
+            }
+        }
+
+        return "Ethereal Hub";
     }
 }

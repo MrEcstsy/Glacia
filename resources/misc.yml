@@ -1,0 +1,3 @@
+near-radius: 100
+home-max-cap: 50
+home-increaser-permission: "glacia.home.increaser.use"
