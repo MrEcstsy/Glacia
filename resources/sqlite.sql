@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS glacia_players (
     sell_multiplier REAL DEFAULT 1,
     collection TEXT,
     kills INT default 0,
-    deaths INT default 0
+    deaths INT default 0,
+    slot_credits INT default 0
 );
 -- # }
 
@@ -55,8 +56,9 @@ WHERE username IS NOT NULL AND username != '';
 -- #    :collection string
 -- #    :kills int
 -- #    :deaths int
-INSERT OR REPLACE INTO glacia_players (uuid, username, balance, cooldowns, faction_id, faction_role, power, rank, settings, buffs, sell_multiplier, collection, kills, deaths)
-VALUES (:uuid, :username, :balance, :cooldowns, :faction_id, :faction_role, :power, :rank, :settings, :buffs, :sell_multiplier, :collection, :kills, :deaths);
+-- #    :slot_credits int
+INSERT OR REPLACE INTO glacia_players (uuid, username, balance, cooldowns, faction_id, faction_role, power, rank, settings, buffs, sell_multiplier, collection, kills, deaths, slot_credits)
+VALUES (:uuid, :username, :balance, :cooldowns, :faction_id, :faction_role, :power, :rank, :settings, :buffs, :sell_multiplier, :collection, :kills, :deaths, :slot_credits);
 -- # }
 
 -- # { update
@@ -74,6 +76,7 @@ VALUES (:uuid, :username, :balance, :cooldowns, :faction_id, :faction_role, :pow
 -- #   :collection string
 -- #   :kills int
 -- #   :deaths int
+-- #   :slot_credits int
 UPDATE glacia_players
 SET username = :username, 
     balance = :balance, 
@@ -87,7 +90,8 @@ SET username = :username,
     sell_multiplier = :sell_multiplier,
     collection = :collection,
     kills = :kills,
-    deaths = :deaths
+    deaths = :deaths,
+    slot_credits = :slot_credits
 WHERE uuid = :uuid;
 -- # }
 

@@ -53,6 +53,7 @@ use ecstsy\Glacia\commands\SeeBragCommand;
 use ecstsy\Glacia\commands\SeeItemCommand;
 use ecstsy\Glacia\commands\SettingsCommand;
 use ecstsy\Glacia\commands\ShopCommand;
+use ecstsy\Glacia\commands\SlotbotCommand;
 use ecstsy\Glacia\commands\GlaciaReloadCommand;
 use ecstsy\Glacia\commands\KitCommand;
 use ecstsy\Glacia\entity\boss\bosses\AstralDevourer;
@@ -255,6 +256,7 @@ final class GlaciaUtils
             new BlackMarketCommand($loader, "blackmarket", "Black market commands", ["bah"]),
             new CollectCommand($loader, "collect", "Collect items"),
             new ShopCommand($loader, "shop", "Open the shop"),
+            new SlotbotCommand($loader, "slotbot", "Open the slot bot", ["bot", "slot"]),
             new GlaciaReloadCommand($loader, "greload", "Reload Glacia configs"),
             new KitCommand($loader, "kit", "Open the kit screen"),
         ]);
@@ -438,7 +440,7 @@ final class GlaciaUtils
         Loader::getInstance()->getScheduler()->scheduleRepeatingTask($autoPlantTask, 5  );
         AutoPlanterEnchant::setTask($autoPlantTask);
 
-        $files = ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml", "kits.yml"];
+        $files = ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml", "kits.yml", "slotbot.yml"];
 
         foreach ($files as $file) {
             $loader->saveResource($file);

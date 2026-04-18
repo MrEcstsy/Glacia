@@ -1,0 +1,41 @@
+# Slot rewards
+jackpot-chance: 1.0
+
+rewards:
+  - item: "diamond"
+    amount: 1
+    name: "&r&l&8Diamond Sword"  # optional
+    lore:  # optional
+      - "&r&7Diamond Sword won from slotbot!"
+    enchantments: # optional
+      - enchant: "unbreaking"
+        level: 1
+  - item: "arrow"
+    amount: 1
+  - item: "apple"
+    amount: 1
+  - item: "beetroot"
+    amount: 1
+  - item: "emerald"
+    amount: 1
+  - item: "lapis_lazuli"
+    amount: 1
+  - item: "chainmail_chestplate"
+    amount: 1
+  - item: "diamond_axe"
+    amount: 1
+  - item: "baked_potato"
+    amount: 1
+  - item: "amethyst_shard"
+    amount: 1
+  - item: "acacia_sign"
+    amount: 1
+
+# Jackpot rewards
+jackpot-rewards:
+  - item: "xpnote"
+    amount: 100000
+  - item: "mysterymobspawner"
+    amount: 1
+  - item: "whitescroll"
+    amount: 1

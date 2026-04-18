@@ -16,6 +16,7 @@ use ecstsy\Glacia\server\enchantments\CustomEnchantments;
 use ecstsy\Glacia\server\enchantments\Groups;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\utils\GlaciaUtils;
+use ecstsy\Glacia\utils\screens\slotbot\SlotbotMenuScreen;
 use ecstsy\Glacia\utils\screens\droppackages\DropPackageScreen;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
@@ -78,6 +79,12 @@ final class ItemListener implements Listener {
         }
 
         $itemTag = $glaciaTag->getString("glaciaItem");
+
+        if ($itemTag === "slot_ticket") {
+            $event->cancel();
+            (new SlotbotMenuScreen($player))->display($player);
+            return;
+        }
 
         if ($itemTag === "econote") {
             $amount = $glaciaTag->getInt("worth", 0);

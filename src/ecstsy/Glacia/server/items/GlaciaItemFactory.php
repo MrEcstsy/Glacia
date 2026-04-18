@@ -340,6 +340,20 @@ final class GlaciaItemFactory {
         return $item;
     }
 
+    public static function slotTicket(): Item {
+        return self::create("slot_ticket");
+    }
+
+    public static function getGlaciaIdentifier(Item $item): string
+    {
+        return $item->getNamedTag()->getCompoundTag("Glacia")?->getString("glaciaItem", "") ?? "";
+    }
+
+    public static function isGlaciaItem(Item $item, string $identifier): bool
+    {
+        return self::getGlaciaIdentifier($item) === $identifier;
+    }
+
     private static function template(string $template, array $args): string {
         foreach ($args as $k => $v) {
             $template = str_replace("{" . $k . "}", (string)$v, $template);

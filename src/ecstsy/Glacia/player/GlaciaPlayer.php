@@ -41,7 +41,8 @@ final class GlaciaPlayer {
         private float $sellMultiplier,
         private string $collection,
         private int $kills,
-        private int $deaths
+        private int $deaths,
+        private int $slotCredits = 0
     )
     {
         
@@ -418,6 +419,42 @@ final class GlaciaPlayer {
         $this->updateDb();
     }
 
+    public function getSlotCredits(): int
+    {
+        return $this->slotCredits;
+    }
+
+    public function addSlotCredits(int $amount): void
+    {
+        if ($amount <= 0) {
+            return;
+        }
+
+        $this->slotCredits += $amount;
+        $this->updateDb();
+    }
+
+    public function removeSlotCredits(int $amount): bool
+    {
+        if ($amount <= 0) {
+            return true;
+        }
+
+        if ($this->slotCredits < $amount) {
+            return false;
+        }
+
+        $this->slotCredits -= $amount;
+        $this->updateDb();
+        return true;
+    }
+
+    public function setSlotCredits(int $amount): void
+    {
+        $this->slotCredits = max(0, $amount);
+        $this->updateDb();
+    }
+
     public function updateDb(): void {
         Loader::getDatabase()->executeChange(QueryStmts::PLAYERS_UPDATE, [
             'uuid' => $this->uuid->toString(),
@@ -433,7 +470,8 @@ final class GlaciaPlayer {
             'sell_multiplier' => $this->sellMultiplier,
             'collection' => $this->collection,
             'kills' => $this->kills,
-            'deaths' => $this->deaths
+            'deaths' => $this->deaths,
+            'slot_credits' => $this->slotCredits
         ]);
     }
 }

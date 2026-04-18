@@ -43,7 +43,8 @@ final class PlayerManager {
                     $row['sell_multiplier'],
                     $row['collection'],
                     $row['kills'],
-                    $row['deaths']
+                    $row['deaths'],
+                    (int)($row['slot_credits'] ?? 0)
                 );
             }
         });
@@ -66,7 +67,8 @@ final class PlayerManager {
             "sell_multiplier" => 1,
             "collection" => "",
             "kills" => 0,
-            "deaths" => 0
+            "deaths" => 0,
+            "slot_credits" => 0
         ];
 
         Loader::getDatabase()->executeInsert(QueryStmts::PLAYERS_CREATE, $args);
@@ -85,7 +87,8 @@ final class PlayerManager {
             $args["sell_multiplier"],
             $args["collection"],
             $args["kills"],
-            $args["deaths"]
+            $args["deaths"],
+            $args["slot_credits"]
         );
 
         return $this->sessions[$player->getUniqueId()->toString()];

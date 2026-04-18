@@ -404,7 +404,17 @@ final class GlaciaItems {
                     '&r&7Adds +1 &e/home &7slots to your player.',
                 ],
                 'nbt' => ['glaciaItem' => 'max_home_increase'],
-            ]
+            ],
+            "slot_ticket" => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&l&dSlot Bot &5Ticket &r&7(/bot)',
+                'lore' => [
+                    '&r&7Right-Click the Slot Bot or',
+                    '&r&7use /bot and insert this ticket',
+                    '&r&7into the bot and click spin.',
+                ],
+                'nbt' => ['glaciaItem' => 'slot_ticket'],
+            ],
         ];
     }
 
