@@ -16,7 +16,9 @@ use ecstsy\Glacia\server\GraceInstance;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\server\items\GlaciaSpawnerItem;
 use ecstsy\Glacia\server\player\BackLocationManager;
+use ecstsy\Glacia\server\hats\HatPlayer;
 use ecstsy\Glacia\server\items\rename\ItemRenameManager;
+use ecstsy\Glacia\server\items\trackers\TrackerManager;
 use ecstsy\Glacia\server\quests\QuestInstance;
 use ecstsy\Glacia\server\ranks\RankManager;
 use ecstsy\Glacia\server\scoreboard\ScoreboardHelper;
@@ -38,6 +40,7 @@ use pocketmine\event\entity\EntityRegainHealthEvent;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\event\player\PlayerDeathEvent;
+use pocketmine\event\player\PlayerCreationEvent;
 use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\event\player\PlayerItemConsumeEvent;
 use pocketmine\event\player\PlayerJoinEvent;
@@ -83,6 +86,10 @@ final class GlaciaListener implements Listener {
     private const GAP_WINDOW = 20; // seconds allowed between apples
     public static array $lastMessages = [];
     public static array $lastMessageTime = [];
+
+    public function onPlayerCreation(PlayerCreationEvent $event): void {
+        $event->setPlayerClass(HatPlayer::class);
+    }
 
     public function onLogin(PlayerLoginEvent $event): void {
         $player = $event->getPlayer();
@@ -583,7 +590,6 @@ final class GlaciaListener implements Listener {
         if (!$last instanceof EntityDamageByEntityEvent) return;
 
         $damager = $last->getDamager();
-
         if (!$damager instanceof Player) return;
 
         $pos = $damager->getPosition();
@@ -606,6 +612,12 @@ final class GlaciaListener implements Listener {
     public function onBlockBreak(BlockBreakEvent $event): void {
         $player = $event->getPlayer();
         $block = $event->getBlock();
+        $hand = $player->getInventory()->getItemInHand();
+        $updatedHand = TrackerManager::addProgress($hand, TrackerManager::BLOCKS);
+
+        if (!$updatedHand->equalsExact($hand)) {
+            $player->getInventory()->setItemInHand($updatedHand);
+        }
 
         if (!GlaciaUtils::isFullyGrownCrop($block)) return;
 

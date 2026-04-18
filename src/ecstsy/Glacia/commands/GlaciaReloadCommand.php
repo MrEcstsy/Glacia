@@ -18,43 +18,6 @@ use pocketmine\utils\TextFormat as C;
 
 final class GlaciaReloadCommand extends BaseCommand {
 
-    private const TARGETS = [
-        "all" => ["items.yml", "shop.yml", "sell.yml", "kits.yml", "blackmarket.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml", "lootboxes/example.yml", "dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "config.yml"],
-        "items" => ["items.yml"],
-        "shop" => ["shop.yml"],
-        "sell" => ["sell.yml"],
-        "kits" => ["kits.yml"],
-        "blackmarket" => ["blackmarket.yml"],
-        "enchanter" => ["enchanter.yml"],
-        "auctionhouse" => ["auctionhouse.yml"],
-        "quests" => ["quests.yml"],
-        "spawners" => ["spawners.yml"],
-        "misc" => ["misc.yml"],
-        "lootboxes" => ["lootboxes/example.yml"],
-        "dps" => ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml"],
-        "config" => ["config.yml"],
-    ];
-
-    private const RESTORABLE = [
-        "items.yml",
-        "shop.yml",
-        "sell.yml",
-        "kits.yml",
-        "blackmarket.yml",
-        "enchanter.yml",
-        "auctionhouse.yml",
-        "quests.yml",
-        "spawners.yml",
-        "misc.yml",
-        "lootboxes/example.yml",
-        "dps/Simple.yml",
-        "dps/Unique.yml",
-        "dps/Elite.yml",
-        "dps/Exotic.yml",
-        "dps/Legendary.yml",
-        "dps/Godly.yml",
-    ];
-
     public function prepare(): void {
         $this->setPermission($this->getPermission());
         $this->registerArgument(0, new RawStringArgument("action", true));
@@ -66,12 +29,13 @@ final class GlaciaReloadCommand extends BaseCommand {
         $action = strtolower((string) ($args["action"] ?? "reload"));
         $target = strtolower((string) ($args["target"] ?? "all"));
 
-        if (!isset(self::TARGETS[$target])) {
+        $targets = $this->getTargets();
+        if (!isset($targets[$target])) {
             $sender->sendMessage(C::colorize("&r&cUnknown target. Use: all, items, shop, sell, kits, blackmarket, enchanter, auctionhouse, quests, spawners, misc, lootboxes, dps, config"));
             return;
         }
 
-        $files = self::TARGETS[$target];
+        $files = $targets[$target];
 
         switch ($action) {
             case "reload":
@@ -95,7 +59,7 @@ final class GlaciaReloadCommand extends BaseCommand {
         $restored = 0;
 
         foreach ($files as $file) {
-            if (!in_array($file, self::RESTORABLE, true)) {
+            if (!in_array($file, $this->getRestorableFiles(), true)) {
                 continue;
             }
 
@@ -141,5 +105,58 @@ final class GlaciaReloadCommand extends BaseCommand {
 
     public function getPermission(): string {
         return "glacia.admin";
+    }
+
+    /**
+     * @return array<string, string[]>
+     */
+    private function getTargets(): array
+    {
+        $lootboxes = LootboxRepository::getBundledResourceFiles();
+
+        return [
+            "all" => array_merge(["items.yml", "shop.yml", "sell.yml", "kits.yml", "blackmarket.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml"], $lootboxes, ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "config.yml"]),
+            "items" => ["items.yml"],
+            "shop" => ["shop.yml"],
+            "sell" => ["sell.yml"],
+            "kits" => ["kits.yml"],
+            "blackmarket" => ["blackmarket.yml"],
+            "enchanter" => ["enchanter.yml"],
+            "auctionhouse" => ["auctionhouse.yml"],
+            "quests" => ["quests.yml"],
+            "spawners" => ["spawners.yml"],
+            "misc" => ["misc.yml"],
+            "lootboxes" => $lootboxes,
+            "dps" => ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml"],
+            "config" => ["config.yml"],
+        ];
+    }
+
+    /**
+     * @return string[]
+     */
+    private function getRestorableFiles(): array
+    {
+        return array_merge(
+            [
+                "items.yml",
+                "shop.yml",
+                "sell.yml",
+                "kits.yml",
+                "blackmarket.yml",
+                "enchanter.yml",
+                "auctionhouse.yml",
+                "quests.yml",
+                "spawners.yml",
+                "misc.yml",
+                "dps/Simple.yml",
+                "dps/Unique.yml",
+                "dps/Elite.yml",
+                "dps/Exotic.yml",
+                "dps/Legendary.yml",
+                "dps/Godly.yml",
+            ],
+            LootboxRepository::getBundledResourceFiles()
+        );
     }
 }

@@ -51,6 +51,7 @@ use ecstsy\Glacia\commands\TrashCommand;
 use ecstsy\Glacia\commands\ReapplyCommand;
 use ecstsy\Glacia\commands\WithdrawCommand;
 use ecstsy\Glacia\commands\WarpCommand;
+use ecstsy\Glacia\commands\WildCommand;
 use ecstsy\Glacia\commands\XpBottleCommand;
 use ecstsy\Glacia\commands\BlessCommand;
 use ecstsy\Glacia\commands\CoinFlipCommand;
@@ -83,6 +84,7 @@ use ecstsy\Glacia\entity\GlaciaPrimedTNT;
 use ecstsy\Glacia\entity\RiftEntity;
 use ecstsy\Glacia\entity\RiftWalkerEntity;
 use ecstsy\Glacia\listeners\CustomArmorListener;
+use ecstsy\Glacia\listeners\CollectionChestListener;
 use ecstsy\Glacia\listeners\CustomTNTListener;
 use ecstsy\Glacia\listeners\EnchantmentListener;
 use ecstsy\Glacia\listeners\FactionListener;
@@ -241,6 +243,7 @@ final class GlaciaUtils
             new WithdrawCommand($loader, "withdraw", "Withdraw money into a bank note", ["wd"]),
             new BackCommand($loader, "back", "Teleport to your previous location"),
             new NearCommand($loader, "near", "View nearby players"),
+            new WildCommand($loader, "wild", "Teleport to a random wilderness location"),
             new EnderChestCommand($loader, "enderchest", "Open your ender chest", ["ec"]),
             new EnderSeeCommand($loader, "endersee", "View another player's ender chest", ["ecsee"]),
             new PlayerVaultCommand($loader, "pv", "Open a player vault", ["vault", "playervault"]),
@@ -308,6 +311,7 @@ final class GlaciaUtils
             new ItemListener(),
             new QuestListener(),
             new EnchantmentListener(),
+            new CollectionChestListener(),
             new CustomTNTListener(),
             new CustomArmorListener(),
         ];
@@ -491,7 +495,10 @@ final class GlaciaUtils
         Loader::getInstance()->getScheduler()->scheduleRepeatingTask($autoPlantTask, 5  );
         AutoPlanterEnchant::setTask($autoPlantTask);
 
-        $files = ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml", "kits.yml", "slotbot.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml", "lootboxes/example.yml"];
+        $files = array_merge(
+            ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml", "kits.yml", "slotbot.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml"],
+            LootboxRepository::getBundledResourceFiles()
+        );
 
         foreach ($files as $file) {
             $loader->saveResource($file);

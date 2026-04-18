@@ -35,7 +35,7 @@ final class ClaimSubCommand extends BaseSubCommand
 
         $role = $session->getFactionRole();
         if ($role !== "leader" && $role !== "officer") {
-            $sender->sendMessage(C::colorize("&r&l&c(✘) &r&cYou do not have permission to claim land."));
+            $sender->sendMessage(C::colorize("&r&l&c(X) &r&cYou do not have permission to claim land."));
             return;
         }
 
@@ -46,12 +46,17 @@ final class ClaimSubCommand extends BaseSubCommand
         $claimManager = ClaimManager::getInstance();
         $existing = $claimManager->getClaimAtPosition($pos);
 
+        if ($existing !== null && $existing->getFaction() === null) {
+            $claimManager->deleteClaim($existing);
+            $existing = null;
+        }
+
         if ($existing !== null) {
             $owner = $existing->getFaction();
             if ($owner !== null && $owner->getFactionId() === $factionId) {
-                $sender->sendMessage(C::colorize("&r&l&c(✘) &r&cThis chunk is already claimed by your faction."));
+                $sender->sendMessage(C::colorize("&r&l&c(X) &r&cThis chunk is already claimed by your faction."));
             } else {
-                $sender->sendMessage(C::colorize("&r&l&c(✘) &r&cThis chunk is already claimed by &b" . $existing->getFaction()->getName()));
+                $sender->sendMessage(C::colorize("&r&l&c(X) &r&cThis chunk is already claimed by &b" . ($owner?->getName() ?? "Unknown")));
             }
             return;
         }
@@ -60,7 +65,7 @@ final class ClaimSubCommand extends BaseSubCommand
         $currentPower = $faction->getFactionPower();
 
         if ($faction->getClaimCount() >= intdiv($currentPower, 25)) {
-            $sender->sendMessage(c::colorize("&r&l&c(✘) &r&cYou have reached the maximum amount of claims for your faction."));
+            $sender->sendMessage(C::colorize("&r&l&c(X) &r&cYou have reached the maximum amount of claims for your faction."));
             return;
         }
 

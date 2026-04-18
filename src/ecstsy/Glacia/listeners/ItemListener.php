@@ -15,12 +15,17 @@ use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
 use ecstsy\Glacia\server\enchantments\Groups;
 use ecstsy\Glacia\server\factions\FactionXpBoosterManager;
+use ecstsy\Glacia\server\hats\HatManager;
 use ecstsy\Glacia\server\homes\HomeManager;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
+use ecstsy\Glacia\server\items\armor\abilities\YijkiLightningStrike;
+use ecstsy\Glacia\server\items\trackers\TrackerManager;
 use ecstsy\Glacia\server\items\rename\ItemRenameManager;
+use ecstsy\Glacia\server\factions\claims\ClaimManager;
 use ecstsy\Glacia\server\lootboxes\LootboxRepository;
 use ecstsy\Glacia\server\ranks\RankManager;
 use ecstsy\Glacia\server\ranks\RankProgressionManager;
+use ecstsy\Glacia\tasks\ChunkBusterTask;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\Glacia\utils\screens\lootboxes\LootboxAnimationScreen;
 use ecstsy\Glacia\utils\screens\slotbot\SlotbotMenuScreen;
@@ -34,10 +39,12 @@ use pocketmine\event\inventory\InventoryTransactionEvent;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\event\player\PlayerItemUseEvent;
+use pocketmine\inventory\ArmorInventory;
 use pocketmine\inventory\transaction\action\SlotChangeAction;
 use pocketmine\item\Armor;
 use pocketmine\item\Axe;
 use pocketmine\item\Bow;
+use pocketmine\item\Durable;
 use pocketmine\item\FireworkRocketExplosion;
 use pocketmine\item\FireworkRocketType;
 use pocketmine\item\Hoe;
@@ -50,9 +57,12 @@ use pocketmine\nbt\tag\ByteTag;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\nbt\tag\IntTag;
 use pocketmine\player\Player;
+use pocketmine\player\GameMode;
+use pocketmine\scheduler\ClosureTask;
 use pocketmine\world\sound\XpCollectSound;
 use pocketmine\utils\TextFormat as C;
 use pocketmine\world\Position;
+use pocketmine\block\VanillaBlocks;
 
 final class ItemListener implements Listener {
 
@@ -69,6 +79,65 @@ final class ItemListener implements Listener {
         $id = $glaciaTag->getString("glaciaItem", "");
 
         if (CustomTNTIds::isCustomTNT($id)) {
+            return;
+        }
+
+        if ($id === "chunk_buster") {
+            $event->cancel();
+
+            $session = Loader::getPlayerManager()->getSession($player);
+            $faction = $session?->getFaction();
+            if ($faction === null) {
+                $player->sendMessage(C::colorize("&r&cYou must be in a faction to use a Chunk Buster."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $targetPos = null;
+            foreach ($event->getTransaction()->getBlocks() as [$x, $y, $z, $block]) {
+                $targetPos = new Position($x, $y, $z, $player->getWorld());
+                break;
+            }
+
+            if ($targetPos === null) {
+                $player->sendMessage(C::colorize("&r&cFailed to place the Chunk Buster."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $claim = ClaimManager::getInstance()->getClaimAtPosition($targetPos);
+            if ($claim === null || $claim->getFactionId() !== $faction->getFactionId()) {
+                $player->sendMessage(C::colorize("&r&cYou can only place a Chunk Buster in your own faction claim."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $chunkX = $targetPos->getFloorX() >> 4;
+            $chunkZ = $targetPos->getFloorZ() >> 4;
+            if (ChunkBusterTask::isChunkActive($targetPos->getWorld()->getFolderName(), $chunkX, $chunkZ)) {
+                $player->sendMessage(C::colorize("&r&cA Chunk Buster is already active in this chunk."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $targetPos->getWorld()->setBlock($targetPos, VanillaBlocks::BEACON());
+
+            if ($player->getGamemode() !== GameMode::CREATIVE()) {
+                $item->pop();
+                $player->getInventory()->setItemInHand($item);
+            }
+
+            Loader::getInstance()->getScheduler()->scheduleRepeatingTask(
+                new ChunkBusterTask($player, $targetPos, $chunkX, $chunkZ),
+                1
+            );
+
+            $player->sendMessage(C::colorize("&r&b&lCHUNK BUSTER &8» &r&7Deployment successful. Priming sequence started."));
+            PlayerUtils::playSound($player, "random.fuse");
+            return;
+        }
+
+        if ($id === "collection_chest") {
             return;
         }
 
@@ -254,6 +323,135 @@ final class ItemListener implements Listener {
             $player->getInventory()->setItemInHand($item);
             $player->sendMessage(C::colorize("&r&aYour max homes increased to &f" . $homeManager->getMaxHomes($player->getUniqueId()) . "&r&a."));
             PlayerUtils::playSound($player, "random.levelup");
+            return;
+        }
+
+        if ($itemTag === "frostwake_trident") {
+            $event->cancel();
+            if ($this->handleRelicCooldown($player, $session, "relic.frostwake_trident", 300, "Frostwake Trident")) {
+                return;
+            }
+
+            $repaired = 0;
+
+            foreach ($player->getInventory()->getContents() as $slot => $storedItem) {
+                if (!$storedItem instanceof Durable || $storedItem->isNull() || $storedItem->getDamage() <= 0) {
+                    continue;
+                }
+
+                $maxDurability = $storedItem->getMaxDurability();
+                if ($maxDurability <= 0) {
+                    continue;
+                }
+
+                $repair = max(1, (int) ceil($maxDurability * 0.50));
+                $storedItem->setDamage(max(0, $storedItem->getDamage() - $repair));
+                $player->getInventory()->setItem($slot, $storedItem);
+                $repaired++;
+            }
+
+            foreach ($player->getArmorInventory()->getContents() as $slot => $storedItem) {
+                if (!$storedItem instanceof Durable || $storedItem->isNull() || $storedItem->getDamage() <= 0) {
+                    continue;
+                }
+
+                $maxDurability = $storedItem->getMaxDurability();
+                if ($maxDurability <= 0) {
+                    continue;
+                }
+
+                $repair = max(1, (int) ceil($maxDurability * 0.50));
+                $storedItem->setDamage(max(0, $storedItem->getDamage() - $repair));
+                $player->getArmorInventory()->setItem($slot, $storedItem);
+                $repaired++;
+            }
+
+            if ($repaired <= 0) {
+                $player->sendMessage(C::colorize("&r&cYou have no damaged items to restore."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $session->addCooldown("relic.frostwake_trident", 300);
+            $this->consumeHeldItem($player, $item);
+            $player->sendMessage(C::colorize("&r&bFrostwake Trident &r&7restored durability throughout your inventory."));
+            PlayerUtils::playSound($player, "random.levelup");
+            return;
+        }
+
+        if ($itemTag === "stormflare_torch") {
+            $event->cancel();
+            if ($this->handleRelicCooldown($player, $session, "relic.stormflare_torch", 600, "Stormflare Torch")) {
+                return;
+            }
+
+            $tagged = 0;
+            foreach ($player->getWorld()->getPlayers() as $nearby) {
+                if ($nearby->getId() === $player->getId()) {
+                    continue;
+                }
+
+                if ($nearby->getPosition()->distance($player->getPosition()) > 9) {
+                    continue;
+                }
+
+                Loader::getCombatManager()->startCombat($player, $nearby);
+                $tagged++;
+            }
+
+            if ($tagged <= 0) {
+                $player->sendMessage(C::colorize("&r&cNo players were close enough to tag."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $session->addCooldown("relic.stormflare_torch", 600);
+            $this->consumeHeldItem($player, $item);
+            $player->sendMessage(C::colorize("&r&eStormflare Torch &r&7tagged &f{$tagged} &r&7player(s) in combat."));
+            PlayerUtils::playSound($player, "ambient.weather.thunder");
+            return;
+        }
+
+        if ($itemTag === "glacial_blessing") {
+            $event->cancel();
+            if ($this->handleRelicCooldown($player, $session, "relic.glacial_blessing", 1800, "Glacial Blessing")) {
+                return;
+            }
+
+            $player->setHealth($player->getMaxHealth());
+            $session->addCooldown("relic.glacial_blessing", 1800);
+            $this->consumeHeldItem($player, $item);
+            $player->sendMessage(C::colorize("&r&fGlacial Blessing &r&7restored you to full health."));
+            PlayerUtils::playSound($player, "random.levelup");
+            return;
+        }
+
+        if ($itemTag === "tempest_gateway") {
+            $event->cancel();
+            if ($this->handleRelicCooldown($player, $session, "relic.tempest_gateway", 1800, "Tempest Gateway")) {
+                return;
+            }
+
+            $targets = [];
+            foreach ($player->getWorld()->getPlayers() as $nearby) {
+                if ($nearby->getId() === $player->getId()) {
+                    continue;
+                }
+
+                if ($nearby->getPosition()->distance($player->getPosition()) > 8) {
+                    continue;
+                }
+
+                $targets[] = $nearby;
+            }
+
+            $strikePosition = $targets !== [] ? $targets[array_rand($targets)]->getPosition() : $player->getPosition();
+            YijkiLightningStrike::strike($player, $strikePosition, 4.0, 3.0);
+
+            $session->addCooldown("relic.tempest_gateway", 1800);
+            $this->consumeHeldItem($player, $item);
+            $player->sendMessage(C::colorize("&r&3Tempest Gateway &r&7unleashed a Stormcaller ability."));
+            PlayerUtils::playSound($player, "ambient.weather.thunder");
             return;
         }
 
@@ -1138,6 +1336,100 @@ final class ItemListener implements Listener {
         return $this->getGroupWeight($dustGroup) >= $this->getGroupWeight($bookGroup);
     }
 
+    public function onHatArmorSync(InventoryTransactionEvent $event): void
+    {
+        $player = $event->getTransaction()->getSource();
+        if (!$player instanceof Player || !HatManager::hasRenderedHat($player)) {
+            return;
+        }
+
+        foreach ($event->getTransaction()->getActions() as $action) {
+            if (!$action instanceof SlotChangeAction) {
+                continue;
+            }
+
+            $inventory = $action->getInventory();
+            if ($inventory instanceof ArmorInventory && $inventory->getHolder() === $player && $action->getSlot() === ArmorInventory::SLOT_HEAD) {
+                Loader::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(
+                    static function() use ($player): void {
+                        HatManager::syncHelmetChange($player);
+                    }
+                ), 1);
+                return;
+            }
+        }
+    }
+
+    /**
+     * @priority HIGHEST
+     */
+    public function onDragTrackers(InventoryTransactionEvent $event): void
+    {
+        $actions = array_values($event->getTransaction()->getActions());
+        if (count($actions) !== 2) {
+            return;
+        }
+
+        foreach ($actions as $i => $action) {
+            if (!$action instanceof SlotChangeAction) {
+                continue;
+            }
+
+            $otherAction = $actions[($i + 1) % 2];
+            if (!$otherAction instanceof SlotChangeAction) {
+                continue;
+            }
+
+            $itemClickedWith = $action->getTargetItem();
+            $itemClicked = $action->getSourceItem();
+            $player = $event->getTransaction()->getSource();
+
+            if (!$player instanceof Player || $itemClickedWith->getCount() !== 1 || $itemClicked->isNull()) {
+                continue;
+            }
+
+            $glaciaTag = $itemClickedWith->getNamedTag()->getCompoundTag("Glacia");
+            if ($glaciaTag === null || $glaciaTag->getTag("glaciaItem") === null) {
+                continue;
+            }
+
+            $itemTag = $glaciaTag->getString("glaciaItem");
+            $trackerType = match ($itemTag) {
+                "block_tracker" => TrackerManager::BLOCKS,
+                "kill_tracker" => TrackerManager::PLAYER_KILLS,
+                "mob_tracker" => TrackerManager::MOB_KILLS,
+                "xp_tracker" => TrackerManager::XP,
+                default => null,
+            };
+
+            if ($trackerType === null) {
+                continue;
+            }
+
+            $event->cancel();
+
+            if (!TrackerManager::canApplyTo($itemClicked, $trackerType)) {
+                $player->sendMessage(C::colorize("&r&cThat tracker cannot be applied to this item."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            if (TrackerManager::hasTracker($itemClicked, $trackerType)) {
+                $player->sendMessage(C::colorize("&r&cThis item already has that tracker applied."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $trackedItem = TrackerManager::applyTracker($itemClicked, $trackerType);
+            $action->getInventory()->setItem($action->getSlot(), $trackedItem);
+            $otherAction->getInventory()->setItem($otherAction->getSlot(), VanillaItems::AIR());
+
+            $player->sendMessage(C::colorize("&r&aApplied a &f" . TrackerManager::getLabel($trackerType) . " &ato your item."));
+            PlayerUtils::playSound($player, "random.levelup");
+            return;
+        }
+    }
+
     private function getGroupWeight(string $group): int {
         return match(strtolower($group)){
             "simple" => 1,
@@ -1226,5 +1518,22 @@ final class ItemListener implements Listener {
         }
 
         return "Ethereal Hub";
+    }
+
+    private function handleRelicCooldown(Player $player, \ecstsy\Glacia\player\GlaciaPlayer $session, string $cooldownKey, int $seconds, string $display): bool
+    {
+        if (!$session->isOnCooldown($cooldownKey)) {
+            return false;
+        }
+
+        $player->sendMessage(C::colorize("&r&c{$display} is on cooldown for &f" . GeneralUtils::translateTime((int) $session->getCooldown($cooldownKey)) . "&r&c."));
+        PlayerUtils::playSound($player, "note.bass");
+        return true;
+    }
+
+    private function consumeHeldItem(Player $player, \pocketmine\item\Item $item): void
+    {
+        $item->pop();
+        $player->getInventory()->setItemInHand($item);
     }
 }

@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\factions;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\factions\claims\ClaimManager;
+use ecstsy\Glacia\server\factions\relations\RelationManager;
 use ecstsy\Glacia\utils\QueryStmts;
 use pocketmine\Server;
 use pocketmine\utils\SingletonTrait;
 use Ramsey\Uuid\Uuid;
-use pocketmine\utils\TextFormat as C;
 
 final class FactionManager {
     use SingletonTrait;
@@ -103,6 +104,42 @@ final class FactionManager {
         Loader::getDatabase()->executeChange(QueryStmts::FACTIONS_DELETE, [
             "faction_id" => $id
         ]);
+    }
+
+    public function disbandFaction(string $id): ?Faction
+    {
+        $faction = $this->getFaction($id);
+        if ($faction === null) {
+            return null;
+        }
+
+        foreach (Loader::getPlayerManager()->getSessions() as $session) {
+            if ($session !== null && $session->getFactionId() === $id) {
+                $session->joinFaction(null, null);
+            }
+        }
+
+        $relations = RelationManager::getInstance()->getRelationsFor($id, null, true);
+        foreach (array_keys($relations) as $otherId) {
+            RelationManager::getInstance()->clearRelation($id, $otherId);
+            RelationManager::getInstance()->clearRelation($otherId, $id);
+        }
+
+        ClaimManager::getInstance()->deleteAllForFaction($id);
+
+        $db = Loader::getDatabase();
+        $db->executeChange(QueryStmts::FACTION_HOME_DELETE, ["faction_id" => $id]);
+        $db->executeChange(QueryStmts::FACTION_ROLES_DELETE, ["faction_id" => $id]);
+
+        foreach ($faction->getMembers() as $member) {
+            $db->executeChange(QueryStmts::FACTION_MEMBERS_DELETE, [
+                "faction_id" => $id,
+                "member_uuid" => $member->getUuid()->toString()
+            ]);
+        }
+
+        $this->deleteFaction($id);
+        return $faction;
     }
 
     public function recalculateSpawnerWorths(): void

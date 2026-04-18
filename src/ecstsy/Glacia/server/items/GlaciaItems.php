@@ -149,6 +149,50 @@ final class GlaciaItems {
                 ],
                 'nbt' => ['glaciaItem' => 'transmog'],
             ],
+            'block_tracker' => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&l&bBlocks Broken Tracker',
+                'lore' => [
+                    '&r&7Tracks every block broken with a tool.',
+                    '&r&7Works on &bpickaxes&7, &baxes&7, &bshovels &7and &bhoes&7.',
+                    '',
+                    "&r&bDrag n' Drop onto a tool to apply.",
+                ],
+                'nbt' => ['glaciaItem' => 'block_tracker'],
+            ],
+            'kill_tracker' => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&l&cPlayer Kill Tracker',
+                'lore' => [
+                    '&r&7Tracks player kills earned with a weapon.',
+                    '&r&7Best used on your favorite PvP weapon.',
+                    '',
+                    "&r&cDrag n' Drop onto a weapon to apply.",
+                ],
+                'nbt' => ['glaciaItem' => 'kill_tracker'],
+            ],
+            'mob_tracker' => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&l&aMob Kill Tracker',
+                'lore' => [
+                    '&r&7Tracks the mobs slain using a weapon.',
+                    '&r&7Perfect for grinder and PvE gear.',
+                    '',
+                    "&r&aDrag n' Drop onto a weapon to apply.",
+                ],
+                'nbt' => ['glaciaItem' => 'mob_tracker'],
+            ],
+            'xp_tracker' => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&l&eXP Tracker',
+                'lore' => [
+                    '&r&7Tracks the XP earned while fighting',
+                    '&r&7with the weapon it is applied to.',
+                    '',
+                    "&r&eDrag n' Drop onto a weapon to apply.",
+                ],
+                'nbt' => ['glaciaItem' => 'xp_tracker'],
+            ],
             'random_book' => [
                 'material' => VanillaItems::BOOK(),
                 'name' => '&r{group-color}{group-name}&l Enchantment Book &r&7(Right Click)',
@@ -441,9 +485,9 @@ final class GlaciaItems {
                 'nbt' => ['glaciaItem' => 'slot_ticket'],
             ],
             "faction_xp_booster" => [
-                "material" => VanillaItems::EMERALD(), 
-                'name' => "&r&l&bFaction XP Booster &r&7(Right Click)",
-                'lore' => [
+                 "material" => VanillaItems::EMERALD(), 
+                 'name' => "&r&l&bFaction XP Booster &r&7(Right Click)",
+                 'lore' => [
                     '&r&7Multiplies XP gained by all faction',
                     '&r&7members from killing mobs while active.',
                     "",
@@ -454,8 +498,80 @@ final class GlaciaItems {
                     "",
                     "&r&l&dDURATION",
                     "&r&7{duration}",
+                  ],
+                 'nbt' => ['glaciaItem' => 'faction_xp_booster', 'multiplier' => "{multiplier}", 'duration' => "{duration}"],
+            ],
+            "chunk_buster" => [
+                "material" => VanillaBlocks::BEACON()->asItem(),
+                "name" => "&r&l&bCelestial Chunk Buster",
+                "lore" => [
+                    "&r&7A radiant beacon forged to tear through",
+                    "&r&7an entire chunk for rapid base building.",
+                    "",
+                    "&r&bRules",
+                    "&r&f * &r&7Can only be placed in your own claim.",
+                    "&r&f * &r&7Clears downward and stops at bedrock.",
+                    "",
+                    "&r&ePlace to activate."
                 ],
-                'nbt' => ['glaciaItem' => 'faction_xp_booster', 'multiplier' => "{multiplier}", 'duration' => "{duration}"],
+                "nbt" => ['glaciaItem' => 'chunk_buster'],
+            ],
+            "collection_chest" => [
+                "material" => VanillaBlocks::CHEST()->asItem(),
+                "name" => "&r&l&eCollection Chest",
+                "lore" => [
+                    "&r&7Create a chest that will",
+                    "&r&7automatically collect specified",
+                    "&r&7mob drops when a creature dies",
+                    "&r&7within the same chunk.",
+                    "",
+                    "&r&ePlace inside your own claim."
+                ],
+                "nbt" => ['glaciaItem' => 'collection_chest'],
+            ],
+            "frostwake_trident" => [
+                "material" => VanillaItems::TRIDENT(),
+                "name" => "&r&l&bFrostwake Trident",
+                "lore" => [
+                    "&r&7Right-click to restore &f50% durability",
+                    "&r&7to all damaged items in your inventory.",
+                    "",
+                    "&r&bCooldown: &f5m",
+                ],
+                "nbt" => ['glaciaItem' => 'frostwake_trident'],
+            ],
+            "stormflare_torch" => [
+                "material" => VanillaBlocks::TORCH()->asItem(),
+                "name" => "&r&l&eStormflare Torch",
+                "lore" => [
+                    "&r&7Right-click to combat-tag every player",
+                    "&r&7within a &f9 block &r&7radius.",
+                    "",
+                    "&r&eCooldown: &f10m",
+                ],
+                "nbt" => ['glaciaItem' => 'stormflare_torch'],
+            ],
+            "glacial_blessing" => [
+                "material" => VanillaItems::GHAST_TEAR(),
+                "name" => "&r&l&fGlacial Blessing",
+                "lore" => [
+                    "&r&7Right-click to instantly heal",
+                    "&r&7yourself to full health.",
+                    "",
+                    "&r&fCooldown: &f30m",
+                ],
+                "nbt" => ['glaciaItem' => 'glacial_blessing'],
+            ],
+            "tempest_gateway" => [
+                "material" => VanillaItems::ENDER_PEARL(),
+                "name" => "&r&l&3Tempest Gateway",
+                "lore" => [
+                    "&r&7Right-click to awaken a random",
+                    "&r&7armor set ability.",
+                    "",
+                    "&r&3Cooldown: &f30m",
+                ],
+                "nbt" => ['glaciaItem' => 'tempest_gateway'],
             ],
         ];
     }

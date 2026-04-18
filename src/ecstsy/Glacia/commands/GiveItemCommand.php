@@ -149,6 +149,12 @@ class GiveItemCommand extends BaseCommand {
 
                     $item = GlaciaItemFactory::lootbox((string) $boxLookup);
                     break;
+                case 'collection_chest':
+                case 'collectionchest':
+                case 'cchest':
+                case 'ccollect':
+                    $item = GlaciaItemFactory::collectionChest();
+                    break;
 
                     case 'customarmor':
                         $set = $args['extra1'] ?? null;

@@ -1,0 +1,67 @@
+name: "&r&l&6Random Enchantment Orb Generator"
+title: "&r&8Random Enchantment Orb Generator"
+aliases:
+  - "randomenchantmentorbgenerator"
+  - "randomorbgenerator"
+  - "randomorbgen"
+  - "rorbgen"
+icon: "ender_eye"
+glow: true
+item-name: "&r&l&6Random Enchantment Orb Generator"
+item-lore:
+  - "&r&7Right-click to receive a random &612, 13 or 14 lore"
+  - "&r&6Armor &7or &6Weapon Enchantment Orb!"
+  - ""
+  - "&r&l&fRandom Loot (&r&71 item&f&l)"
+  - "&r&f&l * &r&l&6Armor Enchantment Orb [&r&a12&l&6]"
+  - "&r&f&l * &r&l&6Armor Enchantment Orb [&r&a13&l&6]"
+  - "&r&f&l * &r&l&6Armor Enchantment Orb [&r&a14&l&6]"
+  - "&r&f&l * &r&l&6Weapon Enchantment Orb [&r&a12&l&6]"
+  - "&r&f&l * &r&l&6Weapon Enchantment Orb [&r&a13&l&6]"
+  - "&r&f&l * &r&l&6Weapon Enchantment Orb [&r&a14&l&6]"
+  
+rolls:
+  - pool: "rewards"
+    count: 1
+    chance: 100
+    mode: "random"
+
+# `mode: random` rolls from the pool `count` times.
+# `mode: all` gives every entry in the pool once.
+
+rewards:
+  - chance: 17
+    type: item
+    id: "armor_orb"
+    max: 12
+    success: 100
+
+  - chance: 17
+    type: item
+    id: "armor_orb"
+    max: 13
+    success: 100
+
+  - chance: 16
+    type: item
+    id: "armor_orb"
+    max: 14
+    success: 100
+
+  - chance: 17
+    type: item
+    id: "weapon_orb"
+    max: 12
+    success: 100
+
+  - chance: 17
+    type: item
+    id: "weapon_orb"
+    max: 13
+    success: 100
+
+  - chance: 16
+    type: item
+    id: "weapon_orb"
+    max: 14
+    success: 100

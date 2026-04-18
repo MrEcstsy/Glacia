@@ -5,6 +5,7 @@ aliases:
   - "cache"
   - "ac"
 icon: "ender_chest"
+glow: true
 item-name: "&r&l&dArcane Cache"
 item-lore:
   - "&r&7Right-click to open this lootbox."
@@ -14,12 +15,18 @@ rolls:
   - pool: "rewards"
     count: 1
     chance: 100
+    mode: "random"
   - pool: "bonus-rewards"
     count: 1
     chance: 35
+    mode: "random"
   - pool: "jackpot-rewards"
     count: 1
     chance: 8
+    mode: "random"
+
+# `mode: random` rolls from the pool `count` times.
+# `mode: all` gives every entry in the pool once.
 
 rewards:
   - chance: 40

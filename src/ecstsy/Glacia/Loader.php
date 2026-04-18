@@ -7,6 +7,7 @@ namespace ecstsy\Glacia;
 use CortexPE\Commando\PacketHooker;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\auctionhouse\AuctionHouseManager;
+use ecstsy\Glacia\server\collectionchests\CollectionChestManager;
 use ecstsy\Glacia\server\BlackMarketAuctionInstance;
 use ecstsy\Glacia\server\CoinFlipInstance;
 use ecstsy\Glacia\server\CombatManagerInstance;
@@ -63,6 +64,7 @@ final class Loader extends PluginBase {
     private static CoinFlipInstance $coinFlipInstance;
     private static AuctionHouseManager $auctionHouseManager;
     private static PlayerVaultManager $playerVaultManager;
+    private static CollectionChestManager $collectionChestManager;
     private static BlockData $blockData;
 
     public function onLoad(): void {
@@ -109,6 +111,7 @@ final class Loader extends PluginBase {
         self::$coinFlipInstance = new CoinFlipInstance($this);
         self::$auctionHouseManager = new AuctionHouseManager();
         self::$playerVaultManager = new PlayerVaultManager();
+        self::$collectionChestManager = new CollectionChestManager();
 
         GlaciaUtils::initAll($this);
 
@@ -140,6 +143,10 @@ final class Loader extends PluginBase {
     }
 
     public function onDisable(): void {
+        if (isset(self::$collectionChestManager)) {
+            self::$collectionChestManager->save();
+        }
+
         if (isset(self::$connector)) {
             self::$connector->waitAll();
             self::$connector->close();
@@ -216,5 +223,10 @@ final class Loader extends PluginBase {
 
     public static function getPlayerVaultManager(): PlayerVaultManager {
         return self::$playerVaultManager;
+    }
+
+    public static function getCollectionChestManager(): CollectionChestManager
+    {
+        return self::$collectionChestManager;
     }
 }

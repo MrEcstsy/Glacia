@@ -42,6 +42,22 @@ final class LootboxRepository {
     /**
      * @return string[]
      */
+    public static function getBundledResourceFiles(): array
+    {
+        $resourceDirectory = dirname(__DIR__, 5) . DIRECTORY_SEPARATOR . "resources" . DIRECTORY_SEPARATOR . "lootboxes";
+        $files = [];
+
+        foreach (glob($resourceDirectory . DIRECTORY_SEPARATOR . "*.yml") ?: [] as $file) {
+            $files[] = "lootboxes/" . basename($file);
+        }
+
+        sort($files, SORT_NATURAL | SORT_FLAG_CASE);
+        return $files;
+    }
+
+    /**
+     * @return string[]
+     */
     public static function getBoxIds(): array
     {
         self::ensureLoaded();
@@ -124,6 +140,17 @@ final class LootboxRepository {
                 continue;
             }
 
+            $mode = strtolower((string) ($roll["mode"] ?? "random"));
+            if ($mode === "all") {
+                foreach ($pool as $entry) {
+                    $item = RewardResolver::resolveItem($entry, $player);
+                    if ($item !== null) {
+                        $results[] = $item;
+                    }
+                }
+                continue;
+            }
+
             $count = max(0, GeneralUtils::parseRandomNumber($roll["count"] ?? 1));
             for ($i = 0; $i < $count; $i++) {
                 $entry = RewardResolver::rollEntry($pool);
@@ -147,7 +174,7 @@ final class LootboxRepository {
             }
         }
 
-        return array_slice($results, 0, 5);
+        return array_slice($results, 0, 7);
     }
 
     /**

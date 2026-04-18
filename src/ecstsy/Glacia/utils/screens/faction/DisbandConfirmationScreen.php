@@ -6,14 +6,12 @@ namespace ecstsy\Glacia\utils\screens\faction;
 
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\factions\FactionManager;
-use ecstsy\Glacia\utils\QueryStmts;
 use ecstsy\MartianUtilities\utils\screens\BaseScreen;
 use pocketmine\player\Player;
-use Vecnavium\FormsUI\SimpleForm;
 use pocketmine\utils\TextFormat as C;
 use pocketmine\world\particle\HugeExplodeParticle;
 use pocketmine\world\sound\ExplodeSound;
-use ecstsy\Glacia\player\GlaciaPlayer;
+use Vecnavium\FormsUI\SimpleForm;
 
 final class DisbandConfirmationScreen extends BaseScreen {
 
@@ -25,7 +23,9 @@ final class DisbandConfirmationScreen extends BaseScreen {
         $factionId = $session->getFactionId();
 
         $this->form = new SimpleForm(function (Player $player, ?int $data) use ($factionId): void {
-            if ($data === null) return;
+            if ($data === null) {
+                return;
+            }
 
             switch ($data) {
                 case 0:
@@ -36,23 +36,15 @@ final class DisbandConfirmationScreen extends BaseScreen {
                     }
 
                     foreach (Loader::getPlayerManager()->getSessions() as $session) {
-                        /** @var ?GlaciaPlayer $session */
                         if ($session->getFactionId() === $factionId) {
                             $member = $session->getPlayer();
                             if ($member instanceof Player) {
                                 $member->sendMessage(C::colorize("&r&cYour faction &4{$faction->getName()} &chas been disbanded."));
                             }
-                            $session->joinFaction(null, null);
                         }
                     }
 
-                    $db = Loader::getDatabase();
-
-                    FactionManager::getInstance()->deleteFaction($factionId);
-                    $db->executeChange(QueryStmts::FACTION_MEMBERS_DELETE, ["faction_id" => $factionId, "member_uuid" => $player->getUniqueId()->toString()]);
-                    $db->executeChange(QueryStmts::FACTION_ROLES_DELETE, ["faction_id" => $factionId]);
-                    $db->executeChange(QueryStmts::FACTION_HOME_DELETE, ["faction_id" => $factionId]);
-                    $db->executeChange(QueryStmts::FACTION_CLAIM_DELETE_FACTION, ["faction_id" => $factionId]);
+                    FactionManager::getInstance()->disbandFaction($factionId);
 
                     $player->sendMessage(C::colorize("&r&cYou disbanded the faction &4{$faction->getName()}"));
                     $player->getWorld()->addSound($player->getPosition(), new ExplodeSound());

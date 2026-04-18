@@ -9,7 +9,6 @@ use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\factions\FactionManager;
 use ecstsy\Glacia\utils\GlaciaUtils;
-use ecstsy\Glacia\utils\QueryStmts;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
@@ -48,28 +47,19 @@ final class ForceDisbandSubCommand extends BaseSubCommand {
         $factionId = $faction->getFactionId();
 
         foreach (Loader::getPlayerManager()->getSessions() as $session) {
-            /** @var ?\ecstsy\Glacia\player\GlaciaPlayer $session */
             if ($session->getFactionId() === $factionId) {
                 $member = $session->getPlayer();
                 if ($member instanceof Player) {
-                    $member->sendMessage(C::colorize("&r&l&c(✘) &r&cFaction '&4{$faction->getName()}&c' has been disbanded by an Admin."));
+                    $member->sendMessage(C::colorize("&r&l&c(X) &r&cFaction '&4{$faction->getName()}&c' has been disbanded by an Admin."));
                     $member->getWorld()->addSound($member->getPosition(), new ExplodeSound());
                     $member->getWorld()->addParticle($member->getEyePos(), new HugeExplodeParticle());
                 }
-                $session->joinFaction(null, null);
             }
         }
 
-        $db = Loader::getDatabase();
+        $factionManager->disbandFaction($factionId);
 
-        $factionManager->deleteFaction($factionId);
-        $db->executeChange(QueryStmts::FACTION_MEMBERS_DELETE, ["faction_id" => $factionId, "member_uuid" => $sender->getUniqueId()->toString()]);
-        $db->executeChange(QueryStmts::FACTION_ROLES_DELETE, ["faction_id" => $factionId]);
-        $db->executeChange(QueryStmts::FACTION_HOME_DELETE, ["faction_id" => $factionId]);
-        $db->executeChange(QueryStmts::FACTION_CLAIM_DELETE_FACTION, ["faction_id" => $factionId]);
-        
-
-        $sender->sendMessage(C::colorize("&r&c&l(✘) &r&cFaction '&b{$faction->getName()}&c' has been disbanded by &b{$sender->getName()}&c."));
+        $sender->sendMessage(C::colorize("&r&c&l(X) &r&cFaction '&b{$faction->getName()}&c' has been disbanded by &b{$sender->getName()}&c."));
 
         GlaciaUtils::logAdminAction("Force Disband", [
             "admin" => $sender->getName(),

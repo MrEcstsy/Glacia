@@ -46,7 +46,7 @@ final class LootboxAnimationScreen extends BaseScreen {
         ));
         $this->menu->setInventoryCloseListener(function(Player $player, Inventory $inventory): void {
             if (!$this->finished) {
-                $this->finish();
+                $this->finish(true);
             }
         });
 
@@ -110,7 +110,7 @@ final class LootboxAnimationScreen extends BaseScreen {
         ), self::UPDATE_INTERVAL_TICKS);
     }
 
-    private function finish(): void
+    private function finish(bool $closedEarly = false): void
     {
         if ($this->finished) {
             return;
@@ -125,9 +125,11 @@ final class LootboxAnimationScreen extends BaseScreen {
         $inventory = $this->menu->getInventory();
         $rewardSlots = $this->getRewardSlots(count($this->finalRewards));
 
-        $this->fillStaticSlots($inventory, 1);
-        foreach ($rewardSlots as $index => $slot) {
-            $inventory->setItem($slot, clone $this->finalRewards[$index]);
+        if (!$closedEarly) {
+            $this->fillStaticSlots($inventory, 1);
+            foreach ($rewardSlots as $index => $slot) {
+                $inventory->setItem($slot, clone $this->finalRewards[$index]);
+            }
         }
 
         $session = Loader::getPlayerManager()->getSession($this->viewer);
@@ -181,12 +183,14 @@ final class LootboxAnimationScreen extends BaseScreen {
      */
     private function getRewardSlots(int $count): array
     {
-        return match (max(1, min(5, $count))) {
+        return match (max(1, min(7, $count))) {
             1 => [4],
             2 => [3, 5],
             3 => [2, 4, 6],
-            4 => [1, 3, 5, 7],
-            default => [1, 2, 4, 6, 7],
+            4 => [2, 3, 5, 6],
+            5 => [1, 2, 4, 6, 7],
+            6 => [1, 2, 3, 5, 6, 7],
+            default => [1, 2, 3, 4, 5, 6, 7],
         };
     }
 

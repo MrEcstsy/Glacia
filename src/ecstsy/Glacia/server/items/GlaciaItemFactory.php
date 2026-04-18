@@ -11,6 +11,7 @@ use ecstsy\Glacia\server\enchantments\Groups;
 use ecstsy\Glacia\server\items\armor\ArmorSetEnchants;
 use ecstsy\Glacia\server\lootboxes\LootboxRepository;
 use ecstsy\Glacia\server\quests\QuestInstance;
+use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\item\enchantment\EnchantmentInstance;
 use pocketmine\item\enchantment\VanillaEnchantments;
@@ -208,6 +209,12 @@ final class GlaciaItemFactory {
             $item->setLore(array_map(static fn(string $line): string => C::colorize($line), $lore));
         }
 
+        if ((bool) ($box["glow"] ?? false)) {
+            GlaciaUtils::applyDisplayEnchant($item);
+        } else {
+            GlaciaUtils::removeDisplayEnchant($item);
+        }
+
         $root = $item->getNamedTag();
         $tag = new CompoundTag();
         $tag->setString("glaciaItem", "lootbox");
@@ -379,6 +386,11 @@ final class GlaciaItemFactory {
 
     public static function slotTicket(): Item {
         return self::create("slot_ticket");
+    }
+
+    public static function collectionChest(): Item
+    {
+        return self::create("collection_chest");
     }
 
     public static function factionXpBooster(float $multiplier, string $duration): Item

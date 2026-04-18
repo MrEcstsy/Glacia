@@ -34,7 +34,12 @@ final class FactionListener implements Listener
         }
 
         $claim = ClaimManager::getInstance()->getClaimAtPosition($player->getPosition());
-        $currentFactionId = $claim !== null ? $claim->getFaction()->getFactionId() : null;
+        if ($claim !== null && $claim->getFaction() === null) {
+            ClaimManager::getInstance()->deleteClaim($claim);
+            $claim = null;
+        }
+
+        $currentFactionId = $claim?->getFactionId();
 
         if ((self::$claimStates[$uuid] ?? null) === $currentFactionId) {
             return;

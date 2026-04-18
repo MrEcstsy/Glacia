@@ -154,6 +154,10 @@ final class RewardResolver {
             "whitescroll" => GlaciaItemFactory::whitescroll(),
             "blackscroll" => GlaciaItemFactory::blackscroll(self::parsePercentValue($entry["success"] ?? "{90-100}")),
             "renametag", "itemnametag" => GlaciaItemFactory::renametag(),
+            "transmog", "transmog_scroll", "transmogscroll" => GlaciaItemFactory::create("transmog"),
+            "chunkbuster", "chunk_buster" => GlaciaItemFactory::create("chunk_buster"),
+            "collectionchest", "collection_chest" => GlaciaItemFactory::collectionChest(),
+            "orb", "armor_orb", "weapon_orb", "tool_orb" => self::resolveOrbItem($id, $entry),
 
             "simpledp" => GlaciaItemFactory::dropPackage("simple_chest"),
             "uniquedp" => GlaciaItemFactory::dropPackage("unique_chest"),
@@ -233,6 +237,25 @@ final class RewardResolver {
         }
 
         return GlaciaItemFactory::randomMagicDust($group);
+    }
+
+    /**
+     * @param array<string, mixed> $entry
+     */
+    private static function resolveOrbItem(string $id, array $entry): Item
+    {
+        $type = match ($id) {
+            "armor_orb" => "armor",
+            "weapon_orb" => "weapon",
+            "tool_orb" => "tool",
+            default => strtolower((string) ($entry["orb_type"] ?? $entry["type"] ?? "armor"))
+        };
+
+        $max = max(1, GeneralUtils::parseRandomNumber($entry["max"] ?? $entry["slots"] ?? 12));
+        $new = max(1, GeneralUtils::parseRandomNumber($entry["new"] ?? max(1, $max - 9)));
+        $success = self::parsePercentValue($entry["success"] ?? 100);
+
+        return GlaciaItemFactory::enchantOrb($type, $max, $new, $success);
     }
 
     /**
