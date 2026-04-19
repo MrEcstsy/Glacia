@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\commands\sub\balance;
 
-use CortexPE\Commando\args\IntegerArgument;
 use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
+use ecstsy\MartianUtilities\utils\GeneralUtils;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -29,14 +29,14 @@ final class TakeSubCommand extends BaseSubCommand {
         }
 
         $player = isset($args["name"]) ? PlayerUtils::getPlayerByPrefix($args["name"]) : null;
-        $amount = isset($args["amount"]) ? (float)$args["amount"] : null;
+        $amount = isset($args["amount"]) ? (float) GeneralUtils::parseRandomNumber((string) $args["amount"]) : null;
 
         if ($player === null) {
             $sender->sendMessage(C::colorize("&r&cError: &4Player not found."));
             return;
         }
 
-        if ($amount === null) {
+        if ($amount === null || $amount <= 0) {
             $sender->sendMessage(C::colorize("&r&cError: &4Amount not specified."));
             return;
         }

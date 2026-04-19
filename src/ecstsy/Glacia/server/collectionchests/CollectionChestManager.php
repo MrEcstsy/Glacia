@@ -147,7 +147,10 @@ final class CollectionChestManager {
 
         $display = [];
         foreach (($entry["items"] ?? []) as $fingerprint => $stored) {
-            $item = ItemUtils::decodeItem((string) $stored["item_data"]);
+            $item = $this->decodeStoredItem($positionKey, $fingerprint, (string) ($stored["item_data"] ?? ""));
+            if ($item === null) {
+                continue;
+            }
             $count = (int) ($stored["count"] ?? 0);
             $sellPrice = SellHandler::getSellPrice($item->getTypeId());
 
@@ -220,7 +223,10 @@ final class CollectionChestManager {
         $this->persist();
         CollectionChestScreen::refreshFor($position);
 
-        $template = ItemUtils::decodeItem((string) $stored["item_data"]);
+        $template = $this->decodeStoredItem($positionKey, $fingerprint, (string) ($stored["item_data"] ?? ""));
+        if ($template === null) {
+            return [];
+        }
         $remaining = (int) $stored["count"];
         $items = [];
 
@@ -245,11 +251,20 @@ final class CollectionChestManager {
         $positionKey = $this->positionKeyFromEntry($entry);
         $session = Loader::getPlayerManager()->getSession($player);
         $multiplier = $session?->getSellMultiplier() ?? 1.0;
+        $factionMultiplier = 1.0;
+        $factionId = (string) ($entry["faction_id"] ?? "");
+        if ($factionId !== "") {
+            $factionMultiplier = Loader::getFactionUpgradeManager()->getCollectionSellMultiplier(Loader::getFactionManager()->getFaction($factionId));
+        }
+        $multiplier *= $factionMultiplier;
         $totalEarned = 0.0;
         $soldItems = 0;
 
         foreach (($this->entries[$positionKey]["items"] ?? []) as $fingerprint => $stored) {
-            $item = ItemUtils::decodeItem((string) $stored["item_data"]);
+            $item = $this->decodeStoredItem($positionKey, (string) $fingerprint, (string) ($stored["item_data"] ?? ""));
+            if ($item === null) {
+                continue;
+            }
             $count = (int) ($stored["count"] ?? 0);
             $sellPrice = SellHandler::getSellPrice($item->getTypeId());
             if ($sellPrice === null || $count <= 0) {
@@ -293,6 +308,9 @@ final class CollectionChestManager {
         $count = $normalized->getCount();
         $normalized->setCount(1);
         $fingerprint = ItemUtils::encodeItem($normalized);
+        if (!is_string($fingerprint) || $fingerprint === "") {
+            return;
+        }
 
         if (!isset($this->entries[$positionKey]["items"][$fingerprint])) {
             $this->entries[$positionKey]["items"][$fingerprint] = [
@@ -302,6 +320,17 @@ final class CollectionChestManager {
         }
 
         $this->entries[$positionKey]["items"][$fingerprint]["count"] = (int) $this->entries[$positionKey]["items"][$fingerprint]["count"] + $count;
+    }
+
+    private function decodeStoredItem(string $positionKey, string $fingerprint, string $encoded): ?Item
+    {
+        try {
+            return ItemUtils::decodeItem($encoded);
+        } catch (\Throwable) {
+            unset($this->entries[$positionKey]["items"][$fingerprint]);
+            $this->persist();
+            return null;
+        }
     }
 
     private function validateEntry(array $entry): bool

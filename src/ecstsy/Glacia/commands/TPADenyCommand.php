@@ -25,7 +25,7 @@ final class TPADenyCommand extends BaseCommand {
 
         $requester = $args["sender"] ?? null;
         if ($requester === null || !$requester->isOnline()) {
-            $sender->sendMessage(GlaciaUtils::format('player.error.invalid', ['{name}' => $requester->getName()], 'error'));
+            $sender->sendMessage(GlaciaUtils::format('player.error.invalid', ['name' => 'that player'], 'error'));
             return;
         }
         TPAManager::denyTPA($sender, $requester);

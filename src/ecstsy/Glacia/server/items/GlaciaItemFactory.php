@@ -26,7 +26,8 @@ final class GlaciaItemFactory {
     public static array $definitions = [];
 
     public static function create(string $key, array $args = []): Item {
-        $def = self::$definitions[$key] ?? throw new \InvalidArgumentException("Unknown item definition: $key");
+        $definitionKey = self::resolveDefinitionKey($key);
+        $def = self::$definitions[$definitionKey] ?? throw new \InvalidArgumentException("Unknown item definition: $key");
 
         /** @var Item $item */
         $item = clone $def['material'];
@@ -34,7 +35,10 @@ final class GlaciaItemFactory {
         $item->setCustomName(C::colorize(self::template($def['name'] ?? '', $args)));
         $loreLines = [];
         foreach ($def['lore'] ?? [] as $line) {
-            $loreLines[] = C::colorize(self::template((string) $line, $args));
+            $resolved = self::template((string) $line, $args);
+            foreach (preg_split("/\r\n|\n|\r/", $resolved) ?: [$resolved] as $splitLine) {
+                $loreLines[] = C::colorize($splitLine);
+            }
         }
         if ($loreLines) {
             $item->setLore($loreLines);
@@ -225,6 +229,27 @@ final class GlaciaItemFactory {
         return $item;
     }
 
+    private static function resolveDefinitionKey(string $key): string
+    {
+        if (isset(self::$definitions[$key])) {
+            return $key;
+        }
+
+        $normalized = self::normalizeDefinitionKey($key);
+        foreach (array_keys(self::$definitions) as $existingKey) {
+            if (self::normalizeDefinitionKey($existingKey) === $normalized) {
+                return $existingKey;
+            }
+        }
+
+        return $key;
+    }
+
+    private static function normalizeDefinitionKey(string $key): string
+    {
+        return strtolower(str_replace(["_", "-", " "], "", $key));
+    }
+
     public static function tnt(string $type): Item {
         return self::create($type, [
             'type' => $type
@@ -388,6 +413,10 @@ final class GlaciaItemFactory {
         return self::create("slot_ticket");
     }
 
+    public static function heroicSlotTicket(): Item {
+        return self::create("heroic_slot_ticket");
+    }
+
     public static function collectionChest(): Item
     {
         return self::create("collection_chest");
@@ -418,6 +447,6 @@ final class GlaciaItemFactory {
             $template = str_replace("{{" . $k . "}}", (string)$v, $template);
         }
 
-        return $template;
+        return str_replace('\n', "\n", $template);
     }
 }

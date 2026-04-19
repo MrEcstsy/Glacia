@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\tasks;
 
+use ecstsy\Glacia\Loader;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\math\Vector3;
@@ -69,6 +70,15 @@ final class ChunkBusterTask extends Task {
                     $block = $world->getBlockAt($x, $this->currentY, $z);
                     if ($block->isSameState(VanillaBlocks::AIR()) || $block->isSameState(VanillaBlocks::BEDROCK())) {
                         continue;
+                    }
+
+                    $blockPos = new Position($x, $this->currentY, $z, $world);
+                    if (Loader::getCollectionChestManager()->getChestAt($blockPos) !== null) {
+                        Loader::getCollectionChestManager()->removeChest($blockPos);
+                    }
+
+                    if (Loader::getBlockData()->hasAt($world, $x, $this->currentY, $z)) {
+                        Loader::getBlockData()->removeAt($world, $x, $this->currentY, $z);
                     }
 
                     $world->setBlockAt($x, $this->currentY, $z, VanillaBlocks::AIR());

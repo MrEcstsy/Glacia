@@ -586,6 +586,7 @@ final class CustomEnchantments {
     }
 
     public static function display(ItemStack $itemStack): ItemStack {
+        try {
         $item = TypeConverter::getInstance()->netItemStackToCore($itemStack);
         $root = $item->getNamedTag();
         $martianCES = $root->getCompoundTag("GlaciaCES");
@@ -645,7 +646,10 @@ final class CustomEnchantments {
 
         GlaciaUtils::updateGlowEffect($item);
 
-        return TypeConverter::getInstance()->coreItemStackToNet($item);
+            return TypeConverter::getInstance()->coreItemStackToNet($item);
+        } catch (\Throwable) {
+            return $itemStack;
+        }
     }
 
     private static function stripInjectedCustomEnchantLore(array $lore): array {
@@ -712,16 +716,20 @@ final class CustomEnchantments {
     }
 
     public static function filter(ItemStack $itemStack): ItemStack {
-        $item = TypeConverter::getInstance()->netItemStackToCore($itemStack);
-        $tag = $item->getNamedTag();
-        if (count($item->getEnchantments()) > 0) $tag->removeTag(Item::TAG_DISPLAY);
+        try {
+            $item = TypeConverter::getInstance()->netItemStackToCore($itemStack);
+            $tag = $item->getNamedTag();
+            if (count($item->getEnchantments()) > 0) $tag->removeTag(Item::TAG_DISPLAY);
 
-        if ($tag->getTag("OriginalDisplayTag") instanceof CompoundTag) {
-            $tag->setTag(Item::TAG_DISPLAY, $tag->getTag("OriginalDisplayTag"));
-            $tag->removeTag("OriginalDisplayTag");
+            if ($tag->getTag("OriginalDisplayTag") instanceof CompoundTag) {
+                $tag->setTag(Item::TAG_DISPLAY, $tag->getTag("OriginalDisplayTag"));
+                $tag->removeTag("OriginalDisplayTag");
+            }
+            $item->setNamedTag($tag);
+            return TypeConverter::getInstance()->coreItemStackToNet($item);
+        } catch (\Throwable) {
+            return $itemStack;
         }
-        $item->setNamedTag($tag);
-        return TypeConverter::getInstance()->coreItemStackToNet($item);
     }
 
     /**

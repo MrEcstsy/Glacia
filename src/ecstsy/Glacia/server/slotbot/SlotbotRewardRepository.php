@@ -68,6 +68,16 @@ final class SlotbotRewardRepository {
         return clone $normalRewards[array_rand($normalRewards)];
     }
 
+    public static function getJackpotReward(): ?Item
+    {
+        $jackpotRewards = self::getRewards("jackpot-rewards");
+        if ($jackpotRewards === []) {
+            return null;
+        }
+
+        return clone $jackpotRewards[array_rand($jackpotRewards)];
+    }
+
     public static function getDisplayReward(): ?Item
     {
         $normalRewards = self::getRewards();
@@ -86,6 +96,16 @@ final class SlotbotRewardRepository {
         }
 
         return clone $normalRewards[array_rand($normalRewards)];
+    }
+
+    public static function getJackpotDisplayReward(): ?Item
+    {
+        $jackpotRewards = self::getRewards("jackpot-rewards");
+        if ($jackpotRewards === []) {
+            return null;
+        }
+
+        return clone $jackpotRewards[array_rand($jackpotRewards)];
     }
 
     public static function getJackpotChance(): float

@@ -87,6 +87,7 @@ final class GlaciaPlayer {
     public function setCurrentChat(string $chat): void
     {
         $this->chat = $chat;
+        $this->updateDb();
         $player = $this->getPlayer();
         if ($player !== null) {
             ScoreboardHelper::updateChatLine($player);

@@ -1,0 +1,61 @@
+enabled: true
+interval: "2h"
+default-duration: "30m"
+minimum-contribution: 50000
+milestone-broadcasts:
+  - 25
+  - 50
+  - 75
+  - 100
+
+events:
+  glacial_restock:
+    enabled: true
+    display-name: "&r&l&bGlacial Restock Fund"
+    goal: 5000000
+    duration: "30m"
+    description:
+      - "&r&7Pool money together to unlock a fresh restock"
+      - "&r&7for everyone online."
+    rewards:
+      - type: money
+        amount: 50000
+      - type: xp
+        amount: 10000
+      - type: item
+        id: "heroic_slot_ticket"
+        count: 1
+
+  frostfire_drive:
+    enabled: true
+    display-name: "&r&l&3Frostfire Drive"
+    goal: 8000000
+    duration: "45m"
+    description:
+      - "&r&7Help power the outpost relays and earn"
+      - "&r&7a stronger server-wide reward."
+    rewards:
+      - type: money
+        amount: 100000
+      - type: item
+        id: "collection_chest"
+        count: 1
+      - type: item
+        id: "heroic_mysterymobspawner"
+        count: 1
+
+  crystal_relief:
+    enabled: true
+    display-name: "&r&l&fCrystal Relief Fund"
+    goal: 3000000
+    duration: "20m"
+    description:
+      - "&r&7A lighter event with a smaller goal"
+      - "&r&7and a quicker payoff."
+    rewards:
+      - type: money
+        amount: 25000
+      - type: item
+        id: "bank_note"
+        amount: 75000
+        count: 1

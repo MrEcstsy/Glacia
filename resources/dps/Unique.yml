@@ -48,46 +48,86 @@ unique-loot:
 
   unique:
     - type: item
-      id: "simplebook"
-      chance: 28
-    - type: item
-      id: "uniquebook"
-      chance: 30
-    - type: item
-      id: "elitebook"
+      id: bank_note
+      amount: "{10000-15000}"
       chance: 18
     - type: item
-      id: "simpledp"
+      id: xp_note
+      amount: "{5000-7500}"
+      chance: 16
+    - type: item
+      id: simplebook
+      count: "{2-3}"
+      chance: 22
+    - type: item
+      id: uniquebook
       chance: 18
     - type: item
-      id: "uniquedp"
-      chance: 18
+      id: chicken_spawner
+      chance: 8
     - type: item
-      id: "elitedp"
-      chance: 10
-    - type: item
-      id: whitescroll
-      chance: 14
-    - type: item
-      id: blackscroll
-      chance: 12
-    - type: item
-      id: renametag
-      chance: 10
-    - type: item
-      id: zombie_spawner
-      chance: 12
-    - type: item
-      id: skeleton_spawner
-      chance: 12
-    - type: item
-      id: spider_spawner
-      chance: 10
+      id: cow_spawner
+      chance: 8
     - type: item
       id: pig_spawner
+      chance: 8
+    - type: item
+      id: zombie_spawner
+      chance: 8
+    - type: item
+      id: skeleton_spawner
+      chance: 8
+    - type: item
+      id: spider_spawner
+      chance: 8
+    - type: item
+      id: obsidian_gen_bucket_down
       chance: 10
     - type: item
-      id: mysterymobspawner
+      id: simpledp
+      chance: 10
+    - type: item
+      id: uniquedp
+      chance: 10
+    - type: item
+      id: elitedp
+      chance: 8
+    - type: item
+      id: dormant_sigil
+      chance: 10
+    - type: item
+      id: armor_orb
+      max: 12
+      success: "{55-75}"
+      chance: 8
+    - type: item
+      id: weapon_orb
+      max: 12
+      success: "{55-75}"
+      chance: 8
+    - type: item
+      material: diamond_sword
+      enchantments:
+        - enchant: looting
+          level: 2
+      chance: 8
+    - type: item
+      id: frostwake_trident
+      chance: 5
+    - type: item
+      id: stormflare_torch
+      chance: 5
+    - type: item
+      id: glacial_blessing
+      chance: 4
+    - type: item
+      id: purity_wisp
+      chance: 5
+    - type: item
+      id: gale_fox
+      chance: 4
+    - type: item
+      id: hearthbloom
       chance: 4
 
   elite:

@@ -7,14 +7,18 @@ namespace ecstsy\Glacia;
 use CortexPE\Commando\PacketHooker;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\auctionhouse\AuctionHouseManager;
+use ecstsy\Glacia\server\BountyManager;
 use ecstsy\Glacia\server\collectionchests\CollectionChestManager;
 use ecstsy\Glacia\server\BlackMarketAuctionInstance;
 use ecstsy\Glacia\server\CoinFlipInstance;
 use ecstsy\Glacia\server\CombatManagerInstance;
+use ecstsy\Glacia\server\envoys\EnvoyManager;
+use ecstsy\Glacia\server\GlobalFundManager;
 use ecstsy\Glacia\server\factions\FactionManager;
 use ecstsy\Glacia\server\factions\FactionXpBoosterManager;
 use ecstsy\Glacia\server\factions\relations\RelationManager;
 use ecstsy\Glacia\server\factions\role\FactionRoleManager;
+use ecstsy\Glacia\server\factions\upgrades\FactionUpgradeManager;
 use ecstsy\Glacia\server\GraceInstance;
 use ecstsy\Glacia\server\homes\HomeManager;
 use ecstsy\Glacia\server\JackpotInstance;
@@ -54,6 +58,7 @@ final class Loader extends PluginBase {
     private static RankManager $rankManager;
     private static RelationManager $relationManager;
     private static FactionRoleManager $factionRoleManager;
+    private static FactionUpgradeManager $factionUpgradeManager;
     private static RegionManager $regionManager;
     private static HomeManager $homeManager;
     private static WarpManager $warpManager;
@@ -65,6 +70,9 @@ final class Loader extends PluginBase {
     private static AuctionHouseManager $auctionHouseManager;
     private static PlayerVaultManager $playerVaultManager;
     private static CollectionChestManager $collectionChestManager;
+    private static BountyManager $bountyManager;
+    private static GlobalFundManager $globalFundManager;
+    private static EnvoyManager $envoyManager;
     private static BlockData $blockData;
 
     public function onLoad(): void {
@@ -81,6 +89,7 @@ final class Loader extends PluginBase {
         self::$connector->executeGeneric(QueryStmts::FACTION_MEMBERS_INIT);
         self::$connector->executeGeneric(QueryStmts::FACTION_CLAIM_INIT);
         self::$connector->executeGeneric(QueryStmts::FACTION_RELATIONS_INIT);
+        self::$connector->executeGeneric(QueryStmts::FACTION_UPGRADE_BANK_INIT);
         self::$connector->executeGeneric(QueryStmts::PLAYER_RANK_INIT);
         self::$connector->executeGeneric(QueryStmts::PLAYER_PERMISSIONS_INIT);
         self::$connector->executeGeneric(QueryStmts::SERVER_HOMES_INIT);
@@ -89,6 +98,7 @@ final class Loader extends PluginBase {
         self::$connector->executeGeneric(QueryStmts::COINFLIP_INIT);
         self::$connector->executeGeneric(QueryStmts::JACKPOT_INIT);
         self::$connector->executeGeneric(QueryStmts::JACKPOT_STATS_INIT);
+        self::$connector->executeGeneric(QueryStmts::BOUNTIES_INIT);
         self::$connector->executeGeneric(QueryStmts::COMBAT_LOGGER_INIT);
         self::$connector->executeGeneric(QueryStmts::AUCTION_HOUSE_LISTINGS_INIT);
         self::$connector->executeGeneric(QueryStmts::AUCTION_HOUSE_COLLECTION_INIT);
@@ -101,6 +111,7 @@ final class Loader extends PluginBase {
         self::$factionXpBoosterManager = new FactionXpBoosterManager();
         self::$relationManager = new RelationManager();
         self::$factionRoleManager = new FactionRoleManager();
+        self::$factionUpgradeManager = new FactionUpgradeManager();
         self::$rankManager = new RankManager();
         self::$homeManager = new HomeManager($this, 3);
         self::$warpManager = new WarpManager($this);
@@ -112,6 +123,9 @@ final class Loader extends PluginBase {
         self::$auctionHouseManager = new AuctionHouseManager();
         self::$playerVaultManager = new PlayerVaultManager();
         self::$collectionChestManager = new CollectionChestManager();
+        self::$bountyManager = new BountyManager();
+        self::$globalFundManager = new GlobalFundManager();
+        self::$envoyManager = new EnvoyManager();
 
         GlaciaUtils::initAll($this);
 
@@ -151,7 +165,7 @@ final class Loader extends PluginBase {
             self::$connector->waitAll();
             self::$connector->close();
         }
-    }
+    } 
 
     public static function getBlockData(): BlockData {
         return self::$blockData;
@@ -179,6 +193,11 @@ final class Loader extends PluginBase {
 
     public static function getFactionRoleManager(): FactionRoleManager {
         return self::$factionRoleManager;
+    }
+
+    public static function getFactionUpgradeManager(): FactionUpgradeManager
+    {
+        return self::$factionUpgradeManager;
     }
 
     public static function getRankManager(): RankManager {
@@ -228,5 +247,20 @@ final class Loader extends PluginBase {
     public static function getCollectionChestManager(): CollectionChestManager
     {
         return self::$collectionChestManager;
+    }
+
+    public static function getBountyManager(): BountyManager
+    {
+        return self::$bountyManager;
+    }
+
+    public static function getGlobalFundManager(): GlobalFundManager
+    {
+        return self::$globalFundManager;
+    }
+
+    public static function getEnvoyManager(): EnvoyManager
+    {
+        return self::$envoyManager;
     }
 }

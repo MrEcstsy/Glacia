@@ -4,38 +4,102 @@ settings:
 simple-loot:
   simple:
     - type: item
-      id: "simplebook"
-      chance: 40
+      id: bank_note
+      amount: "{1000-10000}"
+      chance: 18
     - type: item
-      id: "uniquebook"
+      id: xp_note
+      amount: "{2000-5000}"
+      chance: 16
+    - type: item
+      id: simplebook
+      count: "{1-2}"
       chance: 24
     - type: item
-      id: "simpledp"
-      chance: 22
-    - type: item
-      id: "uniquedp"
-      chance: 14
-    - type: item
-      id: whitescroll
-      chance: 12
-    - type: item
-      id: blackscroll
-      chance: 8
-    - type: item
-      id: renametag
-      chance: 10
-    - type: item
-      id: sheep_spawner
+      id: uniquebook
       chance: 14
     - type: item
       id: chicken_spawner
-      chance: 14
+      chance: 10
     - type: item
       id: cow_spawner
-      chance: 14
+      chance: 10
     - type: item
       id: pig_spawner
+      chance: 10
+    - type: item
+      material: obsidian
+      count: 32
       chance: 12
+    - type: item
+      material: obsidian
+      count: 64
+      chance: 10
+    - type: item
+      id: cobble_gen_bucket_down
+      chance: 10
+    - type: item
+      id: sand_gen_bucket_down
+      chance: 10
+    - type: item
+      id: uniquedp
+      chance: 10
+    - type: item
+      id: dormant_sigil
+      chance: 10
+    - type: item
+      material: blaze_rod
+      count: 16
+      chance: 10
+    - type: item
+      id: transmog
+      chance: 10
+    - type: item
+      material: lava_bucket
+      chance: 8
+    - type: item
+      material: water_bucket
+      chance: 8
+    - type: item
+      material: emerald
+      count: 64
+      chance: 8
+    - type: item
+      material: diamond
+      count: 64
+      chance: 6
+    - type: item
+      id: armor_orb
+      max: 12
+      success: "{30-55}"
+      chance: 6
+    - type: item
+      id: weapon_orb
+      max: 12
+      success: "{30-55}"
+      chance: 6
+    - type: item
+      material: diamond_sword
+      enchantments:
+        - enchant: looting
+          level: 1
+      chance: 6
+    - type: item
+      material: golden_apple
+      count: 32
+      chance: 8
+    - type: item
+      id: frostwake_trident
+      chance: 5
+    - type: item
+      id: stormflare_torch
+      chance: 5
+    - type: item
+      id: glacial_blessing
+      chance: 4
+    - type: item
+      id: collection_chest
+      chance: 4
 
   unique:
     - type: item

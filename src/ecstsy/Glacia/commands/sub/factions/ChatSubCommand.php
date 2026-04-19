@@ -33,7 +33,7 @@ final class ChatSubCommand extends BaseSubCommand {
             case "a":
             case "ally":
                 if ($faction === null) {
-                    $sender->sendMessage(GlaciaUtils::format("player.no_faction"));
+                    $sender->sendMessage(GlaciaUtils::format("player.error.no_faction", [], "error"));
                     return;
                 }
                 $type = ChatTypes::ALLY;
@@ -43,7 +43,7 @@ final class ChatSubCommand extends BaseSubCommand {
             case "f":
             case "faction":
                 if ($faction === null) {
-                    $sender->sendMessage(GlaciaUtils::format("player.no_faction"));
+                    $sender->sendMessage(GlaciaUtils::format("player.error.no_faction", [], "error"));
                     return;
                 }
                 $type = ChatTypes::FACTION;
@@ -63,7 +63,7 @@ final class ChatSubCommand extends BaseSubCommand {
         }
         
         $session->setCurrentChat($type);
-        $sender->sendMessage(GlaciaUtils::format("faction.chat_set", ['chatType' => $label], "success"));
+        $sender->sendMessage(GlaciaUtils::format("faction.status.chat_set", ['chatType' => $label], "success"));
     }
 
     public function getPermission(): string {

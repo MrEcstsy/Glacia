@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\listeners;
 
+use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\quests\QuestInstance;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\block\utils\DyeColor;
@@ -57,7 +58,20 @@ final class QuestListener implements Listener {
             return;
         }
 
-        $player->getInventory()->addItem($reward);
+        foreach ($player->getInventory()->addItem($reward) as $leftover) {
+            $player->getWorld()->dropItem($player->getPosition(), $leftover);
+        }
+
+        $faction = Loader::getPlayerManager()->getSession($player)?->getFaction();
+        if (Loader::getFactionUpgradeManager()->rollQuestBonus($faction)) {
+            $bonusReward = QuestInstance::rollReward($tier, $player);
+            if ($bonusReward !== null) {
+                foreach ($player->getInventory()->addItem($bonusReward) as $leftover) {
+                    $player->getWorld()->dropItem($player->getPosition(), $leftover);
+                }
+                $player->sendMessage("Â§6Glory Surge activated! Â§eYou received an extra quest reward.");
+            }
+        }
 
         $item->pop();
         $player->getInventory()->setItemInHand($item);

@@ -1,0 +1,19 @@
+pets:
+  purity_wisp:
+    cooldown: "10s"
+
+  gale_fox:
+    cooldown: "5m"
+    speed-level: 5
+    duration: "10s"
+
+  shatterfang:
+    cooldown: "20m"
+    duration: "5s"
+    extra-durability-damage: 1
+
+  hearthbloom:
+    cooldown: "90s"
+    heal: 2
+    food: 20
+    saturation: 20

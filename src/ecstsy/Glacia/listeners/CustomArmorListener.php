@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\listeners;
 
+use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\items\armor\abilities\YijkiLightningStrike;
 use ecstsy\Glacia\server\items\armor\ArmorSetManager;
 use pocketmine\event\Listener;
@@ -71,20 +72,25 @@ final class CustomArmorListener implements Listener {
 
         if ($damager instanceof Player) {
             $damagerSet = ArmorSetManager::getInstance()->getFullSet($damager);
+            $victimFaction = $victim instanceof Player ? Loader::getPlayerManager()->getSession($victim)?->getFaction() : null;
+            $mitigation = Loader::getFactionUpgradeManager()->getArmorSetMitigationPercent($victimFaction) / 100;
 
             switch ($damagerSet) {
                 case 'phantom':
-                    $damage = $event->getBaseDamage() * 1.15;
+                    $baseDamage = $event->getBaseDamage();
+                    $bonusMultiplier = 0.15;
 
                     if ($this->isUsingGlaciaItem($damager, "phantom_sword")) {
-                        $damage *= 1.05;
+                        $bonusMultiplier += 0.05;
                     }
 
+                    $damage = $baseDamage * (1 + ($bonusMultiplier * max(0.0, 1 - $mitigation)));
                     $event->setBaseDamage($damage);
                     break;
 
                 case 'yeti':
-                    $damage = $event->getBaseDamage() * 1.10;
+                    $baseDamage = $event->getBaseDamage();
+                    $damage = $baseDamage * (1 + (0.10 * max(0.0, 1 - $mitigation)));
 
                     if ($victim instanceof Player && $this->isUsingGlaciaItem($damager, "yeti_sword")) {
                         $this->damageVictimArmor($victim, 1);
@@ -97,7 +103,7 @@ final class CustomArmorListener implements Listener {
                     $damage = $event->getBaseDamage();
 
                     if ($this->isUsingGlaciaItem($damager, "yijki_sword")) {
-                        $damage *= 1.10;
+                        $damage *= 1 + (0.10 * max(0.0, 1 - $mitigation));
                     }
 
                     $event->setBaseDamage($damage);

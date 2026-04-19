@@ -4,3 +4,8 @@ wild-max-radius: 10500
 wild-attempts: 18
 home-max-cap: 50
 home-increaser-permission: "glacia.home.increaser.use"
+relic-cooldowns:
+  frostwake_trident: "2m"
+  stormflare_torch: "5m"
+  glacial_blessing: "10m"
+  tempest_gateway: "10m"

@@ -34,7 +34,7 @@ class SeeItemCommand extends BaseCommand {
         $target = PlayerUtils::getPlayerByPrefix($targetName);
 
         if ($target === null) {
-            $sender->sendMessage(GlaciaUtils::format("player.error.invalid", ["{name}" => $targetName], "error"));
+            $sender->sendMessage(GlaciaUtils::format("player.error.invalid", ["name" => $targetName], "error"));
             return;
         }
 

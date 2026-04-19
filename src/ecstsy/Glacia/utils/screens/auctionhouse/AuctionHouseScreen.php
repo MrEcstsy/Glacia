@@ -67,13 +67,10 @@ final class AuctionHouseScreen extends BaseScreen {
                     return;
                 }
 
-                $result = Loader::getAuctionHouseManager()->purchaseListing($player, (string) $listing["listing_id"]);
-                if ($result !== "") {
-                    $player->sendMessage(C::colorize("&r&c" . $result));
-                } else {
-                    $player->sendMessage(C::colorize("&r&aPurchase successful."));
-                }
-                $this->build();
+                $player->removeCurrentWindow();
+                $transaction->then(function() use ($player, $listing): void {
+                    AuctionHousePurchaseConfirmScreen::displayForm($player, (string) $listing["listing_id"]);
+                });
             }
         }));
 

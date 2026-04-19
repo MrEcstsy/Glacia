@@ -39,6 +39,16 @@ final class Region {
         return $this->name;
     }
 
+    public function getMin(): Vector3
+    {
+        return clone $this->min;
+    }
+
+    public function getMax(): Vector3
+    {
+        return clone $this->max;
+    }
+
     /**
      * Is this world-position inside the cuboid?
      */

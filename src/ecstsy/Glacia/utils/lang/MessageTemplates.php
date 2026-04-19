@@ -4,110 +4,153 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\utils\lang;
 
+use ecstsy\Glacia\Loader;
+use ecstsy\MartianUtilities\utils\GeneralUtils;
+
 final class MessageTemplates {
-    
 
-    public static array $messages = [
-        // General
-        "general.ingame-only" => "&r&cThis command can only be used in-game.",
+    public static array $messages = [];
+    public static array $joinMessages = [];
 
-        // Player-related
-        "player.error.invalid" => "&r&c'{name}' &7does not exist or is offline.",
-        "player.error.no_faction" => "&r&7You are not in a faction.",
-        "player.error.already_in_faction" => "&r&7You are already in a faction.",
-        "player.error.not_in_your_faction" => "&r&c'{name}' &7is not in your faction.",
-        "player.error.no_permission" => "&r&7You don’t have permission to do that.",
-        "player.error.no_session" => "&r&7There is an issue with your session. Please rejoin or contact support.",
-        "player.status.joined_faction" => "&aYou have joined the faction &2'{name}'.",
-        "player.command.cooldown" => "&r&cYou must wait {time} before using this command again.",
+    public static function load(): void
+    {
+        self::$messages = self::getDefaultMessages();
+        self::$joinMessages = self::getDefaultJoinMessages();
 
-        // Faction-related
-        "faction.error.exists" => "&r&7A faction named &c{name} &7already exists.",
-        "faction.error.not_exists" => "&r&7Faction &c'{name}' &7does not exist.",
-        "faction.error.page_not_found" => "&r&7Page &c{page} &7not found. &7&o(Max: {maxPage})",
-        "faction.error.not_member" => "&r&c{name} &7is not a member of your faction.",
-        "faction.error.cant_demote" => "&r&7You can't demote this member.",
-        "faction.error.permission_denied" => "&r&7Your role doesn't allow you to do this.",
-        "faction.error.cant_kick_self" => "&r&cYou can't kick yourself.",
-        "faction.error.cant_kick_leader" => "&r&cYou can't kick the leader.",
-        "faction.error.no_pending_allies" => "&r&7You have no pending ally requests.",
-        "faction.error.max_allies" => "&r&7You or '{faction}' have reached the maximum number of allies.",
-        "faction.error.cant_neutral_self" => "&r&cYou can't neutral your own faction.",
-        "faction.error.cant_ally_self" => "&r&cYou can't ally with your own faction.",
-        "faction.error.cant_enemy_self" => "&r&cYou can't enemy your own faction.",
-        "faction.error.already_allied" => "&r&7You are already allied with &2'{faction}'.",
-        "faction.status.chat_set" => "&r&7Chat has been set to &2'{chatType}'",
-        "faction.status.demote.sender" => "&r&7You demoted &2'{player}' &7to &2'{role}'.",
-        "faction.status.demote.target" => "&r&cYou were demoted to &2'{role}'.",
-        "faction.status.description_set" => "&r&7Faction description set to &2'{description}'.",
-        "faction.status.invite_sent" => "&r&7Faction invite sent to &2'{player}' &7they have &2{time} &7to accept.",
-        "faction.status.invite_received" => "&r&7You have been invited to &2'{faction}'. You have &2{time} &7to accept.",
-        "faction.status.no_invite" => "&r&7You have no pending invites from this faction.",
-        "faction.status.joined" => "&r&2✔ {name} &7has joined your faction.",
-        
-        // Rank
-        "rank.error.invalid" => "&r&7Rank &c'{name}' &7does not exist.",
-        "rank.status.assigned" => "&r&7Assigned rank &2'{name}' &7to &2'{player}'.",
+        $config = GeneralUtils::getConfiguration(Loader::getInstance(), "messages.yml");
+        if ($config === null) {
+            return;
+        }
 
-        // Admin-related
-        "admin-mode.enabled" => "&r&l&a(!) &r&aAdmin mode enabled.",
-        "admin-mode.disabled" => "&r&l&a(!) &r&7Admin mode disabled.",
+        $messageOverrides = $config->get("messages", []);
+        if (is_array($messageOverrides)) {
+            foreach ($messageOverrides as $key => $value) {
+                if (is_string($key) && is_string($value)) {
+                    self::$messages[$key] = $value;
+                }
+            }
+        }
 
-        // Balance-related
-        "balance.info" => "&r&3◆ &fBalance&8: &b$" . "{balance} &r&3◆",
-        "balance.info.other" => "&r&3◆ &f{name}'s Balance&8: &b$" . "{balance} &r&3◆",
-        "balance.richer-than" => "&r&7&oYou're richer than them.",
-        "balance.poorer-than" => "&r&7&oThey're richer than you.",
-        "balance.equal" => "&r&7&oYou both have equal balance.",
+        $joinOverrides = $config->get("join-messages", []);
+        if (is_array($joinOverrides)) {
+            self::$joinMessages = array_values(array_map("strval", $joinOverrides));
+        }
+    }
 
-        // Coinflip-related
-        "coinflip.error.invalid_amount" => "&r&cAmount must be at least $1,000.",
-        "coinflip.error.already_submitted" => "&r&cYou have already submitted a coin flip.",
+    public static function getMessage(string $key): ?string
+    {
+        $aliases = [
+            "player.no_faction" => "player.error.no_faction",
+            "faction.chat_set" => "faction.status.chat_set",
+            "heal.success-target" => "heal.success.target",
+            "heal.success-other" => "heal.success.other",
+        ];
 
-        // Home-related
-        "home.created" => "&r&aSuccessfully created home '{home}'.",
+        $resolved = $aliases[$key] ?? $key;
+        if (isset(self::$messages[$resolved])) {
+            return self::$messages[$resolved];
+        }
 
-        // warp-related
-        "warp.usage" => "&r&cUsage: /setwarp <warpname>",
-        "warp.created" => "&r&aWarp '{warp}' has been created.",
-        "warp.exists" => "&r&cWarp '{warp}' already exists.",
-    
-        //  Dupe-related
-        "dupe.no_item" => "&r&cYou must be holding an item to duplicate.", 
-        "dupe.no_space" => "&r&cYou do not have enough inventory space to duplicate that item.",
-        "dupe.success" => "&r&aDuplicated &f{name} &ax{count}.",
+        $normalized = str_replace(["-", "_"], ".", $resolved);
+        if (isset(self::$messages[$normalized])) {
+            return self::$messages[$normalized];
+        }
 
-        // Feed-related
-        "feed.success" => "&r&aYou have been fed.",
-        
-        // Fix-related
-        "fixall.success" => "&r&aYour items have been repaired.",
-        "fixall.no_damaged" => "&r&cYou have no damaged items to repair.",
-        "fix.success" => "&r&aYour item has been repaired.",
-        "fix.no_damaged" => "&r&cYou must be holding a damaged item to repair it.",
+        return null;
+    }
 
-        // Fly-speed
-        "flyspeed.success" => "&r&aYour fly speed has been set to {speed}.",
-        "flyspeed.invalid" => "&r&cInvalid speed.",
+    private static function getDefaultMessages(): array
+    {
+        return [
+            "general.ingame-only" => "&r&cThis command can only be used in-game.",
 
-        // Heal-related
-        "heal.success" => "&r&aYou have been healed.",
-        "heal.success.other" => "&r&aYou have been healed by {player}.",
-        "heal.success.target" => "&r&aYou have healed {tar}."
+            "player.error.invalid" => "&r&c'{name}' &7does not exist or is offline.",
+            "player.error.no_faction" => "&r&7You are not in a faction.",
+            "player.error.already_in_faction" => "&r&7You are already in a faction.",
+            "player.error.not_in_your_faction" => "&r&c'{name}' &7is not in your faction.",
+            "player.error.no_permission" => "&r&7You don't have permission to do that.",
+            "player.error.no_session" => "&r&7There is an issue with your session. Please rejoin or contact support.",
+            "player.status.joined_faction" => "&r&aYou have joined the faction &2'{name}'&a.",
+            "player.command.cooldown" => "&r&cYou must wait {time} before using this command again.",
 
-    ];
+            "faction.error.exists" => "&r&7A faction named &c{name} &7already exists.",
+            "faction.error.not_exists" => "&r&7Faction &c'{name}' &7does not exist.",
+            "faction.error.page_not_found" => "&r&7Page &c{page} &7not found. &7&o(Max: {maxPage})",
+            "faction.error.not_member" => "&r&c{name} &7is not a member of your faction.",
+            "faction.error.cant_demote" => "&r&7You can't demote this member.",
+            "faction.error.permission_denied" => "&r&7Your role doesn't allow you to do this.",
+            "faction.error.cant_kick_self" => "&r&cYou can't kick yourself.",
+            "faction.error.cant_kick_leader" => "&r&cYou can't kick the leader.",
+            "faction.error.no_pending_allies" => "&r&7You have no pending ally requests.",
+            "faction.error.max_allies" => "&r&7You or '{faction}' have reached the maximum number of allies.",
+            "faction.error.cant_neutral_self" => "&r&cYou can't neutral your own faction.",
+            "faction.error.cant_ally_self" => "&r&cYou can't ally with your own faction.",
+            "faction.error.cant_enemy_self" => "&r&cYou can't enemy your own faction.",
+            "faction.error.already_allied" => "&r&7You are already allied with &2'{faction}'.",
+            "faction.status.chat_set" => "&r&7Chat has been set to &b{chatType}&7.",
+            "faction.status.demote.sender" => "&r&7You demoted &2'{player}' &7to &2'{role}'.",
+            "faction.status.demote.target" => "&r&cYou were demoted to &2'{role}'.",
+            "faction.status.description_set" => "&r&7Faction description set to &2'{description}'.",
+            "faction.status.invite_sent" => "&r&7Faction invite sent to &2'{player}' &7they have &2{time} &7to accept.",
+            "faction.status.invite_received" => "&r&7You have been invited to &2'{faction}'. You have &2{time} &7to accept.",
+            "faction.status.no_invite" => "&r&7You have no pending invites from this faction.",
+            "faction.status.joined" => "&r&2✔ {name} &7has joined your faction.",
 
-    public static array $joinMessages = [
-        "   &r&l&fGlacia Factions &bETHEREAL HUB",
-        " ",
-        "   &r&f      Welcome, &b{player}&f!",
-        "   &r&f     Online players: &b{online}",
-        " ",
-        "   &r&f   {nametag}  &r{pingcolor}{ping}ms {networkbar}",
-        "   &r&b&l WEBSITE &r&3➤ &fetherealhub.net",
-        "  &r&b&l VOTE &r&3➤ &fvote.etherealhub.net",
-        " &r&b&l STORE &r&3➤ &fstore.etherealhub.net",
-        " ",
-        "       &r&bglacia.etherealhub.net"
-    ];
+            "rank.error.invalid" => "&r&7Rank &c'{name}' &7does not exist.",
+            "rank.status.assigned" => "&r&7Assigned rank &2'{name}' &7to &2'{player}'.",
+
+            "admin-mode.enabled" => "&r&aAdmin mode enabled.",
+            "admin-mode.disabled" => "&r&7Admin mode disabled.",
+
+            "balance.info" => "&r&b◆ &fBalance&8: &b\${balance} &r&b◆",
+            "balance.info.other" => "&r&b◆ &f{name}'s Balance&8: &b\${balance} &r&b◆",
+            "balance.richer-than" => "&r&7You're richer than them.",
+            "balance.poorer-than" => "&r&7They're richer than you.",
+            "balance.equal" => "&r&7You both have equal balance.",
+
+            "coinflip.error.invalid_amount" => "&r&cAmount must be at least $1,000.",
+            "coinflip.error.already_submitted" => "&r&cYou have already submitted a coin flip.",
+
+            "home.created" => "&r&aSuccessfully created home '{home}'.",
+
+            "warp.usage" => "&r&cUsage: /setwarp <warpname>",
+            "warp.created" => "&r&aWarp '{warp}' has been created.",
+            "warp.exists" => "&r&cWarp '{warp}' already exists.",
+
+            "dupe.no_item" => "&r&cYou must be holding an item to duplicate.",
+            "dupe.no_space" => "&r&cYou do not have enough inventory space to duplicate that item.",
+            "dupe.success" => "&r&aDuplicated &f{name} &ax{count}.",
+
+            "feed.success" => "&r&aYou have been fed.",
+
+            "fixall.success" => "&r&aYour items have been repaired.",
+            "fixall.no_damaged" => "&r&cYou have no damaged items to repair.",
+            "fix.success" => "&r&aYour item has been repaired.",
+            "fix.no_damaged" => "&r&cYou must be holding a damaged item to repair it.",
+
+            "flyspeed.success" => "&r&aYour fly speed has been set to {speed}.",
+            "flyspeed.invalid" => "&r&cInvalid speed.",
+
+            "heal.success" => "&r&aYou have been healed.",
+            "heal.success.other" => "&r&aYou have been healed by {player}.",
+            "heal.success.target" => "&r&aYou have healed {player}.",
+        ];
+    }
+
+    private static function getDefaultJoinMessages(): array
+    {
+        return [
+            "   &r&l&fGlacia Factions &bETHEREAL HUB",
+            " ",
+            "   &r&f      Welcome, &b{player}&f!",
+            "   &r&f     Online players: &b{online}",
+            " ",
+            "   &r&f   {nametag}  &r{pingcolor}{ping}ms {networkbar}",
+            "   &r&b&l WEBSITE &r&3➤ &fetherealhub.net",
+            "  &r&b&l VOTE &r&3➤ &fvote.etherealhub.net",
+            " &r&b&l STORE &r&3➤ &fstore.etherealhub.net",
+            " ",
+            "       &r&bglacia.etherealhub.net"
+        ];
+    }
 }

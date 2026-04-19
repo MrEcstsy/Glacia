@@ -133,6 +133,15 @@ final class ScoreboardHelper {
         self::setLine($player, self::LINE_POWER, self::pad("&r&b&l> &r&fPower&7: &b" . number_format($session->getPower())));
     }
 
+    public static function updateChatLine(Player $player): void
+    {
+        if (!ScoreBoardAPI::hasScore($player)) {
+            return;
+        }
+
+        self::refreshScoreboard($player);
+    }
+
     public static function updateFactionLines(Player $player): void
     {
         if (!ScoreBoardAPI::hasScore($player)) {

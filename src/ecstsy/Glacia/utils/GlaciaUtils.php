@@ -12,6 +12,7 @@ use ecstsy\Glacia\commands\BackCommand;
 use ecstsy\Glacia\commands\SellCommand;
 use ecstsy\Glacia\commands\BalanceCommand;
 use ecstsy\Glacia\commands\BalTopCommand;
+use ecstsy\Glacia\commands\BountyCommand;
 use ecstsy\Glacia\commands\BanCommand;
 use ecstsy\Glacia\commands\BlackMarketCommand;
 use ecstsy\Glacia\commands\CreateHomeCommand;
@@ -21,6 +22,7 @@ use ecstsy\Glacia\commands\EnchanterCommand;
 use ecstsy\Glacia\commands\EnderChestCommand;
 use ecstsy\Glacia\commands\EnderSeeCommand;
 use ecstsy\Glacia\commands\EnchantmentsCommand;
+use ecstsy\Glacia\commands\EnvoyCommand;
 use ecstsy\Glacia\commands\ExpCommand;
 use ecstsy\Glacia\commands\FactionCommand;
 use ecstsy\Glacia\commands\FixAllCommand;
@@ -61,6 +63,7 @@ use ecstsy\Glacia\commands\DupeCommand;
 use ecstsy\Glacia\commands\ClearChatCommand;
 use ecstsy\Glacia\commands\ClearInventoryCommand;
 use ecstsy\Glacia\commands\FeedCommand;
+use ecstsy\Glacia\commands\FundCommand;
 use ecstsy\Glacia\commands\FlyCommand;
 use ecstsy\Glacia\commands\GamemodeCommand;
 use ecstsy\Glacia\commands\HatCommand;
@@ -87,6 +90,7 @@ use ecstsy\Glacia\listeners\CustomArmorListener;
 use ecstsy\Glacia\listeners\CollectionChestListener;
 use ecstsy\Glacia\listeners\CustomTNTListener;
 use ecstsy\Glacia\listeners\EnchantmentListener;
+use ecstsy\Glacia\listeners\EnvoyListener;
 use ecstsy\Glacia\listeners\FactionListener;
 use ecstsy\Glacia\listeners\GlaciaListener;
 use ecstsy\Glacia\listeners\ItemListener;
@@ -152,6 +156,7 @@ use ecstsy\Glacia\server\FloatingTextInstance;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\server\items\GlaciaItems;
 use ecstsy\Glacia\server\items\GlaciaSpawnerItem;
+use ecstsy\Glacia\server\items\genbuckets\GenBucketManager;
 use ecstsy\Glacia\server\lootboxes\LootboxRepository;
 use ecstsy\Glacia\server\quests\QuestInstance;
 use ecstsy\Glacia\server\ranks\RankManager;
@@ -214,6 +219,7 @@ final class GlaciaUtils
     public static function initAll(Loader $loader): void
     {
         self::ensureRanks();
+        MessageTemplates::load();
         self::initDiscordWebhooks($loader);
         GlaciaItems::init();
 
@@ -239,6 +245,9 @@ final class GlaciaUtils
             new ExpCommand($loader, "exp", "Experience commands", ["xp"]),
             new BalanceCommand($loader, "balance", "View your balance or another player's balance", ["bal"]),
             new BalTopCommand($loader, "baltop", "View the richest players on the server"),
+            new BountyCommand($loader, "bounty", "Place and view player bounties", ["bounties"]),
+            new FundCommand($loader, "fund", "Contribute to the active global fund"),
+            new EnvoyCommand($loader, "envoy", "View the next envoy or manage it"),
             new PayCommand($loader, "pay", "Pay another player", ["p"]),
             new WithdrawCommand($loader, "withdraw", "Withdraw money into a bank note", ["wd"]),
             new BackCommand($loader, "back", "Teleport to your previous location"),
@@ -311,6 +320,7 @@ final class GlaciaUtils
             new ItemListener(),
             new QuestListener(),
             new EnchantmentListener(),
+            new EnvoyListener(),
             new CollectionChestListener(),
             new CustomTNTListener(),
             new CustomArmorListener(),
@@ -343,6 +353,8 @@ final class GlaciaUtils
             {
                 Loader::getFactionXpBoosterManager()->tick();
                 Loader::getAuctionHouseManager()->tick();
+                Loader::getGlobalFundManager()->tick();
+                Loader::getEnvoyManager()->tick();
                 foreach (Server::getInstance()->getOnlinePlayers() as $player) {
                     RankProgressionManager::tickPlayer($player);
                     ScoreboardHelper::refreshScoreboard($player);
@@ -496,7 +508,7 @@ final class GlaciaUtils
         AutoPlanterEnchant::setTask($autoPlantTask);
 
         $files = array_merge(
-            ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml", "kits.yml", "slotbot.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml"],
+            ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml", "kits.yml", "slotbot.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml", "messages.yml", "faction_upgrades.yml", "pets.yml", "fund.yml", "envoy.yml", "genbuckets.yml"],
             LootboxRepository::getBundledResourceFiles()
         );
 
@@ -509,6 +521,7 @@ final class GlaciaUtils
 
         SellHandler::registerDefaults();
         SpawnerWorthManager::loadFromConfig();
+        GenBucketManager::loadFromConfig();
 
         Loader::getInstance()->getScheduler()->scheduleDelayedTask(new class extends Task {
             public function onRun(): void
@@ -843,15 +856,16 @@ final class GlaciaUtils
     public static function format(string $key, array $replacements = [], string $prefix = "none"): string
     {
         $prefixes = [
-            "error" => "&r&4&lError: ",
-            "info" => "&r&3&lInfo: ",
-            "success" => "&r&a&lSuccess: ",
+            "error" => "&r&c✘ &r&7",
+            "info" => "&r&b• &r&7",
+            "success" => "&r&a✔ &r&7",
             "none" => ""
         ];
 
-        $template = MessageTemplates::$messages[$key] ?? $key;
+        $template = MessageTemplates::getMessage($key) ?? "&7A message is missing for this action.";
         foreach ($replacements as $k => $v) {
-            $template = str_replace("{" . $k . "}", (string)$v, $template);
+            $normalizedKey = trim((string) $k, "{}");
+            $template = str_replace("{" . $normalizedKey . "}", (string) $v, $template);
         }
 
         return C::colorize(($prefixes[$prefix] ?? "") . $template);

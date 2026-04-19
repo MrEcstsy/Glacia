@@ -30,7 +30,7 @@ final class TPACommand extends BaseCommand {
         $target = $args["target"] ?? null;
 
         if ($target === null || !$target->isOnline()) {
-            $sender->sendMessage(GlaciaUtils::format("player.error.invalid", ["{name}" => $target->getName()], "error"));
+            $sender->sendMessage(GlaciaUtils::format("player.error.invalid", ["name" => "that player"], "error"));
             return;
         }
 

@@ -14,6 +14,7 @@ use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\factions\relations\RelationManager;
 use ecstsy\Glacia\server\GraceInstance;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
+use ecstsy\Glacia\server\items\pets\PetManager;
 use ecstsy\Glacia\server\items\GlaciaSpawnerItem;
 use ecstsy\Glacia\server\player\BackLocationManager;
 use ecstsy\Glacia\server\hats\HatPlayer;
@@ -52,6 +53,7 @@ use pocketmine\event\server\DataPacketReceiveEvent;
 use pocketmine\event\world\ChunkLoadEvent;
 use pocketmine\item\enchantment\VanillaEnchantments;
 use pocketmine\item\ItemBlock;
+use pocketmine\item\Durable;
 use pocketmine\item\ItemTypeIds;
 use pocketmine\item\Pickaxe;
 use pocketmine\item\StringToItemParser;
@@ -72,11 +74,17 @@ final class GlaciaListener implements Listener {
         "./factions disband",
         "./cf",
         "./coinflip",
-        "./settings",
-        "./glaciasettings",
-        "./ah sell",
-        "./auctionhouse sell",
-    ];
+          "./settings",
+          "./glaciasettings",
+          "./f upgrades",
+          "./faction upgrades",
+          "./factions upgrades",
+          "./f upgrade",
+          "./faction upgrade",
+          "./factions upgrade",
+          "./ah sell",
+          "./auctionhouse sell",
+      ];
 
     /** @var Player[] */
     private array $online = [];
@@ -115,6 +123,7 @@ final class GlaciaListener implements Listener {
         GlaciaUtils::refreshNametagsForTarget($player);
         GlaciaUtils::updateScoreTag($player);
         ScoreboardHelper::initScoreboard($player);
+        FactionListener::syncClaimFlight($player);
 
         $combatManager = Loader::getCombatManager();
         $combatManager->register($player);
@@ -135,7 +144,7 @@ final class GlaciaListener implements Listener {
         unset($this->online[$player->getUniqueId()->toString()]);
         ItemRenameManager::abort($player);
 
-        PlayerManager::getInstance()->getSession($player)->setConnected(false);
+        PlayerManager::getInstance()->getSession($player)?->setConnected(false);
 
         $combatManager = Loader::getCombatManager();
 
@@ -166,6 +175,9 @@ final class GlaciaListener implements Listener {
         }
 
         $session = Loader::getPlayerManager()->getSession($sender);
+        if ($session === null) {
+            return;
+        }
 
         $chatType = $session->getCurrentChat();
 
@@ -416,11 +428,24 @@ final class GlaciaListener implements Listener {
             return;
         }
 
-        if ($damager instanceof CombatLoggerEntity && $player instanceof Player) {
-            Loader::getCombatManager()->startCombat($player);
-            return;
-        }
-    }
+          if ($damager instanceof CombatLoggerEntity && $player instanceof Player) {
+              Loader::getCombatManager()->startCombat($player);
+              return;
+          }
+
+          if ($damager instanceof Player && $player instanceof Player && PetManager::isShatterfangActive($damager)) {
+              $extraDamage = max(1, PetManager::getInt("shatterfang", "extra-durability-damage", 1));
+              $armorInventory = $player->getArmorInventory();
+              foreach ($armorInventory->getContents() as $slot => $armorPiece) {
+                  if (!$armorPiece instanceof Durable || $armorPiece->isNull()) {
+                      continue;
+                  }
+
+                  $armorPiece->setDamage(min($armorPiece->getMaxDurability(), $armorPiece->getDamage() + $extraDamage));
+                  $armorInventory->setItem($slot, $armorPiece);
+              }
+          }
+      }
 
     public function onPlayerDeath(PlayerDeathEvent $event): void {
         $player = $event->getPlayer();
@@ -432,8 +457,33 @@ final class GlaciaListener implements Listener {
             $player->getWorld()->dropItem($player->getPosition(), $xpBottle);
             $event->setXpDropAmount(0);
         } elseif ($player->getXpManager()->getCurrentTotalXp() === 0) {
+            // continue to bounty payout handling below
+        }
+
+        $cause = $player->getLastDamageCause();
+        if (!$cause instanceof EntityDamageByEntityEvent) {
             return;
         }
+
+        $killer = $cause->getDamager();
+        if (!$killer instanceof Player || $killer->getUniqueId()->toString() === $player->getUniqueId()->toString()) {
+            return;
+        }
+
+        $victimSession = Loader::getPlayerManager()->getSession($player);
+        $killerSession = Loader::getPlayerManager()->getSession($killer);
+        if ($victimSession === null || $killerSession === null) {
+            return;
+        }
+
+        $bounty = Loader::getBountyManager()->claimBounty($victimSession);
+        if ($bounty <= 0) {
+            return;
+        }
+
+        $killerSession->addBalance($bounty);
+        $killer->sendMessage(C::colorize("&r&6Bounty &8| &r&aYou claimed &f$" . number_format($bounty) . " &afor killing &c" . $player->getName() . "&a."));
+        Loader::getBountyManager()->broadcastClaim($killer->getName(), $player->getName(), $bounty);
     }
 
     public function onTeleport(EntityTeleportEvent $event): void {

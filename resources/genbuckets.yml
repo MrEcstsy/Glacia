@@ -1,0 +1,12 @@
+enabled: true
+
+# Safety cap so buckets do not try to generate forever in open space.
+max-length: 256
+blocks-per-step: 1
+step-interval-ticks: 3
+use-cooldown-seconds: 1
+
+costs:
+  sand: 25000
+  cobble: 10000
+  obsidian: 50000

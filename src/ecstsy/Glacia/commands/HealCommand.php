@@ -56,8 +56,8 @@ final class HealCommand extends BaseCommand {
             $sender->sendMessage(GlaciaUtils::format("heal.success", [], "success"));
             $session->addCooldown("commands.heal", 60);
         } else {
-            $sender->sendMessage(GlaciaUtils::format("heal.success-target", ["player" => $sender->getName()], "success"));
-            $target->sendMessage(GlaciaUtils::format("heal.success-other", ["player" => $target->getName()], "success"));
+            $sender->sendMessage(GlaciaUtils::format("heal.success.target", ["player" => $target->getName()], "success"));
+            $target->sendMessage(GlaciaUtils::format("heal.success.other", ["player" => $sender->getName()], "success"));
         }
     }
 

@@ -155,6 +155,13 @@ class GiveItemCommand extends BaseCommand {
                 case 'ccollect':
                     $item = GlaciaItemFactory::collectionChest();
                     break;
+                case 'heroic_slot_ticket':
+                case 'heroicslotticket':
+                case 'heroic_ticket':
+                case 'heroicticket':
+                case 'hslot':
+                    $item = GlaciaItemFactory::heroicSlotTicket();
+                    break;
 
                     case 'customarmor':
                         $set = $args['extra1'] ?? null;

@@ -1,0 +1,55 @@
+upgrades:
+  aerodynamic:
+    enabled: true
+    display-name: "&r&bSkybound Accord"
+    description:
+      - "&r&7Unlock free flight inside your"
+      - "&r&7own faction claims for every member."
+    max-level: 1
+    base-cost: 2500000
+    cost-multiplier: 1.0
+
+  megaknight:
+    enabled: true
+    display-name: "&r&dBastion Weave"
+    description:
+      - "&r&7Reduce extra damage taken from"
+      - "&r&7enemy custom armor set bonuses."
+    max-level: 2
+    base-cost: 1500000
+    cost-multiplier: 2.0
+    reduction-percent-per-level: 1
+
+  veteran:
+    enabled: true
+    display-name: "&r&eWar Tempo"
+    description:
+      - "&r&7Tighten your faction's nerves in battle."
+      - "&r&7Shortens combat tag duration by &f2 seconds&7."
+    max-level: 1
+    base-cost: 1250000
+    cost-multiplier: 1.0
+    seconds-reduction-per-level: 2
+
+  entrepreneur:
+    enabled: true
+    display-name: "&r&aQuartermaster's Cut"
+    description:
+      - "&r&7Boost the payout from items sold"
+      - "&r&7through collection chests."
+    max-level: 1
+    base-cost: 2000000
+    cost-multiplier: 1.0
+    sell-multiplier-per-level: 1.5
+
+  heroic_rush:
+    enabled: true
+    display-name: "&r&6Glory Surge"
+    description:
+      - "&r&7Gain a chance to receive one extra"
+      - "&r&7reward whenever a faction member"
+      - "&r&7completes a quest."
+    max-level: 1
+    base-cost: 2750000
+    cost-multiplier: 1.0
+    extra-reward-chance-per-level: 5

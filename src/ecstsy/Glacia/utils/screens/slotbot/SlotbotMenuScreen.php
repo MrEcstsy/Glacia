@@ -126,7 +126,7 @@ final class SlotbotMenuScreen extends BaseScreen {
             return false;
         }
 
-        if (GlaciaItemFactory::isGlaciaItem($item, "slot_ticket")) {
+        if (GlaciaItemFactory::isGlaciaItem($item, "slot_ticket") || GlaciaItemFactory::isGlaciaItem($item, "heroic_slot_ticket")) {
             $this->removeTicket($player, $transaction->getAction()->getSlot());
             return false;
         }
@@ -157,8 +157,8 @@ final class SlotbotMenuScreen extends BaseScreen {
     private function handleClose(Player $player, Inventory $inventory): void
     {
         if ($this->status === self::STATUS_IDLE) {
-            foreach ($this->getFilledTicketSlots() as $_slot) {
-                foreach ($player->getInventory()->addItem(GlaciaItemFactory::slotTicket()) as $leftover) {
+            foreach ($this->getFilledTicketSlots() as $slot) {
+                foreach ($player->getInventory()->addItem($this->createTicketRefund($this->menu->getInventory()->getItem($slot))) as $leftover) {
                     $player->getWorld()->dropItem($player->getPosition(), $leftover);
                 }
             }
@@ -179,18 +179,21 @@ final class SlotbotMenuScreen extends BaseScreen {
             return;
         }
 
-        $slot = $this->findFirstTicketSlot($player);
-        if ($slot === null) {
+        $ticketData = $this->findFirstTicket($player);
+        if ($ticketData === null) {
             PlayerUtils::playSound($player, "note.bass");
             return;
         }
 
-        $item = $player->getInventory()->getItem($slot);
+        $slot = (int) $ticketData["slot"];
+        $item = clone $ticketData["item"];
         $item->setCount($item->getCount() - 1);
         $player->getInventory()->setItem($slot, $item);
 
         $menuSlot = $emptySlots[0];
-        $this->menu->getInventory()->setItem($menuSlot, GlaciaItemFactory::slotTicket()->setCount($menuSlot - 46));
+        $ticketItem = clone $ticketData["item"];
+        $ticketItem->setCount($menuSlot - 46);
+        $this->menu->getInventory()->setItem($menuSlot, $ticketItem);
 
         $filledCount = count($this->getFilledTicketSlots());
         $this->menu->getInventory()->setItem(26, $this->createSpinItem($filledCount > 0));
@@ -206,7 +209,7 @@ final class SlotbotMenuScreen extends BaseScreen {
 
         $this->menu->getInventory()->setItem($slot, $this->createEmptyTicketSlotItem($slot - 46));
 
-        foreach ($player->getInventory()->addItem(GlaciaItemFactory::slotTicket()) as $leftover) {
+        foreach ($player->getInventory()->addItem($this->createTicketRefund($this->menu->getInventory()->getItem($slot))) as $leftover) {
             $player->getWorld()->dropItem($player->getPosition(), $leftover);
         }
 
@@ -242,8 +245,10 @@ final class SlotbotMenuScreen extends BaseScreen {
         }
 
         foreach ($filledSlots as $slot) {
-            $this->pendingRewards[] = $this->getSpinReward();
-            $inventory->setItem($slot - 45, $this->getDisplayReward());
+            $ticket = $inventory->getItem($slot);
+            $heroic = GlaciaItemFactory::isGlaciaItem($ticket, "heroic_slot_ticket");
+            $this->pendingRewards[] = $heroic ? $this->getJackpotReward() : $this->getSpinReward();
+            $inventory->setItem($slot - 45, $heroic ? $this->getJackpotDisplayReward() : $this->getDisplayReward());
         }
 
         $ticks = 0;
@@ -283,7 +288,9 @@ final class SlotbotMenuScreen extends BaseScreen {
         }
 
         foreach ($filledSlots as $slot) {
-            $inventory->setItem($slot - 45, $this->getDisplayReward());
+            $ticket = $inventory->getItem($slot);
+            $heroic = GlaciaItemFactory::isGlaciaItem($ticket, "heroic_slot_ticket");
+            $inventory->setItem($slot - 45, $heroic ? $this->getJackpotDisplayReward() : $this->getDisplayReward());
         }
     }
 
@@ -412,20 +419,37 @@ final class SlotbotMenuScreen extends BaseScreen {
         return SlotbotRewardRepository::getSpinReward() ?? VanillaItems::BARRIER()->setCustomName(C::colorize("&r&cMissing Reward"));
     }
 
+    private function getJackpotReward(): Item
+    {
+        return SlotbotRewardRepository::getJackpotReward() ?? $this->getSpinReward();
+    }
+
     private function getDisplayReward(): Item
     {
         return SlotbotRewardRepository::getDisplayReward() ?? VanillaItems::BARRIER()->setCustomName(C::colorize("&r&cMissing Reward"));
     }
 
-    private function findFirstTicketSlot(Player $player): ?int
+    private function getJackpotDisplayReward(): Item
+    {
+        return SlotbotRewardRepository::getJackpotDisplayReward() ?? $this->getDisplayReward();
+    }
+
+    private function findFirstTicket(Player $player): ?array
     {
         $inventory = $player->getInventory();
         foreach ($inventory->getContents() as $slot => $item) {
-            if (GlaciaItemFactory::isGlaciaItem($item, "slot_ticket")) {
-                return $slot;
+            if (GlaciaItemFactory::isGlaciaItem($item, "slot_ticket") || GlaciaItemFactory::isGlaciaItem($item, "heroic_slot_ticket")) {
+                return ["slot" => $slot, "item" => $item];
             }
         }
 
         return null;
+    }
+
+    private function createTicketRefund(Item $item): Item
+    {
+        return GlaciaItemFactory::isGlaciaItem($item, "heroic_slot_ticket")
+            ? GlaciaItemFactory::heroicSlotTicket()
+            : GlaciaItemFactory::slotTicket();
     }
 }

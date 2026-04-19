@@ -244,6 +244,25 @@ final class RankProgressionManager {
                 $player->getWorld()->dropItem($player->getPosition(), $leftover);
             }
         }
+
+        $faction = Loader::getPlayerManager()->getSession($player)?->getFaction();
+        if (!Loader::getFactionUpgradeManager()->rollQuestBonus($faction)) {
+            return;
+        }
+
+        $bonusPool = array_values(array_filter(
+            $rewards,
+            static fn(Item $reward): bool => GlaciaItemFactory::getGlaciaIdentifier($reward) !== $rank . "_voucher"
+        ));
+        if ($bonusPool === []) {
+            return;
+        }
+
+        $bonus = clone $bonusPool[array_rand($bonusPool)];
+        foreach ($player->getInventory()->addItem($bonus) as $leftover) {
+            $player->getWorld()->dropItem($player->getPosition(), $leftover);
+        }
+        $player->sendMessage(C::colorize("&r&l&6Glory Surge &r&eactivated! You received an extra quest reward."));
     }
 
     private static function getExtraDisplayName(string $extra): string

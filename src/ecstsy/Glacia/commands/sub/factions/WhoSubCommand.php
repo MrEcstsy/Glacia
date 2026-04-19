@@ -137,6 +137,7 @@ final class WhoSubCommand extends BaseSubCommand {
 
         $lines[] = C::colorize("&r&b> &fPower/Max/Claims: &7{$faction->getFactionPower()}/{$faction->getMaxPower()}/{$faction->getClaimCount()}");
         $lines[] = C::colorize("&r&b> &fFaction Value: &7$" . number_format($faction->getFactionValue()));
+        $lines[] = C::colorize("&r&b> &fFaction Bank: &7$" . number_format(Loader::getFactionUpgradeManager()->getBankBalance($faction->getFactionId()), 2));
         $lines[] = "&r&b> &fAllies: &7" . ($allyNames === [] ? "None" : implode("&7, ", $allyNames));
         $lines[] = "&r&b> &fEnemies: &7" . ($enemyNames === [] ? "None" : implode("&7, ", $enemyNames));
 

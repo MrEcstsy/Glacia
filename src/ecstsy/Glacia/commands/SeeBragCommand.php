@@ -28,13 +28,13 @@ final class SeeBragCommand extends BaseCommand {
 
         $targetName = $args["name"] ?? null;
         if ($targetName === null) {
-            $sender->sendMessage(GlaciaUtils::format("player.error.invalid", ["{name}" => $targetName], "error"));
+            $sender->sendMessage(GlaciaUtils::format("player.error.invalid", ["name" => "that player"], "error"));
             return;
         }
 
         $target = PlayerUtils::getPlayerByPrefix($targetName);
         if ($target === null) {
-            $sender->sendMessage(GlaciaUtils::format("player.error.invalid", ["{name}" => $targetName], "error"));
+            $sender->sendMessage(GlaciaUtils::format("player.error.invalid", ["name" => $targetName], "error"));
             return;
         }
 

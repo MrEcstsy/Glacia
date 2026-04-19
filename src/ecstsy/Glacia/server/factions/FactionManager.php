@@ -82,6 +82,7 @@ final class FactionManager {
         $this->factions[$id] = $faction;
 
         $faction->addMember($id, Uuid::fromString($leaderUuid), "leader");
+        Loader::getFactionUpgradeManager()->ensureFaction($faction);
         return $faction;
     }
 
@@ -138,6 +139,7 @@ final class FactionManager {
             ]);
         }
 
+        Loader::getFactionUpgradeManager()->removeFaction($id);
         $this->deleteFaction($id);
         return $faction;
     }

@@ -70,7 +70,7 @@ final class RewardResolver {
 
         return match($type){
             "item" => self::resolveGenericItem($entry, $player),
-            "money_note" => self::resolveFactoryItem("money_note", $entry, $player),
+            "money_note", "bank_note", "econote" => self::resolveFactoryItem("bank_note", $entry, $player),
             "xp_note", "xpnote" => self::resolveFactoryItem("xp_note", $entry, $player),
             default => self::resolveGenericItem($entry, $player)
         };
@@ -142,7 +142,7 @@ final class RewardResolver {
         }
 
         return match($id) {
-            "money_note" => GlaciaItemFactory::bankNote($player, GeneralUtils::parseRandomNumber($entry["amount"] ?? 1)),
+            "money_note", "bank_note", "moneynote", "econote" => GlaciaItemFactory::bankNote($player, GeneralUtils::parseRandomNumber($entry["amount"] ?? 1)),
             "xp_note", "xpnote" => GlaciaItemFactory::xpNote($player, GeneralUtils::parseRandomNumber($entry["amount"] ?? 1)),
 
             "simplebook" => GlaciaItemFactory::randomEnchantBook("simple"),
@@ -173,7 +173,16 @@ final class RewardResolver {
             "legendarydust" => self::resolveDustItem("legendary", $entry),
 
             "mysterymobspawner" => GlaciaItemFactory::mysteryMobSpawner(),
-            'heroicmysterymobspawner' => GlaciaItemFactory::heroicMysteryMobSpawner(),
+            'heroicmysterymobspawner', 'heroic_mysterymobspawner', 'heroic_mystery_mob_spawner' => GlaciaItemFactory::heroicMysteryMobSpawner(),
+            "slot_ticket" => GlaciaItemFactory::slotTicket(),
+            "slotticket" => GlaciaItemFactory::slotTicket(),
+            "heroic_slot_ticket" => GlaciaItemFactory::heroicSlotTicket(),
+            "heroicslotticket" => GlaciaItemFactory::heroicSlotTicket(),
+            "envoy_beacon", "envoybeacon", "force_envoy", "envoy_starter" => GlaciaItemFactory::create("envoy_beacon"),
+            "faction_xp_booster", "factionxpbooster" => GlaciaItemFactory::factionXpBooster(
+                (float) ($entry["multiplier"] ?? 2.0),
+                (string) ($entry["duration"] ?? "15m")
+            ),
 
             "blaze_spawner" => GlaciaItemFactory::mobSpawner("blaze"),
             "creeper_spawner" => GlaciaItemFactory::mobSpawner("creeper"),
@@ -355,7 +364,7 @@ final class RewardResolver {
         $id = strtolower((string) ($entry["id"] ?? $entry["material"] ?? $entry["type"] ?? ""));
 
         return match ($id) {
-            "money_note", "xp_note", "xpnote", "moneynote" => 1,
+            "money_note", "bank_note", "econote", "xp_note", "xpnote", "moneynote" => 1,
             default => $entry["amount"] ?? 1
         };
     }

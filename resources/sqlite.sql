@@ -224,8 +224,9 @@ SELECT * FROM glacia_factions;
 -- #    :leader_uuid string
 -- #    :leader_name string
 -- #    :max_members int
-INSERT OR REPLACE INTO glacia_factions (faction_id, name, description, leader_uuid, leader_name, max_members)
-VALUES (:faction_id, :name, :description, :leader_uuid, :leader_name, :max_members);
+-- #    :base_power_cap int
+INSERT OR REPLACE INTO glacia_factions (faction_id, name, description, leader_uuid, leader_name, max_members, base_power_cap)
+VALUES (:faction_id, :name, :description, :leader_uuid, :leader_name, :max_members, :base_power_cap);
 -- # }
 
 -- # { update
@@ -235,8 +236,9 @@ VALUES (:faction_id, :name, :description, :leader_uuid, :leader_name, :max_membe
 -- #   :leader_uuid string
 -- #   :leader_name string
 -- #   :max_members int
+-- #   :base_power_cap int
 UPDATE glacia_factions
-SET name = :name, description = :description, leader_uuid = :leader_uuid, leader_name = :leader_name, max_members = :max_members
+SET name = :name, description = :description, leader_uuid = :leader_uuid, leader_name = :leader_name, max_members = :max_members, base_power_cap = :base_power_cap
 WHERE faction_id = :faction_id;
 -- # }
 
@@ -544,6 +546,33 @@ WHERE faction_id = :faction_id AND other_id = :other_id;
 -- #  }
 -- # }
 
+-- # { glacia_faction_upgrade_bank
+-- #    { init
+CREATE TABLE IF NOT EXISTS glacia_faction_upgrade_bank (
+    faction_id VARCHAR(36) PRIMARY KEY,
+    bank_balance REAL NOT NULL DEFAULT 0,
+    upgrade_data TEXT NOT NULL DEFAULT '{}'
+);
+-- # }
+
+-- # { select
+SELECT * FROM glacia_faction_upgrade_bank;
+-- # }
+
+-- # { create
+-- #    :faction_id string
+-- #    :bank_balance float
+-- #    :upgrade_data string
+INSERT OR REPLACE INTO glacia_faction_upgrade_bank (faction_id, bank_balance, upgrade_data)
+VALUES (:faction_id, :bank_balance, :upgrade_data);
+-- # }
+
+-- # { delete
+-- #    :faction_id string
+DELETE FROM glacia_faction_upgrade_bank WHERE faction_id = :faction_id;
+-- #  }
+-- # }
+
 -- # { glacia_ranks
 -- #  { init
 CREATE TABLE IF NOT EXISTS glacia_ranks (
@@ -821,6 +850,32 @@ UPDATE glacia_jackpot_stats SET wins = :wins, winnings = :winnings WHERE uuid = 
 -- #      :wins int
 -- #      :winnings int
 INSERT OR IGNORE INTO glacia_jackpot_stats (uuid, username, wins, winnings) VALUES (:uuid, :username, :wins, :winnings);
+-- #   }
+-- # }
+
+-- # { glacia_bounties
+-- #   { init
+CREATE TABLE IF NOT EXISTS glacia_bounties (
+    target_uuid VARCHAR(36) PRIMARY KEY,
+    target_name VARCHAR(16) NOT NULL,
+    amount INT NOT NULL DEFAULT 0,
+    updated_at INT NOT NULL DEFAULT 0
+);
+-- #   }
+-- #   { select
+SELECT * FROM glacia_bounties;
+-- #   }
+-- #   { create
+-- #      :target_uuid string
+-- #      :target_name string
+-- #      :amount int
+-- #      :updated_at int
+INSERT OR REPLACE INTO glacia_bounties (target_uuid, target_name, amount, updated_at)
+VALUES (:target_uuid, :target_name, :amount, :updated_at);
+-- #   }
+-- #   { delete
+-- #      :target_uuid string
+DELETE FROM glacia_bounties WHERE target_uuid = :target_uuid;
 -- #   }
 -- # }
 

@@ -295,6 +295,7 @@ class SpawnerTile extends Spawnable
 
         $needed = min($needed, $remainingCapacity);
 
+        $startingStack = $this->stackCount;
         foreach ($inv->getContents(true) as $slot => $item) {
             if ($item->isNull()) continue;
             $spawnerId = GlaciaSpawnerItem::getSpawnerEntityId($item);
@@ -315,6 +316,10 @@ class SpawnerTile extends Spawnable
             if ($needed <= 0 || $this->stackCount >= $max) break;
         }
 
+        if ($this->stackCount !== $startingStack) {
+            $this->setStackCount($this->stackCount);
+        }
+
         return $added;
     }
 
@@ -332,6 +337,7 @@ class SpawnerTile extends Spawnable
 
         $inv = $player->getInventory();
 
+        $startingStack = $this->stackCount;
         for ($i = 0; $i < $toRemove; $i++) {
         $shortName = GlaciaUtils::convertMobIdToName($this->legacyEntityTypeId);
         $item = StringToItemParser::getInstance()->parse($shortName . "_spawner");    
@@ -342,6 +348,10 @@ class SpawnerTile extends Spawnable
             }
             $removed++;
             $this->stackCount--;
+        }
+
+        if ($this->stackCount !== $startingStack) {
+            $this->setStackCount($this->stackCount);
         }
 
         return $removed;

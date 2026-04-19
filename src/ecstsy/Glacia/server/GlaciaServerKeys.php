@@ -18,4 +18,7 @@ final class GlaciaServerKeys {
     public const BAH_ACTIVE = "bah_active";
     public const BAH_END_TIME = "bah_end_time";
     public const BAH_HISTORY = "bah_history";
+    public const GLOBAL_FUND_STATE = "global_fund_state";
+    public const ENVOY_STATE = "envoy_state";
+    public const ENVOYSTATE = "envoystate";
 }

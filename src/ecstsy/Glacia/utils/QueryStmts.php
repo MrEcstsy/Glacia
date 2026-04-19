@@ -86,6 +86,11 @@ final class QueryStmts {
     public const FACTION_RELATIONS_UPDATE = "glacia_faction_relations.update";
     public const FACTION_RELATIONS_DELETE = "glacia_faction_relations.delete";
 
+    public const FACTION_UPGRADE_BANK_INIT = "glacia_faction_upgrade_bank.init";
+    public const FACTION_UPGRADE_BANK_SELECT = "glacia_faction_upgrade_bank.select";
+    public const FACTION_UPGRADE_BANK_CREATE = "glacia_faction_upgrade_bank.create";
+    public const FACTION_UPGRADE_BANK_DELETE = "glacia_faction_upgrade_bank.delete";
+
     // COINFLIP QUERY
     public const COINFLIP_INIT = "coinflip.initialize";
     public const COINFLIP_SELECT = "coinflip.select";
@@ -103,6 +108,12 @@ final class QueryStmts {
     public const JACKPOT_STATS_SELECT = "glacia_jackpot_stats.select";
     public const JACKPOT_STATS_UPDATE = "glacia_jackpot_stats.update";
     public const JACKPOT_STATS_INSERT = "glacia_jackpot_stats.insert";
+
+    // BOUNTIES
+    public const BOUNTIES_INIT = "glacia_bounties.init";
+    public const BOUNTIES_SELECT = "glacia_bounties.select";
+    public const BOUNTIES_CREATE = "glacia_bounties.create";
+    public const BOUNTIES_DELETE = "glacia_bounties.delete";
 
     // COMBAT LOGGER QUERY
     public const COMBAT_LOGGER_INIT = "glacia_combat_loggers.init";

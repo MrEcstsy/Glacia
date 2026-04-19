@@ -314,7 +314,7 @@ final class GlaciaItems {
             ],
             "heroic_mysterymobspawner" => [
                 'material' => VanillaBlocks::MONSTER_SPAWNER()->asItem(),
-                'name' => '&r&4&k:::&r&c&lHeroic &r&4&k:::&r&l&6Mystery Mob Spawner',
+                'name' => '&r&3&k||&r &b&lHeroic &r&3&k||&r &f&lMystery Mob Spawner',
                 'lore' => [
                     "&r&7Right-click in hand to reveal one",
                     "&r&7of the following mob spawner types:",
@@ -484,6 +484,17 @@ final class GlaciaItems {
                 ],
                 'nbt' => ['glaciaItem' => 'slot_ticket'],
             ],
+            "heroic_slot_ticket" => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&3&k||&r &b&lHeroic &r&3&k||&r &f&lSlot Bot Ticket &r&7(/bot)',
+                'lore' => [
+                    '&r&7Use this in the Slot Bot to roll',
+                    '&r&7exclusively from the jackpot table.',
+                    '',
+                    '&r&7One spin. &bOnly jackpot loot.',
+                ],
+                'nbt' => ['glaciaItem' => 'heroic_slot_ticket'],
+            ],
             "faction_xp_booster" => [
                  "material" => VanillaItems::EMERALD(), 
                  'name' => "&r&l&bFaction XP Booster &r&7(Right Click)",
@@ -500,6 +511,17 @@ final class GlaciaItems {
                     "&r&7{duration}",
                   ],
                  'nbt' => ['glaciaItem' => 'faction_xp_booster', 'multiplier' => "{multiplier}", 'duration' => "{duration}"],
+            ],
+            "envoy_beacon" => [
+                "material" => VanillaItems::NETHER_STAR(),
+                "name" => "&r&l&bEnvoy Beacon",
+                "lore" => [
+                    "&r&7Right-click to immediately trigger",
+                    "&r&7the next &bEnvoy &7if one is not active.",
+                    "",
+                    "&r&eSingle use.",
+                ],
+                "nbt" => ['glaciaItem' => 'envoy_beacon'],
             ],
             "chunk_buster" => [
                 "material" => VanillaBlocks::BEACON()->asItem(),
@@ -573,7 +595,98 @@ final class GlaciaItems {
                 ],
                 "nbt" => ['glaciaItem' => 'tempest_gateway'],
             ],
+            "purity_wisp" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&fPurity Wisp Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &fBless",
+                    "&r&7Right-click to cleanse all",
+                    "&r&7negative effects instantly.",
+                    "",
+                    "&r&7Cooldown: &f10s",
+                ],
+                "nbt" => ['glaciaItem' => 'purity_wisp'],
+            ],
+            "gale_fox" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&bGale Fox Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &bSonic Burst",
+                    "&r&7Right-click to gain a burst",
+                    "&r&7of extreme movement speed.",
+                    "",
+                    "&r&7Cooldown: &f5m",
+                ],
+                "nbt" => ['glaciaItem' => 'gale_fox'],
+            ],
+            "shatterfang" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&8Shatterfang Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &8Armor Rend",
+                    "&r&7Right-click to empower your strikes",
+                    "&r&7with crushing armor wear.",
+                    "",
+                    "&r&7Cooldown: &f20m",
+                ],
+                "nbt" => ['glaciaItem' => 'shatterfang'],
+            ],
+            "hearthbloom" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&eHearthbloom Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &eWarmth",
+                    "&r&7Right-click to restore your hunger",
+                    "&r&7and recover a small burst of health.",
+                    "",
+                    "&r&7Cooldown: &f90s",
+                ],
+                "nbt" => ['glaciaItem' => 'hearthbloom'],
+            ],
         ];
+
+        $materials = [
+            "sand" => ["display" => "&eSand", "material" => VanillaItems::BUCKET()],
+            "cobble" => ["display" => "&7Cobble", "material" => VanillaItems::BUCKET()],
+            "obsidian" => ["display" => "&5Obsidian", "material" => VanillaItems::BUCKET()],
+        ];
+        $directions = [
+            "north" => "North",
+            "east" => "East",
+            "south" => "South",
+            "west" => "West",
+            "up" => "Up",
+            "down" => "Down",
+        ];
+
+        foreach ($materials as $materialKey => $materialData) {
+            foreach ($directions as $directionKey => $directionName) {
+                GlaciaItemFactory::$definitions["{$materialKey}_gen_bucket_{$directionKey}"] = [
+                    "material" => clone $materialData["material"],
+                    "name" => "&r&l" . $materialData["display"] . " &fGen Bucket &r&7(" . $directionName . ")",
+                    "lore" => [
+                        "&r&7Right-click a block to generate",
+                        "&r" . $materialData["display"] . " &r&7toward &f" . $directionName . "&7.",
+                        "&r&7It will continue until blocked.",
+                        "",
+                        "&r&eOne use per activation.",
+                    ],
+                    "nbt" => [
+                        "glaciaItem" => "gen_bucket",
+                        "material" => $materialKey,
+                        "direction" => $directionKey,
+                    ],
+                ];
+            }
+        }
     }
 
     private static function initCustomArmor(): void {

@@ -17,6 +17,7 @@ use pocketmine\utils\TextFormat as C;
 final class FactionListener implements Listener 
 {
     private static array $claimStates = [];
+    private static array $claimFlight = [];
     private const POWER_KILL_REWARD = 5;
     private const POWER_DEATH_PENALTY = 10;
     private const POWER_MAX = 100;
@@ -46,7 +47,36 @@ final class FactionListener implements Listener
         }
         self::$claimStates[$uuid] = $currentFactionId;
 
+        self::syncClaimFlight($player, $claim);
         GlaciaUtils::handleClaimTitle($player, $claim);
+    }
+
+    public static function syncClaimFlight(Player $player, ?\ecstsy\Glacia\server\factions\claims\FactionClaim $claim = null): void
+    {
+        $uuid = $player->getUniqueId()->toString();
+        $session = Loader::getPlayerManager()->getSession($player);
+        $claim ??= ClaimManager::getInstance()->getClaimAtPosition($player->getPosition());
+        $faction = $session?->getFaction();
+        $isOwnClaim = $claim !== null && $faction !== null && $claim->getFactionId() === $faction->getFactionId();
+        $canFly = $isOwnClaim && Loader::getFactionUpgradeManager()->canFlyInOwnClaim($faction);
+
+        if ($canFly) {
+            if (!$player->getAllowFlight()) {
+                $player->setAllowFlight(true);
+                $player->sendMessage(C::colorize("&r&bSkybound Accord &7lets you fly within your claim."));
+            }
+            self::$claimFlight[$uuid] = true;
+            return;
+        }
+
+        if ((self::$claimFlight[$uuid] ?? false) === true) {
+            unset(self::$claimFlight[$uuid]);
+            if (!$player->hasPermission("glacia.fly")) {
+                $player->setAllowFlight(false);
+                $player->setFlying(false);
+                $player->resetFallDistance();
+            }
+        }
     }
 
     public function onEntityDamage(EntityDamageByEntityEvent $event): void {

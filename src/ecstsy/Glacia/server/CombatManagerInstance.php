@@ -76,6 +76,11 @@ final class CombatManagerInstance {
         $this->combatTime = max(1.0, $seconds);
     }
 
+    public function getBaseCombatTime(): float
+    {
+        return $this->combatTime;
+    }
+
     /**
      * Call on PlayerJoin event
      */
@@ -96,7 +101,7 @@ final class CombatManagerInstance {
     public function startCombat(Player $player, ?Player $opponent = null): void {
         $lower = strtolower($player->getName());
         $now = microtime(true);
-        $expires = $now + $this->combatTime;
+        $expires = $now + $this->getCombatTimeFor($player);
         $expireSec = (int)ceil($expires);
 
         $already = isset($this->combatPlayers[$lower]) && $this->combatPlayers[$lower]['expires'] > $now;
@@ -138,11 +143,20 @@ final class CombatManagerInstance {
                 $prevSec = $this->combatPlayers[$opLower]['expireSec'];
                 $this->removeFromBucket($prevSec, $opLower);
 
-                $this->combatPlayers[$opLower]['expires'] = $expires;
-                $this->combatPlayers[$opLower]['expireSec'] = $expireSec;
-                $this->expiryBuckets[$expireSec][] = $opLower;
+                $opponentExpires = $now + $this->getCombatTimeFor($opponent);
+                $opponentExpireSec = (int) ceil($opponentExpires);
+                $this->combatPlayers[$opLower]['expires'] = $opponentExpires;
+                $this->combatPlayers[$opLower]['expireSec'] = $opponentExpireSec;
+                $this->expiryBuckets[$opponentExpireSec][] = $opLower;
             }
         }
+    }
+
+    private function getCombatTimeFor(Player $player): float
+    {
+        $faction = Loader::getPlayerManager()->getSession($player)?->getFaction();
+        $reduction = Loader::getFactionUpgradeManager()->getCombatTagReductionSeconds($faction);
+        return max(1.0, $this->combatTime - $reduction);
     }
 
     private function removeFromBucket(int $sec, string $lower): void {
