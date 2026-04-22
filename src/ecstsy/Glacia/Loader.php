@@ -9,6 +9,7 @@ use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\auctionhouse\AuctionHouseManager;
 use ecstsy\Glacia\server\BountyManager;
 use ecstsy\Glacia\server\collectionchests\CollectionChestManager;
+use ecstsy\Glacia\server\capture\CaptureManager;
 use ecstsy\Glacia\server\BlackMarketAuctionInstance;
 use ecstsy\Glacia\server\CoinFlipInstance;
 use ecstsy\Glacia\server\CombatManagerInstance;
@@ -70,6 +71,7 @@ final class Loader extends PluginBase {
     private static AuctionHouseManager $auctionHouseManager;
     private static PlayerVaultManager $playerVaultManager;
     private static CollectionChestManager $collectionChestManager;
+    private static CaptureManager $captureManager;
     private static BountyManager $bountyManager;
     private static GlobalFundManager $globalFundManager;
     private static EnvoyManager $envoyManager;
@@ -123,6 +125,7 @@ final class Loader extends PluginBase {
         self::$auctionHouseManager = new AuctionHouseManager();
         self::$playerVaultManager = new PlayerVaultManager();
         self::$collectionChestManager = new CollectionChestManager();
+        self::$captureManager = new CaptureManager();
         self::$bountyManager = new BountyManager();
         self::$globalFundManager = new GlobalFundManager();
         self::$envoyManager = new EnvoyManager();
@@ -247,6 +250,11 @@ final class Loader extends PluginBase {
     public static function getCollectionChestManager(): CollectionChestManager
     {
         return self::$collectionChestManager;
+    }
+
+    public static function getCaptureManager(): CaptureManager
+    {
+        return self::$captureManager;
     }
 
     public static function getBountyManager(): BountyManager

@@ -56,6 +56,7 @@ use pocketmine\item\StringToItemParser;
 use pocketmine\item\Sword;
 use pocketmine\item\VanillaItems;
 use pocketmine\math\Facing;
+use pocketmine\math\Vector3;
 use pocketmine\nbt\tag\ByteTag;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\nbt\tag\IntTag;
@@ -65,6 +66,9 @@ use pocketmine\scheduler\CancelTaskException;
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\world\sound\XpCollectSound;
 use pocketmine\utils\TextFormat as C;
+use pocketmine\world\particle\LavaParticle;
+use pocketmine\world\particle\MobSpawnParticle;
+use pocketmine\world\particle\PortalParticle;
 use pocketmine\world\Position;
 use pocketmine\block\VanillaBlocks;
 
@@ -580,6 +584,62 @@ final class ItemListener implements Listener {
             return;
         }
 
+        if ($itemTag === "soul_compass") {
+            $event->cancel();
+
+            $envoyManager = Loader::getEnvoyManager();
+            if ($envoyManager->getActive() === null) {
+                $player->sendMessage(C::colorize(
+                    "&r&bSoul Compass &8| &r&7No active signal. "
+                    . "&fNext Envoy &7in &b" . GeneralUtils::translateTime($envoyManager->getTimeLeft()) . "&7."
+                ));
+                PlayerUtils::playSound($player, "random.click");
+                return;
+            }
+
+            $nearest = $envoyManager->getNearestCrate($player->getPosition());
+            if ($nearest === null) {
+                $player->sendMessage(C::colorize("&r&bSoul Compass &8| &r&7The signal is unstable right now."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $uses = max(0, $glaciaTag->getInt("uses", $this->getSoulCompassDefaultUses()));
+            if ($uses <= 0) {
+                $player->sendMessage(C::colorize("&r&cThis Soul Compass has lost all of its charge."));
+                PlayerUtils::playSound($player, "note.bass");
+                $player->getInventory()->setItemInHand(VanillaItems::AIR());
+                return;
+            }
+
+            $crateX = (int) ($nearest["x"] ?? 0);
+            $crateY = (int) ($nearest["y"] ?? 0);
+            $crateZ = (int) ($nearest["z"] ?? 0);
+            $crateType = (string) ($nearest["type"] ?? "simple");
+            $direction = $this->formatCompassDirection(
+                ($crateX + 0.5) - $player->getPosition()->x,
+                ($crateZ + 0.5) - $player->getPosition()->z
+            );
+            $distance = (int) round($player->getPosition()->distance(new Vector3($crateX + 0.5, $crateY + 0.5, $crateZ + 0.5)));
+
+            $uses--;
+            if ($uses <= 0) {
+                $player->getInventory()->setItemInHand(VanillaItems::AIR());
+                $useText = "&c0";
+            } else {
+                  $player->getInventory()->setItemInHand(GlaciaItemFactory::soulCompass($uses));
+                  $useText = "&f" . $uses;
+              }
+  
+              $player->sendMessage(C::colorize(
+                  "&r&bSoul Compass &8| &r&7A " . ucfirst($crateType) . " signal stirs &8(&b{$direction}&8)&7. "
+                  . "&7Follow the soul trail. &7Uses left: {$useText}&7."
+              ));
+              $this->startSoulCompassTrail($player, new Vector3($crateX + 0.5, $crateY + 0.5, $crateZ + 0.5), $crateType, $distance);
+              PlayerUtils::playSound($player, "random.orb");
+              return;
+          }
+
         if ($itemTag === "envoy_beacon") {
             $event->cancel();
 
@@ -733,13 +793,13 @@ final class ItemListener implements Listener {
             return;
         }
 
-        if ($itemTag === "ethereal_ultimate_chest") {
+        if ($itemTag === "ethereal_exotic_chest") {
             $event->cancel();
 
             $session = new DropPackageSession(
-                "ultimate",
-                "Ultimate Ethereal Chest",
-                "&r&l&cUltimate Ethereal Chest",
+                "exotic",
+                "Exotic Ethereal Chest",
+                "&r&l&eExotic Ethereal Chest",
                 5
             );
 
@@ -756,7 +816,7 @@ final class ItemListener implements Listener {
             $session = new DropPackageSession(
                 "legendary",
                 "Legendary Ethereal Chest",
-                "&r&l&dLegendary Ethereal Chest",
+                "&r&l&6Legendary Ethereal Chest",
                 5
             );
 
@@ -1794,6 +1854,110 @@ final class ItemListener implements Listener {
         $config = GeneralUtils::getConfiguration(Loader::getInstance(), "misc.yml");
         $value = $config?->getNested("relic-cooldowns.{$key}", "{$fallback}s");
         return max(1, GeneralUtils::parseTimeString((string) $value));
+    }
+
+    private function getSoulCompassDefaultUses(): int
+    {
+        $config = GeneralUtils::getConfiguration(Loader::getInstance(), "envoy.yml");
+        return max(1, (int) ($config?->getNested("soul-compass.default-uses", 8) ?? 8));
+    }
+
+    private function formatCompassDirection(float $deltaX, float $deltaZ): string
+    {
+        $vertical = "";
+        $horizontal = "";
+
+        if ($deltaZ <= -3) {
+            $vertical = "N";
+        } elseif ($deltaZ >= 3) {
+            $vertical = "S";
+        }
+
+        if ($deltaX >= 3) {
+            $horizontal = "E";
+        } elseif ($deltaX <= -3) {
+            $horizontal = "W";
+        }
+
+        return $vertical . $horizontal ?: "HERE";
+    }
+
+    private function startSoulCompassTrail(Player $player, Vector3 $target, string $crateType, int $distance): void
+    {
+        $ticks = 0;
+        Loader::getInstance()->getScheduler()->scheduleRepeatingTask(new ClosureTask(
+            function() use ($player, $target, $crateType, $distance, &$ticks): void {
+                if (!$player->isConnected() || $player->isClosed() || $player->getWorld() !== Loader::getInstance()->getServer()->getWorldManager()->getDefaultWorld()) {
+                    throw new CancelTaskException();
+                }
+
+                $ticks++;
+
+                $origin = $player->getEyePos();
+                $delta = $target->subtractVector($origin);
+                $length = sqrt(($delta->x * $delta->x) + ($delta->y * $delta->y) + ($delta->z * $delta->z));
+                if ($length <= 0.001) {
+                    throw new CancelTaskException();
+                }
+
+                $unitX = $delta->x / $length;
+                $unitY = $delta->y / $length;
+                $unitZ = $delta->z / $length;
+                $segments = min(14, max(6, (int) floor($distance / 7)));
+
+                for ($i = 1; $i <= $segments; $i++) {
+                    $step = min($length, $i * 1.75);
+                    $particlePos = new Vector3(
+                        $origin->x + ($unitX * $step),
+                        $origin->y + ($unitY * $step),
+                        $origin->z + ($unitZ * $step)
+                    );
+                    $player->getWorld()->addParticle($particlePos, new PortalParticle());
+                    if ($i % 2 === 0) {
+                        $player->getWorld()->addParticle($particlePos->add(0, 0.2, 0), new MobSpawnParticle(2, 2));
+                    }
+                }
+
+                $leadDistance = min($length, ($segments + 1) * 1.75);
+                $leadPos = new Vector3(
+                    $origin->x + ($unitX * $leadDistance),
+                    $origin->y + ($unitY * $leadDistance),
+                    $origin->z + ($unitZ * $leadDistance)
+                );
+
+                for ($ring = 0; $ring < 8; $ring++) {
+                    $angle = deg2rad(($ring * 45) + ($ticks * 24));
+                    $player->getWorld()->addParticle(
+                        new Vector3(
+                            $leadPos->x + (cos($angle) * 0.65),
+                            $leadPos->y + 0.2,
+                            $leadPos->z + (sin($angle) * 0.65)
+                        ),
+                        new PortalParticle()
+                    );
+                }
+
+                for ($column = 0; $column < 4; $column++) {
+                    $markerPos = new Vector3($leadPos->x, $leadPos->y + ($column * 0.55), $leadPos->z);
+                    $player->getWorld()->addParticle($markerPos, new LavaParticle());
+                    if ($column % 2 === 0) {
+                        $player->getWorld()->addParticle($markerPos, new MobSpawnParticle(2, 2));
+                    }
+                }
+
+                if ($ticks % 4 === 0) {
+                    $direction = $this->formatCompassDirection($target->x - $origin->x, $target->z - $origin->z);
+                    $player->sendActionBarMessage(C::colorize(
+                        "&r&bSoul Compass &8| &r&f" . ucfirst($crateType) . " signal &7pulling &b{$direction}"
+                    ));
+                    PlayerUtils::playSound($player, "random.click");
+                }
+
+                if ($ticks >= 40) {
+                    throw new CancelTaskException();
+                }
+            }
+        ), 1);
     }
 
     private function consumeHeldItem(Player $player, \pocketmine\item\Item $item): void

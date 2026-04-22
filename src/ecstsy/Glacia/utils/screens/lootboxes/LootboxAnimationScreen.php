@@ -53,7 +53,7 @@ final class LootboxAnimationScreen extends BaseScreen {
         $this->finalRewards = LootboxRepository::rollRewards($this->definition, $viewer);
         if ($this->finalRewards === []) {
             $this->finalRewards = [
-                VanillaItems::BARRIER()->setCustomName(C::colorize("&r&cMissing Reward"))
+                VanillaBlocks::BARRIER()->asItem()->setCustomName(C::colorize("&r&cMissing Reward"))
             ];
         }
 

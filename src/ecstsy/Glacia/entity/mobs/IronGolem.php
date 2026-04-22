@@ -21,15 +21,6 @@ class IronGolem extends SpawnerEntity
         return EntityIds::IRON_GOLEM;
     }
 
-    public function attack(EntityDamageEvent $source) : void{
-
-        if($source->getCause() === EntityDamageEvent::CAUSE_LAVA){
-            $source->setBaseDamage($source->getBaseDamage() / 2);
-        }
-
-        parent::attack($source);
-    }
-
     public function getXpDropAmount() : int{
         return 8;
     }

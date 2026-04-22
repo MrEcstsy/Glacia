@@ -10,9 +10,12 @@ use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\blackmarket\BlackMarketAuctionManager;
 use ecstsy\Glacia\server\economy\SellHandler;
 use ecstsy\Glacia\server\items\genbuckets\GenBucketManager;
+use ecstsy\Glacia\server\levels\PlayerLevelManager;
 use ecstsy\Glacia\server\lootboxes\LootboxRepository;
 use ecstsy\Glacia\server\quests\QuestInstance;
 use ecstsy\Glacia\server\spawners\SpawnerWorthManager;
+use ecstsy\Glacia\server\worldborder\WorldBorderManager;
+use ecstsy\Glacia\server\zones\ZoneManager;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\utils\TextFormat as C;
@@ -32,7 +35,7 @@ final class GlaciaReloadCommand extends BaseCommand {
 
         $targets = $this->getTargets();
         if (!isset($targets[$target])) {
-            $sender->sendMessage(C::colorize("&r&cUnknown target. Use: all, items, shop, sell, kits, blackmarket, enchanter, auctionhouse, quests, spawners, misc, messages, factionupgrades, pets, fund, envoy, genbuckets, lootboxes, dps, config"));
+            $sender->sendMessage(C::colorize("&r&cUnknown target. Use: all, items, shop, sell, kits, blackmarket, enchanter, auctionhouse, quests, spawners, misc, messages, factionupgrades, pets, levels, zones, capture, fund, envoy, genbuckets, lootboxes, dps, config"));
             return;
         }
 
@@ -52,7 +55,7 @@ final class GlaciaReloadCommand extends BaseCommand {
                 return;
         }
 
-        $sender->sendMessage(C::colorize("&r&cUsage: /greload <reload|restore> [all|items|shop|sell|kits|blackmarket|enchanter|auctionhouse|quests|spawners|misc|messages|factionupgrades|pets|fund|envoy|genbuckets|lootboxes|dps|config]"));
+        $sender->sendMessage(C::colorize("&r&cUsage: /greload <reload|restore> [all|items|shop|sell|kits|blackmarket|enchanter|auctionhouse|quests|spawners|misc|messages|factionupgrades|pets|levels|zones|capture|fund|envoy|genbuckets|lootboxes|dps|config]"));
     }
 
     private function restoreFiles(array $files): int {
@@ -119,6 +122,22 @@ final class GlaciaReloadCommand extends BaseCommand {
             GenBucketManager::loadFromConfig();
         }
 
+        if (in_array("misc.yml", $files, true)) {
+            WorldBorderManager::loadFromConfig();
+        }
+
+        if (in_array("levels.yml", $files, true)) {
+            PlayerLevelManager::loadFromConfig();
+        }
+
+        if (in_array("zones.yml", $files, true)) {
+            ZoneManager::loadFromConfig();
+        }
+
+        if (in_array("capturepoints.yml", $files, true)) {
+            Loader::getCaptureManager()->load();
+        }
+
         if (array_filter($files, static fn(string $file): bool => str_starts_with($file, "lootboxes/")) !== []) {
             LootboxRepository::reload();
         }
@@ -136,7 +155,7 @@ final class GlaciaReloadCommand extends BaseCommand {
         $lootboxes = LootboxRepository::getBundledResourceFiles();
 
         return [
-            "all" => array_merge(["items.yml", "shop.yml", "sell.yml", "kits.yml", "blackmarket.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml", "messages.yml", "faction_upgrades.yml", "pets.yml", "fund.yml", "envoy.yml", "genbuckets.yml"], $lootboxes, ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "config.yml"]),
+            "all" => array_merge(["items.yml", "shop.yml", "sell.yml", "kits.yml", "blackmarket.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml", "messages.yml", "faction_upgrades.yml", "pets.yml", "levels.yml", "zones.yml", "capturepoints.yml", "fund.yml", "envoy.yml", "genbuckets.yml"], $lootboxes, ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "config.yml"]),
             "items" => ["items.yml"],
             "shop" => ["shop.yml"],
             "sell" => ["sell.yml"],
@@ -150,6 +169,9 @@ final class GlaciaReloadCommand extends BaseCommand {
             "messages" => ["messages.yml"],
             "factionupgrades" => ["faction_upgrades.yml"],
             "pets" => ["pets.yml"],
+            "levels" => ["levels.yml"],
+            "zones" => ["zones.yml"],
+            "capture" => ["capturepoints.yml"],
             "fund" => ["fund.yml"],
             "envoy" => ["envoy.yml"],
             "genbuckets" => ["genbuckets.yml"],
@@ -179,6 +201,9 @@ final class GlaciaReloadCommand extends BaseCommand {
                 "messages.yml",
                 "faction_upgrades.yml",
                 "pets.yml",
+                "levels.yml",
+                "zones.yml",
+                "capturepoints.yml",
                 "fund.yml",
                 "envoy.yml",
                 "genbuckets.yml",

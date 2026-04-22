@@ -4,6 +4,10 @@ wild-max-radius: 10500
 wild-attempts: 18
 home-max-cap: 50
 home-increaser-permission: "glacia.home.increaser.use"
+world-border-enabled: true
+world-border-radius: 24000
+world-border-world: ""
+world-border-message-cooldown: 2
 relic-cooldowns:
   frostwake_trident: "2m"
   stormflare_torch: "5m"

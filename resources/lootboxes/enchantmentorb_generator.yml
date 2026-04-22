@@ -34,34 +34,34 @@ rewards:
     type: item
     id: "armor_orb"
     max: 12
-    success: 100
+    success: 70
 
   - chance: 17
     type: item
     id: "armor_orb"
     max: 13
-    success: 100
+    success: 70
 
   - chance: 16
     type: item
     id: "armor_orb"
     max: 14
-    success: 100
+    success: 70
 
   - chance: 17
     type: item
     id: "weapon_orb"
     max: 12
-    success: 100
+    success: 70
 
   - chance: 17
     type: item
     id: "weapon_orb"
     max: 13
-    success: 100
+    success: 70
 
   - chance: 16
     type: item
     id: "weapon_orb"
     max: 14
-    success: 100
+    success: 70

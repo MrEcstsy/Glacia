@@ -1,0 +1,40 @@
+name: "&r&l&cRandom TNT Generator"
+title: "&r&8Random TNT Generator"
+aliases:
+  - "randomtntgenerator"
+  - "tntgen"
+  - "rtntgen"
+icon: "chest"
+glow: true
+item-name: "&r&l&cRandom TNT Generator"
+item-lore:
+  - "&r&7Right-click to receive a random TNT!"
+  - ""
+  - "&r&l&fRandom Loot (&r&71 item&f&l)"
+  - "&r&f&l * &r&bGigantic TNT"
+  - "&r&f&l * &r&cLethal TNT"
+  - "&r&f&l * &r&eLucky TNT"
+  - "&r&f&l * &r&9Tactical TNT"
+
+rolls:
+  - pool: "rewards"
+    count: 1
+    chance: 100
+    mode: "random"
+
+rewards:
+  - chance: 25
+    type: item
+    id: "tnt_gigantic"
+
+  - chance: 25
+    type: item
+    id: "tnt_lethal"
+
+  - chance: 25
+    type: item
+    id: "tnt_lucky"
+
+  - chance: 25
+    type: item
+    id: "tnt_tactical"

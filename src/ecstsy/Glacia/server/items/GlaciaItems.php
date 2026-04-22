@@ -261,14 +261,14 @@ final class GlaciaItems {
                 ],
                 'nbt' => ["glaciaItem" => 'ethereal_elite_chest'],
             ],
-            "ethereal_ultimate_chest" => [
+            "ethereal_exotic_chest" => [
                 'material' => VanillaBlocks::TRAPPED_CHEST()->asItem(),
-                'name' => '&r&l&eUltimate Ethereal Chest &r&7(Right Click)',
+                'name' => '&r&l&eExotic Ethereal Chest &r&7(Right Click)',
                 'lore' => [
                     "&r&7A cache of equipment prepared by",
                     "&r&7the Ethereal Intergalactic Station.",
                 ],
-                'nbt' => ["glaciaItem" => 'ethereal_ultimate_chest'],
+                'nbt' => ["glaciaItem" => 'ethereal_exotic_chest'],
             ],
             "ethereal_legendary_chest" => [
                 'material' => VanillaBlocks::TRAPPED_CHEST()->asItem(),
@@ -514,12 +514,15 @@ final class GlaciaItems {
             ],
             "envoy_beacon" => [
                 "material" => VanillaItems::NETHER_STAR(),
-                "name" => "&r&l&bEnvoy Beacon",
+                "name" => "&r&l&bCelestial Envoy Beacon",
                 "lore" => [
-                    "&r&7Right-click to immediately trigger",
-                    "&r&7the next &bEnvoy &7if one is not active.",
+                    "&r&7Tear open the skies and call down",
+                    "&r&7an immediate &bEnvoy &7over the warzone.",
                     "",
-                    "&r&eSingle use.",
+                    "&r&7Can only be used while no",
+                    "&r&7Envoy event is already active.",
+                    "",
+                    "&r&eRight-click to ignite the signal.",
                 ],
                 "nbt" => ['glaciaItem' => 'envoy_beacon'],
             ],
@@ -550,6 +553,18 @@ final class GlaciaItems {
                     "&r&ePlace inside your own claim."
                 ],
                 "nbt" => ['glaciaItem' => 'collection_chest'],
+            ],
+            "soul_compass" => [
+                "material" => VanillaItems::COMPASS(),
+                "name" => "&r&l&bSoul Compass",
+                "lore" => [
+                    "&r&7Right-click to trace the nearest",
+                    "&r&7active &bEnvoy crate &7through the warzone.",
+                    "",
+                    "&r&7Uses: &f8",
+                    "&r&8The signal weakens with each pulse."
+                ],
+                "nbt" => ['glaciaItem' => 'soul_compass', 'uses' => 8],
             ],
             "frostwake_trident" => [
                 "material" => VanillaItems::TRIDENT(),

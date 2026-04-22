@@ -5,8 +5,11 @@ crate-count: 10
 spawn-attempts: 120
 indicator-interval: "12s"
 
+soul-compass:
+  default-uses: 8
+
 broadcasts:
-  start: "&r&l&bEnvoy &8| &r&f{count} envoy crates have landed in &bWarzone&f for &b{time}&f."
+  start: "&r&b&lEnvoy &8| &r&f{count} crates have crashed into &bWarzone&f. Secure them within &b{time}&f."
   end: "&r&l&bEnvoy &8| &r&7The envoy event has ended."
 
 types:
@@ -95,6 +98,26 @@ types:
     enabled: true
     chance: 7
     reward-count: 2
+    mob-wave:
+      enabled: true
+      count: 3
+      spawn-radius: 5
+      name: "&r&3&lEnvoy Beast"
+      mobs:
+        - chance: 25
+          id: "blaze"
+        - chance: 20
+          id: "ghast"
+        - chance: 20
+          id: "skeleton"
+        - chance: 20
+          id: "zombie"
+        - chance: 10
+          id: "baby_zombie"
+        - chance: 15
+          id: "zombie_pigman"
+        - chance: 20
+          id: "slime"
     rewards:
       - chance: 30
         type: item

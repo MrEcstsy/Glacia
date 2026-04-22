@@ -71,7 +71,8 @@ final class RewardResolver {
         return match($type){
             "item" => self::resolveGenericItem($entry, $player),
             "money_note", "bank_note", "econote" => self::resolveFactoryItem("bank_note", $entry, $player),
-            "xp_note", "xpnote" => self::resolveFactoryItem("xp_note", $entry, $player),
+            "xp_note", "xpnote", "xpbottle" => self::resolveFactoryItem("xp_note", $entry, $player),
+            
             default => self::resolveGenericItem($entry, $player)
         };
     }
@@ -141,9 +142,13 @@ final class RewardResolver {
             return $customWeapon;
         }
 
+        if (in_array($id, ["enchantment_book", "enchanted_book", "cebook"])) {
+            return self::resolveDirectEnchantmentBook($entry);
+        }
+
         return match($id) {
             "money_note", "bank_note", "moneynote", "econote" => GlaciaItemFactory::bankNote($player, GeneralUtils::parseRandomNumber($entry["amount"] ?? 1)),
-            "xp_note", "xpnote" => GlaciaItemFactory::xpNote($player, GeneralUtils::parseRandomNumber($entry["amount"] ?? 1)),
+            "xpbottle", "xp_note", "xpnote" => GlaciaItemFactory::xpNote($player, GeneralUtils::parseRandomNumber($entry["amount"] ?? 1)),
 
             "simplebook" => GlaciaItemFactory::randomEnchantBook("simple"),
             "uniquebook" => GlaciaItemFactory::randomEnchantBook("unique"),
@@ -157,6 +162,7 @@ final class RewardResolver {
             "transmog", "transmog_scroll", "transmogscroll" => GlaciaItemFactory::create("transmog"),
             "chunkbuster", "chunk_buster" => GlaciaItemFactory::create("chunk_buster"),
             "collectionchest", "collection_chest" => GlaciaItemFactory::collectionChest(),
+            "soul_compass", "soulcompass" => GlaciaItemFactory::soulCompass(isset($entry["uses"]) ? GeneralUtils::parseRandomNumber($entry["uses"]) : null),
             "orb", "armor_orb", "weapon_orb", "tool_orb" => self::resolveOrbItem($id, $entry),
 
             "simpledp" => GlaciaItemFactory::dropPackage("simple_chest"),
@@ -164,13 +170,20 @@ final class RewardResolver {
             "elitedp" => GlaciaItemFactory::dropPackage("elite_chest"),
             "ultimatedp" => GlaciaItemFactory::dropPackage("ultimate_chest"),
             "legendarydp" => GlaciaItemFactory::dropPackage("legendary_chest"),
-            "goddp" => GlaciaItemFactory::dropPackage("godly_chest"),
+            "godlydp", "goddp" => GlaciaItemFactory::dropPackage("godly_chest"),
+
 
             "simpledust" => self::resolveDustItem("simple", $entry),
             "uniquedust" => self::resolveDustItem("unique", $entry),
             "elitedust" => self::resolveDustItem("elite", $entry),
             "ultimatedust" => self::resolveDustItem("exotic", $entry),
             "legendarydust" => self::resolveDustItem("legendary", $entry),
+
+            "simpleprimaldust" => self::resolveDustItem("simple_primal", $entry),
+            "uniquedust" => self::resolveDustItem("unique_primal", $entry),
+            "elitedust" => self::resolveDustItem("elite_primal", $entry),
+            "ultimatedust" => self::resolveDustItem("exotic_primal", $entry),
+            "legendarydust" => self::resolveDustItem("legendary_primal", $entry),
 
             "mysterymobspawner" => GlaciaItemFactory::mysteryMobSpawner(),
             'heroicmysterymobspawner', 'heroic_mysterymobspawner', 'heroic_mystery_mob_spawner' => GlaciaItemFactory::heroicMysteryMobSpawner(),
@@ -213,6 +226,27 @@ final class RewardResolver {
             default => GlaciaItemFactory::create($id)
         };
     }
+
+    private static function resolveDirectEnchantmentBook(array $entry): ?Item {
+        $enchantName = strtolower((string)($entry["enchant"] ?? ""));
+        if ($enchantName === "") {
+            return null;
+        }
+
+        $level = max(1, (int)($entry["level"] ?? 1));
+        $success = isset($entry["success"]) ? self::parsePercentValue($entry["success"]) : 100;
+        $destroy = isset($entry["destroy"]) ? self::parsePercentValue($entry["destroy"]) : 50;
+
+        $customEnchant = CustomEnchantments::getEnchantmentByName($enchantName);
+
+        if ($customEnchant === null) {
+            return null;
+        }
+
+
+        return GlaciaItemFactory::enchantmentBook($customEnchant, $level, $success, $destroy);
+    }
+
 
     private static function resolveCustomArmorItem(string $id, array $entry): ?Item {
         if (!preg_match('/^([a-z0-9]+)_(helmet|chestplate|leggings|boots)$/', $id, $matches)) {
@@ -364,7 +398,7 @@ final class RewardResolver {
         $id = strtolower((string) ($entry["id"] ?? $entry["material"] ?? $entry["type"] ?? ""));
 
         return match ($id) {
-            "money_note", "bank_note", "econote", "xp_note", "xpnote", "moneynote" => 1,
+            "money_note", "bank_note", "econote", "xp_note", "xpnote", "moneynote", "xpbottle" => 1,
             default => $entry["amount"] ?? 1
         };
     }

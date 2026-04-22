@@ -25,6 +25,7 @@ use ecstsy\Glacia\server\ranks\RankManager;
 use ecstsy\Glacia\server\scoreboard\ScoreboardHelper;
 use ecstsy\Glacia\server\spawners\SpawnerData;
 use ecstsy\Glacia\utils\ChatTypes;
+use ecstsy\Glacia\utils\DiscordLogger;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\Glacia\utils\lang\MessageTemplates;
 use ecstsy\Glacia\utils\screens\spawners\SpawnerStackScreen;
@@ -68,6 +69,9 @@ use Yanoox\ScoreBoardAPI;
 
 final class GlaciaListener implements Listener {
 
+    private const REACH_LOG_THRESHOLD = 3.0;
+    private const REACH_LOG_COOLDOWN = 10;
+
     private array $blockedDotSlashCmds = [
         "./f disband",
         "./faction disband",
@@ -90,6 +94,8 @@ final class GlaciaListener implements Listener {
     private array $online = [];
 
     private array $cooldowns = [];
+    /** @var array<string, int> */
+    private array $reachLogCooldowns = [];
     private const GAP_LIMIT = 3;
     private const GAP_WINDOW = 20; // seconds allowed between apples
     public static array $lastMessages = [];
@@ -404,6 +410,8 @@ final class GlaciaListener implements Listener {
         
         if (!($player instanceof Player) || !($damager instanceof Player)) return;
 
+        $this->checkReach($damager, $player);
+
         $combatManager = Loader::getCombatManager();
         $combatManager->startCombat($player, $damager);
 
@@ -415,13 +423,8 @@ final class GlaciaListener implements Listener {
             GlaciaUtils::toggleFlight($player, true);
         }
 
-        if ($damager->isSprinting()) {
-            $event->setKnockBack(0.6);
-            $event->setVerticalKnockBackLimit($player->isOnGround() ? 0.44 : 0.5);
-        } else {
-            $event->setKnockBack(0.4);
-            $event->setVerticalKnockBackLimit($player->isOnGround() ? 0.36 : 0.8);
-        }
+        $event->setKnockBack(0.4);
+        $event->setVerticalKnockBackLimit($player->isOnGround() ? 0.38 : 1.0);
 
         if ($damager instanceof Player && $player instanceof CombatLoggerEntity) {
             Loader::getCombatManager()->startCombat($damager);
@@ -446,6 +449,52 @@ final class GlaciaListener implements Listener {
               }
           }
       }
+
+    private function checkReach(Player $attacker, Player $victim): void
+    {
+        $eye = $attacker->getEyePos();
+        $bb = $victim->getBoundingBox();
+
+        $closestX = max($bb->minX, min($eye->x, $bb->maxX));
+        $closestY = max($bb->minY, min($eye->y, $bb->maxY));
+        $closestZ = max($bb->minZ, min($eye->z, $bb->maxZ));
+
+        $dx = $eye->x - $closestX;
+        $dy = $eye->y - $closestY;
+        $dz = $eye->z - $closestZ;
+        $reach = sqrt(($dx * $dx) + ($dy * $dy) + ($dz * $dz));
+
+        if ($reach <= self::REACH_LOG_THRESHOLD) {
+            return;
+        }
+
+        $key = strtolower($attacker->getName());
+        $now = time();
+        if (($this->reachLogCooldowns[$key] ?? 0) > $now) {
+            return;
+        }
+
+        $this->reachLogCooldowns[$key] = $now + self::REACH_LOG_COOLDOWN;
+
+        $world = $attacker->getWorld()->getFolderName();
+        $attackerPing = $attacker->getNetworkSession()->getPing();
+        $victimPing = $victim->getNetworkSession()->getPing();
+        $distance = number_format($reach, 2);
+        $attackerPos = $attacker->getPosition();
+        $victimPos = $victim->getPosition();
+
+        DiscordLogger::send(
+            "**Reach Detection**\n" .
+            "**Player:** `{$attacker->getName()}`\n" .
+            "**Target:** `{$victim->getName()}`\n" .
+            "**Reach:** `{$distance}`\n" .
+            "**Attacker Ping:** `{$attackerPing}ms`\n" .
+            "**Target Ping:** `{$victimPing}ms`\n" .
+            "**World:** `{$world}`\n" .
+            "**Attacker Pos:** `" . $attackerPos->getFloorX() . ", " . $attackerPos->getFloorY() . ", " . $attackerPos->getFloorZ() . "`\n" .
+            "**Target Pos:** `" . $victimPos->getFloorX() . ", " . $victimPos->getFloorY() . ", " . $victimPos->getFloorZ() . "`"
+        );
+    }
 
     public function onPlayerDeath(PlayerDeathEvent $event): void {
         $player = $event->getPlayer();
@@ -741,7 +790,7 @@ final class GlaciaListener implements Listener {
             }
         }
 
-        if (!$player->hasPermission("aetheris.chat.advertise.bypass")) {
+        if (!$player->hasPermission("glacia.chat.advertise.bypass")) {
             if (preg_match('/\b([a-z0-9-]+\.)+(com|net|org|gg|co|xyz|io|me|us|uk|ru|ca|de|fr|au|nl|info|biz|site|store)\b/i', $message)) {
                 $event->cancel();
                 $player->sendMessage(C::colorize("&r&l&c(!) &r&cAdvertising is not allowed!"));

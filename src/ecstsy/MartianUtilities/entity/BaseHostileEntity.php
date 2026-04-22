@@ -19,7 +19,7 @@ abstract class BaseHostileEntity extends Living {
     protected bool $persistent = false;
     protected ?Position $spawner = null;
 
-    protected int $aiInterval = 5;
+    protected int $aiInterval = 3;
     protected int $aiTickCounter = 0;
 
     protected int $attackCooldown = 0;
@@ -84,6 +84,8 @@ abstract class BaseHostileEntity extends Living {
                 $this->pathIndex = 0;
                 return;
             }
+
+            $this->recalculatePath();
         }
 
         $this->lookAt($this->target->getPosition()->add(0, $this->target->getEyeHeight(), 0));
@@ -109,6 +111,9 @@ abstract class BaseHostileEntity extends Living {
             $move = $this->buildMovementToward($nextNode, $this->getMoveSpeed());
         } else {
             $move = $this->buildMovementToward($this->target->getPosition(), $this->getMoveSpeed());
+            if ($this->pathCooldown <= 0) {
+                $this->recalculatePath();
+            }
         }
 
         $move = $move->addVector($this->buildSeparationVector());
@@ -194,7 +199,7 @@ abstract class BaseHostileEntity extends Living {
             return true;
         }
 
-        if ($this->stuckTicks >= 10) {
+        if ($this->stuckTicks >= 6) {
             return true;
         }
 
@@ -218,7 +223,7 @@ abstract class BaseHostileEntity extends Living {
 
         $this->path = $newPath ?? [];
         $this->pathIndex = 0;
-        $this->pathCooldown = 10;
+        $this->pathCooldown = 6;
         $this->lastTargetNode = $goal;
         $this->stuckTicks = 0;
     }
@@ -359,6 +364,9 @@ abstract class BaseHostileEntity extends Living {
 
         if (!$event->isCancelled()) {
             $this->attackCooldown = $this->getAttackCooldownTicks();
+            $dx = $player->getPosition()->x - $this->location->x;
+            $dz = $player->getPosition()->z - $this->location->z;
+            $player->knockBack($dx, $dz);
         }
     }
 

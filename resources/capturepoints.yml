@@ -1,0 +1,24 @@
+outposts:
+  forge:
+    display: "&6Forge Outpost"
+    type: "economy"
+    world: ""
+    x: 0
+    y: 80
+    z: 0
+    radius: 5
+    capture-time: 90
+    owner-faction: ""
+
+  conduit:
+    display: "&bConduit Outpost"
+    type: "experience"
+    world: ""
+    x: 0
+    y: 80
+    z: 0
+    radius: 5
+    capture-time: 90
+    owner-faction: ""
+
+koths: {}

@@ -24,16 +24,6 @@ class ZombiePigman extends SpawnerEntity
         return "Zombie Pigman";
     }
 
-    public function attack(EntityDamageEvent $source): void {
-        $immune = [EntityDamageEvent::CAUSE_LAVA, EntityDamageEvent::CAUSE_FIRE, EntityDamageEvent::CAUSE_FIRE_TICK];
-
-        if (in_array($source->getCause(), $immune)) {
-            $source->cancel();
-            return;
-        }
-        parent::attack($source);
-    }
-
     public function getDrops(): array {
         return [
             VanillaBlocks::GOLD()->asItem()->setCount(mt_rand(1, 2)),

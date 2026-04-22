@@ -36,8 +36,11 @@ use ecstsy\Glacia\commands\InvSeeCommand;
 use ecstsy\Glacia\commands\KickCommand;
 use ecstsy\Glacia\commands\ListWarpsCommand;
 use ecstsy\Glacia\commands\LootboxTestCommand;
+use ecstsy\Glacia\commands\KothCommand;
+use ecstsy\Glacia\commands\OutpostCommand;
 use ecstsy\Glacia\commands\PayCommand;
 use ecstsy\Glacia\commands\NearCommand;
+use ecstsy\Glacia\commands\NetherCommand;
 use ecstsy\Glacia\commands\PlayerVaultCommand;
 use ecstsy\Glacia\commands\RankCommand;
 use ecstsy\Glacia\commands\RemoveHomeCommand;
@@ -54,6 +57,7 @@ use ecstsy\Glacia\commands\ReapplyCommand;
 use ecstsy\Glacia\commands\WithdrawCommand;
 use ecstsy\Glacia\commands\WarpCommand;
 use ecstsy\Glacia\commands\WildCommand;
+use ecstsy\Glacia\commands\ZonesCommand;
 use ecstsy\Glacia\commands\XpBottleCommand;
 use ecstsy\Glacia\commands\BlessCommand;
 use ecstsy\Glacia\commands\CoinFlipCommand;
@@ -78,8 +82,16 @@ use ecstsy\Glacia\commands\ShopCommand;
 use ecstsy\Glacia\commands\SlotbotCommand;
 use ecstsy\Glacia\commands\GlaciaReloadCommand;
 use ecstsy\Glacia\commands\KitCommand;
+use ecstsy\Glacia\commands\LevelCommand;
 use ecstsy\Glacia\entity\boss\bosses\AstralDevourer;
 use ecstsy\Glacia\entity\CombatLoggerEntity;
+use ecstsy\Glacia\entity\envoys\EnvoyBabyZombie;
+use ecstsy\Glacia\entity\envoys\EnvoyBlaze;
+use ecstsy\Glacia\entity\envoys\EnvoyGhast;
+use ecstsy\Glacia\entity\envoys\EnvoySkeleton;
+use ecstsy\Glacia\entity\envoys\EnvoySlime;
+use ecstsy\Glacia\entity\envoys\EnvoyZombie;
+use ecstsy\Glacia\entity\envoys\EnvoyZombiePigman;
 use ecstsy\Glacia\entity\FloatingTextEntity;
 use ecstsy\Glacia\entity\GlaciaExplosiveCreeper;
 use ecstsy\Glacia\entity\mobs\GlaciaLightningStrike;
@@ -93,11 +105,15 @@ use ecstsy\Glacia\listeners\EnchantmentListener;
 use ecstsy\Glacia\listeners\EnvoyListener;
 use ecstsy\Glacia\listeners\FactionListener;
 use ecstsy\Glacia\listeners\GlaciaListener;
+use ecstsy\Glacia\listeners\HealingPotionListener;
 use ecstsy\Glacia\listeners\ItemListener;
+use ecstsy\Glacia\listeners\LevelListener;
 use ecstsy\Glacia\listeners\QuestListener;
 use ecstsy\Glacia\listeners\RegionListener;
+use ecstsy\Glacia\listeners\WorldBorderListener;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\player\PlayerManager;
+use ecstsy\Glacia\server\combat\potions\HealingPotionSettings;
 use ecstsy\Glacia\server\economy\SellHandler;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
 use ecstsy\Glacia\server\enchantments\enchants\armor\AngelicEnchant;
@@ -158,6 +174,7 @@ use ecstsy\Glacia\server\items\GlaciaItems;
 use ecstsy\Glacia\server\items\GlaciaSpawnerItem;
 use ecstsy\Glacia\server\items\genbuckets\GenBucketManager;
 use ecstsy\Glacia\server\lootboxes\LootboxRepository;
+use ecstsy\Glacia\server\levels\PlayerLevelManager;
 use ecstsy\Glacia\server\quests\QuestInstance;
 use ecstsy\Glacia\server\ranks\RankManager;
 use ecstsy\Glacia\server\ranks\RankProgressionManager;
@@ -165,6 +182,8 @@ use ecstsy\Glacia\server\regions\Region;
 use ecstsy\Glacia\server\regions\RegionPermissions;
 use ecstsy\Glacia\server\scoreboard\ScoreboardHelper;
 use ecstsy\Glacia\server\spawners\SpawnerWorthManager;
+use ecstsy\Glacia\server\worldborder\WorldBorderManager;
+use ecstsy\Glacia\server\zones\ZoneManager;
 use ecstsy\Glacia\tasks\AutoPlanterTask;
 use ecstsy\Glacia\tasks\BlackMarketAuctionTickTask;
 use ecstsy\Glacia\tasks\CombatTickTask;
@@ -246,12 +265,17 @@ final class GlaciaUtils
             new BalanceCommand($loader, "balance", "View your balance or another player's balance", ["bal"]),
             new BalTopCommand($loader, "baltop", "View the richest players on the server"),
             new BountyCommand($loader, "bounty", "Place and view player bounties", ["bounties"]),
+            new LevelCommand($loader, "level", "View or manage player levels", ["lvl"]),
             new FundCommand($loader, "fund", "Contribute to the active global fund"),
             new EnvoyCommand($loader, "envoy", "View the next envoy or manage it"),
+            new OutpostCommand($loader, "outpost", "Manage outposts"),
+            new KothCommand($loader, "koth", "Manage KOTH events"),
             new PayCommand($loader, "pay", "Pay another player", ["p"]),
             new WithdrawCommand($loader, "withdraw", "Withdraw money into a bank note", ["wd"]),
             new BackCommand($loader, "back", "Teleport to your previous location"),
             new NearCommand($loader, "near", "View nearby players"),
+            new ZonesCommand($loader, "zones", "Open the zones menu", ["zone"]),
+            new NetherCommand($loader, "nether", "Teleport to the nether zone shortcut"),
             new WildCommand($loader, "wild", "Teleport to a random wilderness location"),
             new EnderChestCommand($loader, "enderchest", "Open your ender chest", ["ec"]),
             new EnderSeeCommand($loader, "endersee", "View another player's ender chest", ["ecsee"]),
@@ -313,17 +337,22 @@ final class GlaciaUtils
             new KitCommand($loader, "kit", "Open the kit screen"),
         ]);
 
+        $healingPotionSettings = new HealingPotionSettings();
+
         $listeners = [ 
             new GlaciaListener(),
             new FactionListener(),
             new RegionListener($loader->getRegionManager()),
+            new WorldBorderListener(),
             new ItemListener(),
+            new LevelListener(),
             new QuestListener(),
             new EnchantmentListener(),
             new EnvoyListener(),
             new CollectionChestListener(),
             new CustomTNTListener(),
             new CustomArmorListener(),
+            //new HealingPotionListener($healingPotionSettings),
         ];
 
         foreach ($listeners as $listener) {
@@ -338,7 +367,14 @@ final class GlaciaUtils
             AstralDevourer::class,
             GlaciaPrimedTNT::class,
             GlaciaExplosiveCreeper::class,
-            GlaciaLightningStrike::class
+            GlaciaLightningStrike::class,
+            EnvoyBlaze::class,
+            EnvoyBabyZombie::class,
+            EnvoySkeleton::class,
+            EnvoyZombiePigman::class,
+            EnvoySlime::class,
+            EnvoyZombie::class,
+            EnvoyGhast::class,
         ];
 
         foreach ($entitites as $entity) {
@@ -355,6 +391,7 @@ final class GlaciaUtils
                 Loader::getAuctionHouseManager()->tick();
                 Loader::getGlobalFundManager()->tick();
                 Loader::getEnvoyManager()->tick();
+                Loader::getCaptureManager()->tick();
                 foreach (Server::getInstance()->getOnlinePlayers() as $player) {
                     RankProgressionManager::tickPlayer($player);
                     ScoreboardHelper::refreshScoreboard($player);
@@ -485,7 +522,7 @@ final class GlaciaUtils
             'jellylegs' => ['handler' => fn(...$args) => JellyLegsEnchant::handle(...$args), 'event' => 'entity_damage'],
             'lifesteal' => ['handler' => fn(...$args) => LifestealEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'lucky' => ['handler' => fn(...$args) => LuckyEnchant::handle(...$args), 'event' => 'block_break'],
-            'metaphysical' => ['handler' => fn(...$args) => MetaphysicalEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'metaphysical' => ['handler' => fn(...$args) => MetaphysicalEnchant::handle(...$args), 'event' => 'effect_add'],
             'obsidiandestroyer' => ['handler' => fn(...$args) => ObsidianDestroyerEnchant::handle(...$args), 'event' => 'interact'],
             'pummel' => ['handler' => fn(...$args) => PummelEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'rage' => ['handler' => fn(...$args) => RageEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
@@ -508,7 +545,7 @@ final class GlaciaUtils
         AutoPlanterEnchant::setTask($autoPlantTask);
 
         $files = array_merge(
-            ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml", "kits.yml", "slotbot.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml", "messages.yml", "faction_upgrades.yml", "pets.yml", "fund.yml", "envoy.yml", "genbuckets.yml"],
+            ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml", "kits.yml", "slotbot.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml", "messages.yml", "faction_upgrades.yml", "pets.yml", "fund.yml", "envoy.yml", "genbuckets.yml", "levels.yml", "zones.yml", "capturepoints.yml"],
             LootboxRepository::getBundledResourceFiles()
         );
 
@@ -522,6 +559,10 @@ final class GlaciaUtils
         SellHandler::registerDefaults();
         SpawnerWorthManager::loadFromConfig();
         GenBucketManager::loadFromConfig();
+        WorldBorderManager::loadFromConfig();
+        PlayerLevelManager::loadFromConfig();
+        ZoneManager::loadFromConfig();
+        Loader::getCaptureManager()->load();
 
         Loader::getInstance()->getScheduler()->scheduleDelayedTask(new class extends Task {
             public function onRun(): void
@@ -968,7 +1009,7 @@ final class GlaciaUtils
 
         Await::g2c(
             $webhook->asyncSubmit(
-                "https://discord.com/api/webhooks/1407476694209794198/4tqlt3J2RY8E4CKcW4DMCKDEMokNE99tuo-pSYrT_Xgmf9VCZI9vAERDAfnJaIA9Trsa",
+                "https://discord.com/api/webhooks/1495596161950552091/t_aDEVX3LMjFs0Cexzibz2AfvuVEpF3hapjfEFl0Qfud-y5ATqeGZbLrqTvt2qYQ9Sqq",
                 new WebhookMessage("Webhook Connected!")
             ),
             function (WebhookJobResult $r) {

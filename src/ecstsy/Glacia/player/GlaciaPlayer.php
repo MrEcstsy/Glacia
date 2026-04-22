@@ -277,6 +277,25 @@ final class GlaciaPlayer {
         $this->updateDb();
     }
 
+    public function getLevel(): int
+    {
+        return max(1, (int) ($this->getSetting("player_level") ?? 1));
+    }
+
+    public function getLevelXp(): int
+    {
+        return max(0, (int) ($this->getSetting("player_level_xp") ?? 0));
+    }
+
+    public function setLevelData(int $level, int $xp): void
+    {
+        $settings = json_decode($this->settings, true) ?? [];
+        $settings["player_level"] = max(1, $level);
+        $settings["player_level_xp"] = max(0, $xp);
+        $this->settings = json_encode($settings);
+        $this->updateDb();
+    }
+
      /**
      * Adds a cooldown with the given name and duration to the player. This will overwrite any existing cooldown with the same name.
      * @param string $cooldownName The name of the cooldown to add.

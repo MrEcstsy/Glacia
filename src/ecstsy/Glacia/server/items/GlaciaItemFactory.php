@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\server\items;
 
+use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
@@ -420,6 +421,30 @@ final class GlaciaItemFactory {
     public static function collectionChest(): Item
     {
         return self::create("collection_chest");
+    }
+
+    public static function soulCompass(?int $uses = null): Item
+    {
+        $config = GeneralUtils::getConfiguration(Loader::getInstance(), "envoy.yml");
+        $defaultUses = max(1, (int) ($config?->getNested("soul-compass.default-uses", 8) ?? 8));
+        $uses = max(1, $uses ?? $defaultUses);
+
+        $item = self::create("soul_compass");
+        $item->setLore([
+            C::colorize("&r&7Right-click to trace the nearest"),
+            C::colorize("&r&7active &bEnvoy crate &7through the warzone."),
+            "",
+            C::colorize("&r&7Uses: &f" . $uses),
+            C::colorize("&r&8The signal weakens with each pulse."),
+        ]);
+
+        $root = $item->getNamedTag();
+        $tag = $root->getCompoundTag("Glacia") ?? new CompoundTag();
+        $tag->setInt("uses", $uses);
+        $root->setTag("Glacia", $tag);
+        $item->setNamedTag($root);
+
+        return $item;
     }
 
     public static function factionXpBooster(float $multiplier, string $duration): Item

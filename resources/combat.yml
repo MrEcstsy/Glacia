@@ -1,0 +1,12 @@
+normal:
+  heal: 7.0
+
+strong:
+  heal: 9.0
+
+self-splash:
+  max-impact-distance: 2.35
+  min-intensity: 0.90
+  pitch-assist:
+    min-look-up-pitch: -55.0
+    bonus-intensity: 0.10

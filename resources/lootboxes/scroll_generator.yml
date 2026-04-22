@@ -1,0 +1,41 @@
+name: "&r&l&6Random Scroll Generator"
+title: "&r&8Random Scroll Generator"
+aliases:
+  - "randomscrollgenerator"
+  - "scrollgen"
+  - "rscrollgen"
+icon: "chest"
+glow: true
+item-name: "&r&l&6Random Scroll Generator"
+item-lore:
+  - "&r&7Right-click to receive a random scroll!"
+  - ""
+  - "&r&l&fRandom Loot (&r&71 item&f&l)"
+  - "&r&f&l * &r&fWhite Scroll"
+  - "&r&f&l * &r&0Black Scroll"
+  - "&r&f&l * &r&eTransmog Scroll"
+  - "&r&f&l * &r&6Rename Tag"
+
+rolls:
+  - pool: "rewards"
+    count: 1
+    chance: 100
+    mode: "random"
+
+rewards:
+  - chance: 25
+    type: item
+    id: "whitescroll"
+
+  - chance: 25
+    type: item
+    id: "blackscroll"
+    success: 90
+
+  - chance: 25
+    type: item
+    id: "transmog"
+
+  - chance: 25
+    type: item
+    id: "renametag"

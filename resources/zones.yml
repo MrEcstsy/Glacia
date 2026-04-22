@@ -1,0 +1,52 @@
+nether-shortcut-zone: "nether"
+
+zones:
+  frontier:
+    display: "&bFrontier Fields"
+    description: "&7Starter island for early mob grinding."
+    recommended-level: 1
+    unlock-level: 1
+    world: "world"
+    x: 650
+    y: 100
+    z: 0
+
+  caverns:
+    display: "&3Deep Caverns"
+    description: "&7A stronger mid-game grind spot."
+    recommended-level: 20
+    unlock-level: 15
+    world: "world"
+    x: 1450
+    y: 100
+    z: 0
+
+  frozen:
+    display: "&fFrozen Reach"
+    description: "&7Harder overworld island before the nether."
+    recommended-level: 40
+    unlock-level: 35
+    world: "world"
+    x: 2350
+    y: 100
+    z: 0
+
+  nether:
+    display: "&cInfernal Rift"
+    description: "&7Late beta zone with stronger PvE."
+    recommended-level: 65
+    unlock-level: 60
+    world: "world_nether"
+    x: 0
+    y: 90
+    z: 0
+
+  end:
+    display: "&dAstral End"
+    description: "&7Endgame island for your final beta push."
+    recommended-level: 90
+    unlock-level: 85
+    world: "world_the_end"
+    x: 0
+    y: 80
+    z: 0

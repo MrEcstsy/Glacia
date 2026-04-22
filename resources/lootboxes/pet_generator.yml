@@ -1,0 +1,79 @@
+name: "&r&l&dRandom Pet Generator"
+title: "&r&8Random Pet Generator"
+aliases:
+  - "randompetgenerator"
+  - "petgen"
+  - "rpetgen"
+icon: "chest"
+glow: true
+item-name: "&r&l&dRandom Pet Generator"
+item-lore:
+  - "&r&7Right-click to receive a random pet!"
+  - ""
+  - "&r&l&fRandom Loot (&r&71 item&f&l)"
+  - "&r&f&l * &r&fPurity Wisp"
+  - "&r&f&l * &r&bGale Fox"
+  - "&r&f&l * &r&8Shatterfang"
+  - "&r&f&l * &r&eHearthbloom"
+
+rolls:
+  - pool: "rewards"
+    count: 1
+    chance: 100
+    mode: "random"
+
+rewards:
+  - chance: 25
+    type: item
+    id: "purity_wisp"
+
+  - chance: 25
+    type: item
+    id: "gale_fox"
+
+  - chance: 25
+    type: item
+    id: "shatterfang"
+
+  - chance: 25
+    type: item
+    id: "hearthbloom"
+title: "&r&8Random Pet Generator"
+aliases:
+  - "randompetgenerator"
+  - "petgen"
+  - "rpetgen"
+icon: "bone"
+glow: true
+item-name: "&r&l&dRandom Pet Generator"
+item-lore:
+  - "&r&7Right-click to receive a random pet!"
+  - ""
+  - "&r&l&fRandom Loot (&r&71 item&f&l)"
+  - "&r&f&l * &r&fPurity Wisp"
+  - "&r&f&l * &r&bGale Fox"
+  - "&r&f&l * &r&8Shatterfang"
+  - "&r&f&l * &r&eHearthbloom"
+
+rolls:
+  - pool: "rewards"
+    count: 1
+    chance: 100
+    mode: "random"
+
+rewards:
+  - chance: 25
+    type: item
+    id: "purity_wisp"
+
+  - chance: 25
+    type: item
+    id: "gale_fox"
+
+  - chance: 25
+    type: item
+    id: "shatterfang"
+
+  - chance: 25
+    type: item
+    id: "hearthbloom"

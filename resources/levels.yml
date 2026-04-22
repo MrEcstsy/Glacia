@@ -1,0 +1,33 @@
+max-level: 100
+
+xp-curve:
+  base: 100
+  per-level: 35
+  growth: 1.08
+
+broadcast-milestones: false
+milestones:
+  - 10
+  - 25
+  - 50
+  - 75
+  - 100
+
+mob-xp:
+  default: 8
+  overrides:
+    chicken: 4
+    cow: 5
+    pig: 5
+    sheep: 5
+    zombie: 8
+    skeleton: 9
+    spider: 9
+    slime: 10
+    blaze: 18
+    ghast: 30
+    irongolem: 24
+    iron_golem: 24
+    mooshroom: 12
+    snowgolem: 10
+    snow_golem: 10

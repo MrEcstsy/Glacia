@@ -13,7 +13,7 @@ use SOFe\AwaitGenerator\Await;
 
 final class DiscordLogger {
 
-    // "https://discord.com/api/webhooks/1407476694209794198/4tqlt3J2RY8E4CKcW4DMCKDEMokNE99tuo-pSYrT_Xgmf9VCZI9vAERDAfnJaIA9Trsa"
+    // "https://discord.com/api/webhooks/1495596161950552091/t_aDEVX3LMjFs0Cexzibz2AfvuVEpF3hapjfEFl0Qfud-y5ATqeGZbLrqTvt2qYQ9Sqq"
 
     public static function send(string $message, ?string $username = "Ethereal Hub"): void {
         Await::f2c(function() use($message, $username) {
@@ -31,7 +31,7 @@ final class DiscordLogger {
 
             try {
                 $result = yield from WebhookPool::getInstance()->asyncSubmit(
-                    "https://discord.com/api/webhooks/1407476694209794198/4tqlt3J2RY8E4CKcW4DMCKDEMokNE99tuo-pSYrT_Xgmf9VCZI9vAERDAfnJaIA9Trsa",
+                    "https://discord.com/api/webhooks/1495596161950552091/t_aDEVX3LMjFs0Cexzibz2AfvuVEpF3hapjfEFl0Qfud-y5ATqeGZbLrqTvt2qYQ9Sqq",
                     $messageEmbed
                 );
                 echo "Sent with status {$result->status}\n";

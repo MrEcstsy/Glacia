@@ -36,16 +36,6 @@ class Blaze extends SpawnerEntity
         return "Blaze";
     }
 
-    public function attack(EntityDamageEvent $source): void {
-        $immune = [EntityDamageEvent::CAUSE_LAVA, EntityDamageEvent::CAUSE_FIRE, EntityDamageEvent::CAUSE_FIRE_TICK];
-
-        if (in_array($source->getCause(), $immune)) {
-            $source->cancel();
-            return;
-        }
-        parent::attack($source);
-    }
-
     public function getDrops(): array {
         return [
             VanillaItems::BLAZE_ROD()->setCount(mt_rand(1, 2)),

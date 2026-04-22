@@ -31,8 +31,19 @@ final class SlotbotLootTableScreen extends BaseScreen {
         $this->menu = InvMenu::create(InvMenuTypeIds::TYPE_DOUBLE_CHEST);
         $this->menu->setName(C::colorize($title));
 
+        $inventory = $this->menu->getInventory();
+        $slot = 0;
         foreach ($rewards as $reward) {
-            $this->menu->getInventory()->addItem(clone $reward);
+            if ($slot === 53) {
+                $slot++;
+            }
+
+            if ($slot >= $inventory->getSize()) {
+                break;
+            }
+
+            $inventory->setItem($slot, clone $reward);
+            $slot++;
         }
 
         $back = StringToItemParser::getInstance()->parse("chest_minecart")
