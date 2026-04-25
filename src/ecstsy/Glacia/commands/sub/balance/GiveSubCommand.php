@@ -22,14 +22,13 @@ class GiveSubCommand extends BaseSubCommand {
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void
     {
-        if (!$sender instanceof Player) {
-            return;
-        }
-
-        $player = isset($args["name"]) ? PlayerUtils::getPlayerByPrefix($args["name"]) : null;
+        $lookup = (string)($args["name"] ?? "");
         $amount = isset($args["amount"]) ? (float) GeneralUtils::parseRandomNumber((string) $args["amount"]) : null;
 
-        if ($player === null) {
+        $online = $lookup !== "" ? PlayerUtils::getPlayerByPrefix($lookup) : null;
+        $session = $online !== null ? Loader::getPlayerManager()->getSession($online) : Loader::getPlayerManager()->getSessionByPrefix($lookup);
+
+        if ($session === null) {
             $sender->sendMessage(C::colorize("&r&cError: &4Player not found."));
             return;
         }
@@ -39,15 +38,18 @@ class GiveSubCommand extends BaseSubCommand {
             return;
         }
 
-        $session = Loader::getPlayerManager()->getSession($player);
-
         if ($session->getBalance() + $amount > 9000000000) {
             $sender->sendMessage(C::colorize("&r&cError: &4You cannot give more money than the server allows."));
             return;
         }
 
         $session->addBalance($amount);
-        $sender->sendMessage(C::colorize("&r&a$" . number_format($amount, 2) . " has been added to " . $player->getNameTag() . "'s balance."));
+        $sender->sendMessage(C::colorize("&r&aAdded &f$" . number_format($amount, 2) . "&a to &f" . $session->getUsername() . "&a."));
+
+        $player = $session->getPlayer();
+        if ($player instanceof Player && $player !== $sender) {
+            $player->sendMessage(C::colorize("&r&aYou received &f$" . number_format($amount, 2) . "&a."));
+        }
     }
 
     public function getPermission(): ?string

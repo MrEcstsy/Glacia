@@ -15,7 +15,7 @@ final class PlayerManager {
     use SingletonTrait;
 
     /** @var GlaciaPlayer[] */
-    private array $sessions;
+    private array $sessions = [];
 
     public function __construct(public Loader $plugin)
     {
@@ -61,11 +61,11 @@ final class PlayerManager {
             "power" => 100,
             "rank" => "frostborn",
             "settings" => json_encode([
-                'chest_inventories' => true, 'broadcasts' => true, 'loot_announcer' => true, 'quick_claim' => true, 'max_homes' => 3
+                'chest_inventories' => true, 'broadcasts' => true, 'notifications' => true, 'loot_announcer' => true, 'quick_claim' => true, 'max_homes' => 3
             ]),
             "buffs" => json_encode([]),
             "sell_multiplier" => 1,
-            "collection" => "",
+            "collection" => "[]",
             "kills" => 0,
             "deaths" => 0,
             "slot_credits" => 0
@@ -106,6 +106,34 @@ final class PlayerManager {
             }
         }
         return null;
+    }
+
+    public function getSessionByPrefix(string $name): ?GlaciaPlayer
+    {
+        $name = strtolower(trim($name));
+        if ($name === "") {
+            return null;
+        }
+
+        $found = null;
+        $delta = PHP_INT_MAX;
+
+        foreach ($this->sessions as $session) {
+            $username = strtolower($session->getUsername());
+            if ($username === $name) {
+                return $session;
+            }
+
+            if (str_starts_with($username, $name)) {
+                $currentDelta = strlen($username) - strlen($name);
+                if ($currentDelta < $delta) {
+                    $found = $session;
+                    $delta = $currentDelta;
+                }
+            }
+        }
+
+        return $found;
     }
 
     public function getSessionByUuid(UuidInterface $uuid) : ?GlaciaPlayer

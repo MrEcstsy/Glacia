@@ -34,12 +34,12 @@ final class AngelicHealingManager {
         }
 
         $healAmount = match (true) {
-            $level >= 4 => 2,
-            $level >= 2 => 1,
+            $level >= 4 => 1,
+            $level >= 2 => 0.5,
             default => 1
         };
 
-        $maxTicks = 20 * 3; // 3 seconds
+        $maxTicks = 20 * 1.5; // 1.5 seconds
         $interval = 20; // every second
         $elapsed = 0;
 

@@ -6,9 +6,9 @@ namespace ecstsy\Glacia\server\enchantments\enchants\helmet;
 
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use pocketmine\entity\projectile\Arrow;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
-use pocketmine\item\Arrow;
 
 final class HeavyEnchant implements EntityDamageByEntityEnchantmentHandler {
     public static function handle(EntityDamageByEntityEvent $event, CustomEnchantment $enchant, int $level): void

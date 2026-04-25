@@ -23,7 +23,7 @@ final class MetaphysicalEnchant implements EntityEffectAddEnchantmentHandler {
         }
 
         $effect = $event->getEffect()->getType();
-        if (!$effect === VanillaEffects::SLOWNESS()) {
+        if ($effect !== VanillaEffects::SLOWNESS()) {
             return;
         }
 

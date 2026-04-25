@@ -70,6 +70,7 @@ final class FactionXpBoosterManager {
 
         if ($data["expires_at"] <= time()) {
             unset($this->boosters[$faction->getFactionId()]);
+            $this->hideBossBar($faction->getFactionId());
             return null;
         }
 
@@ -94,17 +95,16 @@ final class FactionXpBoosterManager {
     public function tick(): void
     {
         foreach ($this->boosters as $factionId => $data) {
-            $faction = Loader::getFactionManager()->getFactionById($factionId);
-            if ($faction !== null) {
-                $this->refreshBossBar($faction, $data);
-            }
-
             if ($data["expires_at"] > time()) {
+                $faction = Loader::getFactionManager()->getFactionById($factionId);
+                if ($faction !== null) {
+                    $this->refreshBossBar($faction, $data);
+                }
                 continue;
             }
 
             unset($this->boosters[$factionId]);
-
+            $faction = Loader::getFactionManager()->getFactionById($factionId);
             $this->hideBossBar($factionId);
             if ($faction === null) {
                 continue;

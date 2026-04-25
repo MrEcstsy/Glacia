@@ -1,6 +1,6 @@
 near-radius: 100
 wild-min-radius: 6000
-wild-max-radius: 10500
+wild-max-radius: 7000
 wild-attempts: 18
 home-max-cap: 50
 home-increaser-permission: "glacia.home.increaser.use"

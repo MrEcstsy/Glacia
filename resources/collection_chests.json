@@ -1,0 +1,53 @@
+[
+    {
+        "world": "world",
+        "x": 5502,
+        "y": 68,
+        "z": 5443,
+        "faction_id": "69e3f5c757fed8.60088140",
+        "items": [],
+        "xp": 0
+    },
+    {
+        "world": "world",
+        "x": 5558,
+        "y": 5,
+        "z": 5300,
+        "faction_id": "69e3f5c757fed8.60088140",
+        "items": {
+            "CgAAAQUAQ291bnQBCAQATmFtZRMAbWluZWNyYWZ0OmJsYXplX3JvZAIGAERhbWFnZQAABA8AUE1NUERhdGFWZXJzaW9uAQAAAAAAAAAA": {
+                "item_data": "CgAAAQUAQ291bnQBCAQATmFtZRMAbWluZWNyYWZ0OmJsYXplX3JvZAIGAERhbWFnZQAABA8AUE1NUERhdGFWZXJzaW9uAQAAAAAAAAAA",
+                "count": 129
+            }
+        },
+        "xp": 1957
+    },
+    {
+        "world": "world",
+        "x": 3973,
+        "y": 4,
+        "z": 6692,
+        "faction_id": "69e414783fd3c8.37787763",
+        "items": {
+            "CgAAAQUAQ291bnQBCAQATmFtZRMAbWluZWNyYWZ0OmJsYXplX3JvZAIGAERhbWFnZQAABA8AUE1NUERhdGFWZXJzaW9uAQAAAAAAAAAA": {
+                "item_data": "CgAAAQUAQ291bnQBCAQATmFtZRMAbWluZWNyYWZ0OmJsYXplX3JvZAIGAERhbWFnZQAABA8AUE1NUERhdGFWZXJzaW9uAQAAAAAAAAAA",
+                "count": 52
+            }
+        },
+        "xp": 3196
+    },
+    {
+        "world": "world",
+        "x": -6718,
+        "y": 80,
+        "z": 933,
+        "faction_id": "69e4582a95a5a5.14616970",
+        "items": {
+            "CgAAAQUAQ291bnQBCAQATmFtZRMAbWluZWNyYWZ0OmJsYXplX3JvZAIGAERhbWFnZQAABA8AUE1NUERhdGFWZXJzaW9uAQAAAAAAAAAA": {
+                "item_data": "CgAAAQUAQ291bnQBCAQATmFtZRMAbWluZWNyYWZ0OmJsYXplX3JvZAIGAERhbWFnZQAABA8AUE1NUERhdGFWZXJzaW9uAQAAAAAAAAAA",
+                "count": 5
+            }
+        },
+        "xp": 829
+    }
+]

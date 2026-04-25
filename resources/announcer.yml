@@ -1,0 +1,5 @@
+interval-seconds: 180
+messages:
+  - "&r&6&l(!) &r&eUse &f/settings &eto toggle announcements, notifications, and menu style."
+  - "&r&6&l(!) &r&eNeed more room? Overflow rewards are sent to &f/collect&e."
+  - "&r&6&l(!) &r&ePreview loot by shift-clicking supported openables before using them."

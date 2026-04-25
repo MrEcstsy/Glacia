@@ -24,14 +24,13 @@ final class TakeSubCommand extends BaseSubCommand {
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void
     {
-        if (!$sender instanceof Player) {
-            return;
-        }
-
-        $player = isset($args["name"]) ? PlayerUtils::getPlayerByPrefix($args["name"]) : null;
+        $lookup = (string)($args["name"] ?? "");
         $amount = isset($args["amount"]) ? (float) GeneralUtils::parseRandomNumber((string) $args["amount"]) : null;
 
-        if ($player === null) {
+        $online = $lookup !== "" ? PlayerUtils::getPlayerByPrefix($lookup) : null;
+        $session = $online !== null ? Loader::getPlayerManager()->getSession($online) : Loader::getPlayerManager()->getSessionByPrefix($lookup);
+
+        if ($session === null) {
             $sender->sendMessage(C::colorize("&r&cError: &4Player not found."));
             return;
         }
@@ -41,11 +40,13 @@ final class TakeSubCommand extends BaseSubCommand {
             return;
         }
 
-        $session = Loader::getPlayerManager()->getSession($player);
-
         $session->removeBalance($amount);
-        $sender->sendMessage(C::colorize("&r&a$" . number_format($amount, 2) . " has been removed from " . $player->getNameTag() . "'s balance."));
-        $player->sendMessage(C::colorize("&r&a$" . number_format($amount, 2) . " has been removed from your balance."));
+        $sender->sendMessage(C::colorize("&r&aRemoved &f$" . number_format($amount, 2) . "&a from &f" . $session->getUsername() . "&a."));
+
+        $player = $session->getPlayer();
+        if ($player instanceof Player && $player !== $sender) {
+            $player->sendMessage(C::colorize("&r&c$" . number_format($amount, 2) . " has been removed from your balance."));
+        }
     }
 
     public function getPermission(): string

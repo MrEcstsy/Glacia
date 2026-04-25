@@ -7,10 +7,13 @@ namespace ecstsy\Glacia\commands;
 use CortexPE\Commando\BaseCommand;
 use ecstsy\Glacia\commands\sub\rank\AddPlayerPermissionSubCommand;
 use ecstsy\Glacia\commands\sub\rank\AddRankPermissionSubCommand;
+use ecstsy\Glacia\commands\sub\rank\ClearPlayerPermissionsSubCommand;
 use ecstsy\Glacia\commands\sub\rank\CreateRankSubCommand;
 use ecstsy\Glacia\commands\sub\rank\DeleteRankSubCommand;
 use ecstsy\Glacia\commands\sub\rank\ListRankPermissionsSubCommand;
+use ecstsy\Glacia\commands\sub\rank\ListPlayerPermissionsSubCommand;
 use ecstsy\Glacia\commands\sub\rank\ListRanksSubCommand;
+use ecstsy\Glacia\commands\sub\rank\RemovePlayerPermissionSubCommand;
 use ecstsy\Glacia\commands\sub\rank\RemoveRankPermissionSubCommand;
 use ecstsy\Glacia\commands\sub\rank\SetChatFormatSubCommand;
 use ecstsy\Glacia\commands\sub\rank\SetNametagFormatSubCommand;
@@ -39,12 +42,15 @@ final class RankCommand extends BaseCommand {
         $this->registerSubCommand(new AddRankPermissionSubCommand($plugin, "addperm", "Add a permission to a rank"));
         $this->registerSubCommand(new RemoveRankPermissionSubCommand($plugin, "removeperm", "Remove a permission from a rank"));
         $this->registerSubCommand(new ListRankPermissionsSubCommand($plugin, "perms", "List a rank's permissions"));
-        $this->registerSubCommand(new AddPlayerPermissionSubCommand($plugin, "userperm", "Add a temporary permission to an online player"));
+        $this->registerSubCommand(new AddPlayerPermissionSubCommand($plugin, "userperm", "Add a custom permission to a player"));
+        $this->registerSubCommand(new RemovePlayerPermissionSubCommand($plugin, "removeuserperm", "Remove a custom permission from a player"));
+        $this->registerSubCommand(new ListPlayerPermissionsSubCommand($plugin, "listuserperms", "List a player's custom permissions"));
+        $this->registerSubCommand(new ClearPlayerPermissionsSubCommand($plugin, "clearuserperms", "Clear all custom permissions from a player"));
     }
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void {
         $sender->sendMessage(C::colorize(
-            "&r&cUsage: /glaciaranks <create|delete|list|set|setdisplay|setchat|setnametag|setparent|addperm|removeperm|perms|userperm>"
+            "&r&cUsage: /glaciaranks <create|delete|list|set|setdisplay|setchat|setnametag|setparent|addperm|removeperm|perms|userperm|removeuserperm|listuserperms|clearuserperms>"
         ));
     }
 

@@ -13,8 +13,8 @@ use pocketmine\block\Chest as ChestBlock;
 use pocketmine\item\Item;
 use pocketmine\player\Player;
 use pocketmine\Server;
+use pocketmine\utils\TextFormat as C;
 use pocketmine\world\Position;
-use pocketmine\world\World;
 
 final class CollectionChestManager {
 
@@ -23,6 +23,7 @@ final class CollectionChestManager {
     /** @var array<string, string> */
     private array $chunkIndex = [];
     private string $file;
+    private bool $dirty = false;
 
     public function __construct()
     {
@@ -145,28 +146,32 @@ final class CollectionChestManager {
             return [];
         }
 
+        $positionKey = $this->positionKeyFromEntry($entry);
         $display = [];
+
         foreach (($entry["items"] ?? []) as $fingerprint => $stored) {
-            $item = $this->decodeStoredItem($positionKey, $fingerprint, (string) ($stored["item_data"] ?? ""));
+            $item = $this->decodeStoredItem($positionKey, (string) $fingerprint, (string) ($stored["item_data"] ?? ""));
             if ($item === null) {
                 continue;
             }
+
             $count = (int) ($stored["count"] ?? 0);
             $sellPrice = SellHandler::getSellPrice($item->getTypeId());
 
             $item->setCount(min($item->getMaxStackSize(), max(1, $count)));
             if ($item->hasCustomName()) {
-                $item->setCustomName("§r" . $item->getCustomName());
+                $item->setCustomName(C::RESET . $item->getCustomName());
             }
+
             $lore = $item->getLore();
-            $lore[] = "§r";
-            $lore[] = "§r§8------------------------";
-            $lore[] = "§r§7Stored: §f" . number_format($count);
+            $lore[] = C::RESET;
+            $lore[] = C::colorize("&r&8------------------------");
+            $lore[] = C::colorize("&r&7Stored: &f" . number_format($count));
             if ($sellPrice !== null) {
-                $lore[] = "§r§7Sell Value: §a$" . number_format($sellPrice * $count, 2);
+                $lore[] = C::colorize("&r&7Sell Value: &a$" . number_format($sellPrice * $count, 2));
             }
-            $lore[] = "§r§eClick to withdraw.";
-            $lore[] = "§r§8------------------------";
+            $lore[] = C::colorize("&r&eClick to withdraw.");
+            $lore[] = C::colorize("&r&8------------------------");
             $item->setLore($lore);
 
             $display[] = [
@@ -175,6 +180,8 @@ final class CollectionChestManager {
                 "item" => $item
             ];
         }
+
+        $this->syncIfDirty($position);
 
         usort($display, static fn(array $a, array $b): int => strcmp($a["item"]->getName(), $b["item"]->getName()));
         return $display;
@@ -225,8 +232,10 @@ final class CollectionChestManager {
 
         $template = $this->decodeStoredItem($positionKey, $fingerprint, (string) ($stored["item_data"] ?? ""));
         if ($template === null) {
+            $this->syncIfDirty($position);
             return [];
         }
+
         $remaining = (int) $stored["count"];
         $items = [];
 
@@ -253,9 +262,13 @@ final class CollectionChestManager {
         $multiplier = $session?->getSellMultiplier() ?? 1.0;
         $factionMultiplier = 1.0;
         $factionId = (string) ($entry["faction_id"] ?? "");
+
         if ($factionId !== "") {
-            $factionMultiplier = Loader::getFactionUpgradeManager()->getCollectionSellMultiplier(Loader::getFactionManager()->getFaction($factionId));
+            $factionMultiplier = Loader::getFactionUpgradeManager()->getCollectionSellMultiplier(
+                Loader::getFactionManager()->getFaction($factionId)
+            );
         }
+
         $multiplier *= $factionMultiplier;
         $totalEarned = 0.0;
         $soldItems = 0;
@@ -265,6 +278,7 @@ final class CollectionChestManager {
             if ($item === null) {
                 continue;
             }
+
             $count = (int) ($stored["count"] ?? 0);
             $sellPrice = SellHandler::getSellPrice($item->getTypeId());
             if ($sellPrice === null || $count <= 0) {
@@ -281,6 +295,8 @@ final class CollectionChestManager {
             $session?->addBalance($totalEarned);
             $this->persist();
             CollectionChestScreen::refreshFor($position);
+        } else {
+            $this->syncIfDirty($position);
         }
 
         return [
@@ -320,6 +336,7 @@ final class CollectionChestManager {
         }
 
         $this->entries[$positionKey]["items"][$fingerprint]["count"] = (int) $this->entries[$positionKey]["items"][$fingerprint]["count"] + $count;
+        $this->dirty = true;
     }
 
     private function decodeStoredItem(string $positionKey, string $fingerprint, string $encoded): ?Item
@@ -328,7 +345,7 @@ final class CollectionChestManager {
             return ItemUtils::decodeItem($encoded);
         } catch (\Throwable) {
             unset($this->entries[$positionKey]["items"][$fingerprint]);
-            $this->persist();
+            $this->dirty = true;
             return null;
         }
     }
@@ -390,6 +407,17 @@ final class CollectionChestManager {
     private function persist(): void
     {
         @file_put_contents($this->file, json_encode(array_values($this->entries), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $this->dirty = false;
+    }
+
+    private function syncIfDirty(Position $position): void
+    {
+        if (!$this->dirty) {
+            return;
+        }
+
+        $this->persist();
+        CollectionChestScreen::refreshFor($position);
     }
 
     private function positionFromEntry(array $entry): Position

@@ -139,7 +139,7 @@ final class BountyCommand extends BaseCommand
             return Loader::getPlayerManager()->getSession($online);
         }
 
-        return Loader::getPlayerManager()->getSessionByName($lookup);
+        return Loader::getPlayerManager()->getSessionByPrefix($lookup);
     }
 
     public function getPermission(): string

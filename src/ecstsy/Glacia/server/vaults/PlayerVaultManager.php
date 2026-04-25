@@ -11,6 +11,7 @@ use ecstsy\MartianUtilities\utils\ItemUtils;
 use pocketmine\inventory\Inventory;
 use pocketmine\item\Item;
 use pocketmine\player\Player;
+use pocketmine\Server;
 use pocketmine\utils\TextFormat as C;
 
 final class PlayerVaultManager {
@@ -22,6 +23,7 @@ final class PlayerVaultManager {
 
     /** @var array<string, string> */
     private array $openEditors = [];
+    private bool $dirty = false;
 
     public function __construct()
     {
@@ -98,10 +100,13 @@ final class PlayerVaultManager {
             try {
                 $decoded[(int) $slot] = ItemUtils::decodeItem($encodedItem);
             } catch (\Throwable) {
+                unset($this->vaults[$ownerUuid][$vaultNumber][(int) $slot]);
+                $this->dirty = true;
                 continue;
             }
         }
 
+        $this->persistIfDirty();
         ksort($decoded);
         return $decoded;
     }
@@ -117,11 +122,22 @@ final class PlayerVaultManager {
     public function claimOpenEditor(string $ownerUuid, int $vaultNumber, Player $viewer) : bool
     {
         $key = $this->getVaultKey($ownerUuid, $vaultNumber);
+        $viewerUuid = $viewer->getUniqueId()->toString();
+
         if (isset($this->openEditors[$key])) {
-            return false;
+            $currentViewerUuid = $this->openEditors[$key];
+            if ($currentViewerUuid === $viewerUuid) {
+                return true;
+            }
+
+            if ($this->isViewerOnline($currentViewerUuid)) {
+                return false;
+            }
+
+            unset($this->openEditors[$key]);
         }
 
-        $this->openEditors[$key] = $viewer->getUniqueId()->toString();
+        $this->openEditors[$key] = $viewerUuid;
         return true;
     }
 
@@ -163,7 +179,7 @@ final class PlayerVaultManager {
 
     public function resolvePlayerSession(string $name) : ?GlaciaPlayer
     {
-        return Loader::getPlayerManager()->getSessionByName($name);
+        return Loader::getPlayerManager()->getSessionByPrefix($name);
     }
 
     public function getVaultItemCount(string $ownerUuid, int $vaultNumber) : int
@@ -176,6 +192,24 @@ final class PlayerVaultManager {
         $numbers = array_keys($this->vaults[$ownerUuid] ?? []);
         sort($numbers);
         return $numbers;
+    }
+
+    public function getNonEmptyVaultNumbers(string $ownerUuid, ?Player $viewer = null) : array
+    {
+        $vaultNumbers = [];
+
+        foreach ($this->getKnownVaultNumbers($ownerUuid) as $vaultNumber) {
+            $vaultNumber = (int) $vaultNumber;
+            if ($viewer !== null && !$this->canAccessVault($viewer, $vaultNumber)) {
+                continue;
+            }
+
+            if ($this->getVaultItemCount($ownerUuid, $vaultNumber) > 0) {
+                $vaultNumbers[] = $vaultNumber;
+            }
+        }
+
+        return $vaultNumbers;
     }
 
     private function saveInventory(string $ownerUuid, int $vaultNumber, Inventory $inventory) : void
@@ -205,10 +239,17 @@ final class PlayerVaultManager {
         ksort($contents);
         $this->vaults[$ownerUuid][$vaultNumber] = $contents;
 
+        try {
+            $encodedContents = json_encode($contents, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            Loader::getInstance()->getLogger()->warning("Failed to save player vault {$ownerUuid}:{$vaultNumber}: " . $e->getMessage());
+            return;
+        }
+
         Loader::getDatabase()->executeInsert(QueryStmts::PLAYER_VAULTS_CREATE, [
             "owner_uuid" => $ownerUuid,
             "vault_number" => $vaultNumber,
-            "contents" => json_encode($contents, JSON_THROW_ON_ERROR),
+            "contents" => $encodedContents,
             "updated_at" => time()
         ]);
     }
@@ -234,5 +275,63 @@ final class PlayerVaultManager {
     private function getVaultKey(string $ownerUuid, int $vaultNumber) : string
     {
         return $ownerUuid . ":" . $vaultNumber;
+    }
+
+    private function persistIfDirty() : void
+    {
+        if (!$this->dirty) {
+            return;
+        }
+
+        $removedVaults = [];
+        foreach ($this->vaults as $ownerUuid => $vaults) {
+            foreach ($vaults as $vaultNumber => $contents) {
+                if ($contents === []) {
+                    unset($this->vaults[$ownerUuid][$vaultNumber]);
+                    $removedVaults[] = [$ownerUuid, (int) $vaultNumber];
+                }
+            }
+
+            if (($this->vaults[$ownerUuid] ?? []) === []) {
+                unset($this->vaults[$ownerUuid]);
+            }
+        }
+
+        foreach ($removedVaults as [$ownerUuid, $vaultNumber]) {
+            Loader::getDatabase()->executeChange(QueryStmts::PLAYER_VAULTS_DELETE, [
+                "owner_uuid" => $ownerUuid,
+                "vault_number" => $vaultNumber
+            ]);
+        }
+
+        foreach ($this->vaults as $ownerUuid => $vaults) {
+            foreach ($vaults as $vaultNumber => $contents) {
+                try {
+                    $encodedContents = json_encode($contents, JSON_THROW_ON_ERROR);
+                } catch (\JsonException) {
+                    continue;
+                }
+
+                Loader::getDatabase()->executeInsert(QueryStmts::PLAYER_VAULTS_CREATE, [
+                    "owner_uuid" => $ownerUuid,
+                    "vault_number" => $vaultNumber,
+                    "contents" => $encodedContents,
+                    "updated_at" => time()
+                ]);
+            }
+        }
+
+        $this->dirty = false;
+    }
+
+    private function isViewerOnline(string $viewerUuid) : bool
+    {
+        foreach (Server::getInstance()->getOnlinePlayers() as $online) {
+            if ($online->getUniqueId()->toString() === $viewerUuid) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

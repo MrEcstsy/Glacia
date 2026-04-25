@@ -22,16 +22,6 @@ final class HealingPotionSettings {
         return (bool) $this->config->getNested("healing-potions.enabled", true);
     }
 
-    public function getNormalHeal(): float
-    {
-        return (float) $this->config->getNested("healing-potions.normal.heal", 7.0);
-    }
-
-    public function getStrongHeal(): float
-    {
-        return (float) $this->config->getNested("healing-potions.strong.heal", 9.0);
-    }
-
     public function isSelfSplashEnabled(): bool
     {
         return (bool) $this->config->getNested("healing-potions.self-splash.enabled", true);
@@ -40,11 +30,6 @@ final class HealingPotionSettings {
     public function getSelfSplashDistance(): float
     {
         return (float) $this->config->getNested("healing-potions.self-splash.max-impact-distance", 2.35);
-    }
-
-    public function getMinSelfIntensity(): float
-    {
-        return (float) $this->config->getNested("healing-potions.self-splash.min-intensity", 0.90);
     }
 
     public function isPitchAssistEnabled(): bool
@@ -57,13 +42,33 @@ final class HealingPotionSettings {
         return (float) $this->config->getNested("healing-potions.self-splash.pitch-assist.min-look-up-pitch", -55.0);
     }
 
-    public function getPitchAssistBonusIntensity(): float
+    public function getNormalSelfBonus(): float
     {
-        return (float) $this->config->getNested("healing-potions.self-splash.pitch-assist.bonus-intensity", 0.10);
+        return (float) $this->config->getNested("healing-potions.self-splash.normal-bonus", 0.5);
     }
 
-    public function getMaxIntensity(): float
+    public function getStrongSelfBonus(): float
     {
-        return (float) $this->config->getNested("healing-potions.max-intensity", 1.0);
+        return (float) $this->config->getNested("healing-potions.self-splash.strong-bonus", 1.0);
+    }
+
+    public function getPitchAssistBonusHeal(): float
+    {
+        return (float) $this->config->getNested("healing-potions.self-splash.pitch-assist.bonus-heal", 0.5);
+    }
+
+    public function isDirectHitEnabled(): bool
+    {
+        return (bool) $this->config->getNested("healing-potions.self-splash.direct-hit.enabled", true);
+    }
+
+    public function getDirectHitNormalBonus(): float
+    {
+        return (float) $this->config->getNested("healing-potions.self-splash.direct-hit.normal-bonus", 1.0);
+    }
+
+    public function getDirectHitStrongBonus(): float
+    {
+        return (float) $this->config->getNested("healing-potions.self-splash.direct-hit.strong-bonus", 2.0);
     }
 }

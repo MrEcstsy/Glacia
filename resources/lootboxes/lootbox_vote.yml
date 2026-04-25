@@ -1,0 +1,132 @@
+name: "&r&l&fLootbox: &uVote"
+title: "&r&l&fLootbox: &uVote"
+aliases:
+  - "vote"
+  - "votelb"
+  - ""
+  - ""
+icon: "end_portal_frame"
+glow: false
+item-name: "&r&l&fLootbox: &uVote"
+item-lore:
+  - "&r&7Cast your vote daily to reap havoc upon"
+  - "&r&7those who stand right in front of you."
+  - ""
+  - "&r&l&fRandom Loot (&r&73 items&l&f)"
+  - "&r&l&f * &r&7x2 &l&eExotic Enchantment Books"
+  - "&r&l&f * &r&7x1 &l&bMoney Note &l&f(&r&72k-20k&l&f)"
+  - "&r&l&f * &r&7x1 &l&6Mystery Mob Spawner"
+  - "&r&l&f * &r&7x1 &l&eMax Home Increase"
+  - "&r&l&f * &r&7x3 &l&cLethal Creepers"
+  - "&r&l&f * &r&7x3 &l&9Tactical Creepers"
+  - "&r&l&f * &r&7x1 &l&bElite Space Flare"
+  - ""
+  - "&r&l&e Bonus Loot &f(&r&71 item&l&f)"
+  - "&r&l&f * &r&7x5 &l&dSlot Bot &5Ticket Scraps"
+
+rolls:
+  - pool: "rewards"
+    count: 5
+    chance: 100
+    mode: "random"
+  - pool: "jackpot-rewards"
+    count: 1
+    chance: 100
+    mode: "random"
+
+# `mode: random` rolls from the pool `count` times.
+# `mode: all` gives every entry in the pool once.
+
+rewards:
+  - chance: 10
+    type: item
+    id: "whitescroll"
+    count: 1
+
+  - chance: 10
+    type: item
+    id: "blackscroll"
+    success: 100
+    count: 1
+
+  - chance: 16
+    type: item
+    id: "mysterymobspawner"
+    count: 1
+    
+  - chance: 17
+    type: item
+    id: "soul_compass"
+    count: 1
+
+  - chance: 17
+    type: item
+    id: "ethereal_legendary_chest"
+    count: 1
+  
+  - chance: 17
+    type: item
+    id: "hearthbloom"
+    count: 1
+  
+  - chance: 17
+    type: item
+    id: "block_tracker"
+    count: 1
+  
+  - chance: 17
+    type: item
+    id: "cegg_lucky"
+    count: 12
+
+  - chance: 17
+    type: item
+    id: "xpnote"
+    amount: 100000
+    count: 1
+  
+  - chance: 17
+    type: item
+    id: "renametag"
+    count: 1
+
+  - chance: 17
+    type: item
+    id: "collection_chest"
+    count: 1
+  
+  - chance: 17
+    type: item
+    id: "chunk_buster"
+    count: 1
+  
+  - chance: 17
+    type: item
+    id: "bloody_note"
+    count: 1
+
+  - chance: 17
+    type: item
+    id: "weapon_orb"
+    max: 12
+    success: 50
+
+  - chance: 16
+    type: item
+    id: "armor_orb"
+    max: 12
+    success: 50
+  
+  - chance: 16
+    type: item
+    id: "ultimatebook"
+    count: 2
+  
+
+  - jackpot-rewards:
+    chance: 100
+    type: item
+    id: "whitescroll"
+    count: 1
+    
+

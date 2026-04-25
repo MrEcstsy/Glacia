@@ -58,7 +58,7 @@ final class WhoSubCommand extends BaseSubCommand {
             $player = PlayerUtils::getPlayerByPrefix((string) $target);
             $session = $player !== null
                 ? Loader::getPlayerManager()->getSession($player)
-                : Loader::getPlayerManager()->getSessionByName((string) $target);
+                : Loader::getPlayerManager()->getSessionByPrefix((string) $target);
             $faction = $session?->getFaction();
         }
 

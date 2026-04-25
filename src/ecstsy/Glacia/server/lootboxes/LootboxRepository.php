@@ -197,6 +197,29 @@ final class LootboxRepository {
         return $items;
     }
 
+    /**
+     * @param array<string, mixed> $box
+     * @return array<int, array{name: string, entries: array<int, array<string, mixed>>}>
+     */
+    public static function getPreviewGroups(array $box): array
+    {
+        $groups = [];
+
+        foreach (["rewards", "jackpot-rewards", "bonus-rewards"] as $poolName) {
+            $entries = self::getPool($box, $poolName);
+            if ($entries === []) {
+                continue;
+            }
+
+            $groups[] = [
+                "name" => self::formatId($poolName),
+                "entries" => $entries
+            ];
+        }
+
+        return $groups;
+    }
+
     private static function ensureLoaded(): void
     {
         if (self::$boxes === []) {

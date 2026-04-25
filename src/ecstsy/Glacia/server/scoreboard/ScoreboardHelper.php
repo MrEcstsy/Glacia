@@ -11,6 +11,8 @@ use Yanoox\ScoreBoardAPI;
 
 final class ScoreboardHelper {
 
+    private const SETTING_KEY = "scoreboard";
+
     private const LINE_DATE = 1;
     private const LINE_PLAYER_HEADER = 3;
     private const LINE_RANK = 4;
@@ -26,6 +28,11 @@ final class ScoreboardHelper {
 
     public static function initScoreboard(Player $player): void
     {
+        if (!self::isEnabled($player)) {
+            self::hideScoreboard($player);
+            return;
+        }
+
         ScoreBoardAPI::sendScore($player, C::colorize("&r&l&bGLACIA &r&fFACTIONS"));
         self::refreshScoreboard($player);
     }
@@ -33,6 +40,11 @@ final class ScoreboardHelper {
     public static function refreshScoreboard(Player $player): void
     {
         if (!$player->isConnected()) {
+            return;
+        }
+
+        if (!self::isEnabled($player)) {
+            self::hideScoreboard($player);
             return;
         }
 
@@ -49,7 +61,7 @@ final class ScoreboardHelper {
         self::setLine($player, self::LINE_DATE, self::pad("&r&7     " . date("M d, Y")));
         self::setLine($player, 2, "  ");
         self::setLine($player, 13, " ");
-        self::setLine($player, self::LINE_STORE, self::pad("&r&fstore.etherealhub.net"));
+        self::setLine($player, self::LINE_STORE, self::pad("&r&f    store.etherealpe.com"));
 
         self::updatePlayerLines($player);
         self::updateFactionLines($player);
@@ -70,7 +82,7 @@ final class ScoreboardHelper {
 
         self::setLine($player, self::LINE_PLAYER_HEADER, self::pad("&r&l&b" . strtoupper($player->getName())));
         self::setLine($player, self::LINE_RANK, self::pad("&r&b&l> &r&fRank&7: &b" . $rank));
-        self::setLine($player, self::LINE_BALANCE, self::pad("&r&b&l> &r&fBalance&7: &a$" . number_format($session->getBalance(), 2)));
+        self::setLine($player, self::LINE_BALANCE, self::pad("&r&b&l> &r&fBalance&7: &a$" . self::formatScoreboardMoney($session->getBalance())));
         self::setLine($player, self::LINE_KDR, self::pad("&r&b&l> &r&fKDR&7: &b" . self::formatKdr($session->getKills(), $session->getDeaths(), $session->getKDRRatio())));
         self::setLine($player, self::LINE_POWER, self::pad("&r&b&l> &r&fPower&7: &b" . number_format($session->getPower())));
         self::setLine($player, self::LINE_BREAK, "    ");
@@ -87,7 +99,7 @@ final class ScoreboardHelper {
             return;
         }
 
-        self::setLine($player, self::LINE_BALANCE, self::pad("&r&b&l> &r&fBalance&7: &a$" . number_format($session->getBalance(), 2)));
+        self::setLine($player, self::LINE_BALANCE, self::pad("&r&b&l> &r&fBalance&7: &a$" . self::formatScoreboardMoney($session->getBalance())));
     }
 
     public static function updateRankLine(Player $player): void
@@ -142,6 +154,23 @@ final class ScoreboardHelper {
         self::refreshScoreboard($player);
     }
 
+    public static function setVisible(Player $player, bool $visible): void
+    {
+        if ($visible) {
+            self::initScoreboard($player);
+            return;
+        }
+
+        self::hideScoreboard($player);
+    }
+
+    public static function hideScoreboard(Player $player): void
+    {
+        if (ScoreBoardAPI::hasScore($player)) {
+            ScoreBoardAPI::removeScore($player);
+        }
+    }
+
     public static function updateFactionLines(Player $player): void
     {
         if (!ScoreBoardAPI::hasScore($player)) {
@@ -172,6 +201,40 @@ final class ScoreboardHelper {
     private static function formatKdr(int $kills, int $deaths, float $ratio): string
     {
         return $kills . "&7/&b" . $deaths . " &7(" . number_format($ratio, 2) . ")";
+    }
+
+    private static function isEnabled(Player $player): bool
+    {
+        $session = PlayerManager::getInstance()->getSession($player);
+        if ($session === null) {
+            return true;
+        }
+
+        $setting = $session->getSetting(self::SETTING_KEY);
+        return $setting === null ? true : (bool) $setting;
+    }
+
+    private static function formatScoreboardMoney(float $amount): string
+    {
+        if ($amount < 10_000_000) {
+            return number_format($amount, 2);
+        }
+
+        $units = [
+            1_000_000_000 => "B",
+            1_000_000 => "M",
+        ];
+
+        foreach ($units as $value => $suffix) {
+            if ($amount >= $value) {
+                $formatted = round($amount / $value, 1);
+                $text = number_format($formatted, 1, ".", "");
+                $text = str_ends_with($text, ".0") ? substr($text, 0, -2) : $text;
+                return $text . $suffix;
+            }
+        }
+
+        return number_format($amount, 2);
     }
 
     private static function pad(string $text): string

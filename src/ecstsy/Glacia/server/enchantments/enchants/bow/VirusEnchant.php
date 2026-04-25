@@ -8,9 +8,9 @@ use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
 use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\entity\effect\EffectInstance;
+use pocketmine\entity\projectile\Arrow;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
-use pocketmine\item\Arrow;
 use pocketmine\entity\Living;
 
 final class VirusEnchant implements EntityDamageByEntityEnchantmentHandler {

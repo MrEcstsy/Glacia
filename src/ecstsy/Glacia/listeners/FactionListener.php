@@ -58,7 +58,9 @@ final class FactionListener implements Listener
         $claim ??= ClaimManager::getInstance()->getClaimAtPosition($player->getPosition());
         $faction = $session?->getFaction();
         $isOwnClaim = $claim !== null && $faction !== null && $claim->getFactionId() === $faction->getFactionId();
-        $canFly = $isOwnClaim && Loader::getFactionUpgradeManager()->canFlyInOwnClaim($faction);
+        $inCombat = Loader::getCombatManager()->isInCombat($player);
+        $manualFly = GlaciaUtils::hasManualFlightEnabled($player) && $player->isSurvival();
+        $canFly = !$inCombat && $isOwnClaim && Loader::getFactionUpgradeManager()->canFlyInOwnClaim($faction);
 
         if ($canFly) {
             if (!$player->getAllowFlight()) {
@@ -71,11 +73,24 @@ final class FactionListener implements Listener
 
         if ((self::$claimFlight[$uuid] ?? false) === true) {
             unset(self::$claimFlight[$uuid]);
-            if (!$player->hasPermission("glacia.fly")) {
+            if (!$manualFly) {
                 $player->setAllowFlight(false);
                 $player->setFlying(false);
                 $player->resetFallDistance();
             }
+        }
+
+        if ($inCombat) {
+            GlaciaUtils::disableFlightForCombat($player);
+            return;
+        }
+
+        if ($manualFly && !$player->getAllowFlight()) {
+            $player->setAllowFlight(true);
+        } elseif (!$manualFly && !$canFly && $player->isSurvival() && $player->getAllowFlight()) {
+            $player->setAllowFlight(false);
+            $player->setFlying(false);
+            $player->resetFallDistance();
         }
     }
 

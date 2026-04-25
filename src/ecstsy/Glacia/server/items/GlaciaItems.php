@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\server\items;
 
+use ecstsy\Glacia\server\disguises\DisguiseManager;
+use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\Glacia\server\ranks\RankProgressionManager;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\block\VanillaBlocks;
@@ -12,8 +14,12 @@ use pocketmine\item\VanillaItems;
 
 final class GlaciaItems {
 
+    /** @var array<string, array{display: string, items: string[]}> */
+    private static array $categories = [];
+
     public static function init(): void {
         GlaciaItemFactory::$definitions = [];
+        self::$categories = [];
 
         self::initNotes();
         self::initEnchantItems();
@@ -25,6 +31,276 @@ final class GlaciaItems {
         self::initHomesAndMisc();
         self::initRankItems();
         self::initCustomArmor(); 
+        self::initDisguiseItems();
+        self::initRuneItems();
+        self::initCategories();
+    }
+
+    public static function getCategoryItems(string $category): array {
+        $key = strtolower(trim($category));
+        return self::$categories[$key]["items"] ?? [];
+    }
+
+    public static function getCategoryDisplay(string $category): ?string {
+        $key = strtolower(trim($category));
+        return self::$categories[$key]["display"] ?? null;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function getCategoryDisplays(): array {
+        $displays = [];
+        foreach (self::$categories as $key => $data) {
+            $displays[$key] = $data["display"];
+        }
+
+        return $displays;
+    }
+
+    private static function initCategories(): void {
+        self::$categories = [
+            "pets" => [
+                "display" => "Pets",
+                "items" => [
+                    "purity_wisp",
+                    "gale_fox",
+                    "shatterfang",
+                    "hearthbloom",
+                    "ironclad_wyrm",
+                    "aegis_ram",
+                    "rift_viper",
+                    "sunscorch_jackal",
+                    "runesage_owl",
+                    "stormcore_behemoth",
+                    "veilmoth",
+                    "blastforge_hound",
+                    "pet_tamer",
+                ],
+            ],
+            "trinkets" => [
+                "display" => "Trinkets",
+                "items" => [
+                    "soul_compass",
+                    "frostwake_trident",
+                    "stormflare_torch",
+                    "glacial_blessing",
+                    "tempest_gateway",
+                ],
+            ],
+            "disguises" => [
+                "display" => "Disguises",
+                "items" => array_map(
+                    static fn(string $id): string => "disguise_" . $id,
+                    DisguiseManager::getIds()
+                ),
+            ],
+            "runes" => [
+                "display" => "Runes",
+                "items" => [
+                    "slotkeeper_rune",
+                    "celerity_rune",
+                    "colossus_rune",
+                    "bloodfang_rune",
+                    "verdant_rune",
+                    "pet_duration_rune",
+                    "scholar_rune",
+                    "envoy_vacuum_rune",
+                    "rune_remover",
+                ],
+            ],
+        ];
+    }
+
+    private static function initRuneItems(): void
+    {
+        GlaciaItemFactory::$definitions += [
+            "slotkeeper_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&aSlotkeeper Rune",
+                "lore" => [
+                    "&r&8Passive Rune",
+                    "",
+                    "&r&7Keep this rune in your inventory",
+                    "&r&7for a chance to preserve a",
+                    "&r&fSlot Ticket &r&7after a roll.",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "rune",
+                    "rune_id" => "slotkeeper",
+                    "rune_mode" => "passive",
+                ],
+            ],
+            "celerity_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&bCelerity Rune",
+                "lore" => [
+                    "&r&8Applied Rune",
+                    "",
+                    "&r&7Drag n' drop onto boots to bind",
+                    "&r&7the force of &fGears V &r&7to them.",
+                    "",
+                    "&r&7Only one rune may be bound",
+                    "&r&7to an item at a time.",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "rune",
+                    "rune_id" => "celerity",
+                    "rune_mode" => "applied",
+                ],
+            ],
+            "colossus_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),         
+                "name" => "&r&l&dColossus Rune",
+                "lore" => [
+                    "&r&8Applied Rune",
+                    "",
+                    "&r&7Drag n' drop onto armor to bind",
+                    "&r&7the strength of &fOverload IV&7.",
+                    "",
+                    "&r&7Only one rune may be bound",
+                    "&r&7to an item at a time.",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "rune",
+                    "rune_id" => "colossus",
+                    "rune_mode" => "applied",
+                ],
+            ],
+            "bloodfang_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),         
+                "name" => "&r&l&cBloodfang Rune",
+                "lore" => [
+                    "&r&8Applied Rune",
+                    "",
+                    "&r&7Drag n' drop onto armor to infuse",
+                    "&r&7it with a savage combat seal.",
+                    "&r&7Combat tags last longer and",
+                    "&r&7incoming lifesteal is blunted.",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "rune",
+                    "rune_id" => "bloodfang",
+                    "rune_mode" => "applied",
+                ],
+            ],
+            "verdant_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),         
+                "name" => "&r&l&aVerdant Rune",
+                "lore" => [
+                    "&r&8Passive Rune",
+                    "",
+                    "&r&7Keep this rune in your inventory",
+                    "&r&7to protect crops beneath your feet",
+                    "&r&7and stir faster field growth nearby.",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "rune",
+                    "rune_id" => "verdant",
+                    "rune_mode" => "passive",
+                ],
+            ],
+            "pet_duration_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),         
+                "name" => "&r&l&5Attunement Rune",
+                "lore" => [
+                    "&r&8Passive Rune",
+                    "",
+                    "&r&7Keep this rune in your inventory",
+                    "&r&7to extend the duration of",
+                    "&r&f{pet-display} &r&7by &fx1.5&7.",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "pet_duration_rune",
+                    "rune_id" => "pet_duration",
+                    "rune_mode" => "passive",
+                    "pet" => "{pet}",
+                ],
+            ],
+            "scholar_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),         
+                "name" => "&r&l&eScholar Rune",
+                "lore" => [
+                    "&r&8Passive Rune",
+                    "",
+                    "&r&7Keep this rune in your inventory",
+                    "&r&7for a chance to preserve",
+                    "&r&fEnchantment Books &r&7on apply.",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "rune",
+                    "rune_id" => "scholar",
+                    "rune_mode" => "passive",
+                ],
+            ],
+            "envoy_vacuum_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),         
+                "name" => "&r&l&3Envoy Vacuum Rune",
+                "lore" => [
+                    "&r&8Passive Rune",
+                    "",
+                    "&r&7Keep this rune in your inventory",
+                    "&r&7to draw envoy rewards straight",
+                    "&r&7into your inventory when claimed.",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "rune",
+                    "rune_id" => "envoy_vacuum",
+                    "rune_mode" => "passive",
+                ],
+            ],
+            "rune_remover" => [
+                "material" => VanillaItems::GOLD_NUGGET(),         
+                "name" => "&r&l&fRune Scrubber",
+                "lore" => [
+                    "&r&8Extraction Tool",
+                    "",
+                    "&r&7Drag n' drop onto a runed item",
+                    "&r&7for a chance to strip away",
+                    "&r&7its bound rune.",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "rune_remover",
+                ],
+            ],
+        ];
+    }
+
+    private static function initDisguiseItems(): void
+    {
+        GlaciaItemFactory::$definitions["disguise_unlock"] = [
+            "material" => VanillaItems::EGG(),
+            "name" => "&r&d&lDisguise: &f{display}",
+            "lore" => [
+                "&r&8Unlocked Form",
+                "&r&7{description}",
+                "",
+                "&r&7Right-click to permanently unlock",
+                "&r&f{display} &r&7for &f/disguise&7.",
+            ],
+            "nbt" => [
+                "glaciaItem" => "disguise_unlock",
+                "disguise" => "{disguise}",
+            ],
+        ];
+
+        foreach (DisguiseManager::getIds() as $id) {
+            GlaciaItemFactory::$definitions["disguise_" . $id] = [
+                "material" => VanillaItems::EGG(),
+                "name" => "&r&d&lDisguise: &f" . DisguiseManager::getDisplayName($id),
+                "lore" => [
+                    "&r&8Unlocked Form",
+                    "&r&7" . DisguiseManager::getDescription($id),
+                    "",
+                    "&r&7Right-click to permanently unlock",
+                    "&r&f" . DisguiseManager::getDisplayName($id) . " &r&7for &f/disguise&7.",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "disguise_unlock",
+                    "disguise" => $id,
+                ],
+            ];
+        }
     }
 
     private static function initNotes(): void {
@@ -80,7 +356,7 @@ final class GlaciaItems {
                     '&r&7{applies-to} Enchantment',
                     "&r&7Drag n' Drop onto item to enchant.",
                 ],
-                'nbt' => ['glaciaItem' => 'enchantment_book', 'enchant_book' => '{enchant-no-color}', 'level' => '{level}', 'success' => '{success}', 'destroy' => '{destroy}'],
+                'nbt' => ['glaciaItem' => 'enchantment_book', 'enchant_book' => '{enchant-no-color}', 'level' => '{level}', 'success' => '{success}', 'destroy' => '{destroy}', 'book_type' => '{book-type}', 'vanilla_enchant' => '{vanilla-enchant}'],
             ],
             'orb' => [
                 'material' => StringToItemParser::getInstance()->parse("ender_eye"),
@@ -665,6 +941,136 @@ final class GlaciaItems {
                     "&r&7Cooldown: &f90s",
                 ],
                 "nbt" => ['glaciaItem' => 'hearthbloom'],
+            ],
+            "ironclad_wyrm" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&7Ironclad Wyrm Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &7Sunder Bite",
+                    "&r&7Right-click to prime a guaranteed",
+                    "&r&7random armor disarm on your next",
+                    "&r&7nearby enemy.",
+                    "",
+                    "&r&7Cooldown: &f1h",
+                ],
+                "nbt" => ['glaciaItem' => 'ironclad_wyrm'],
+            ],
+            "aegis_ram" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&bAegis Ram Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &bNull Charge",
+                    "&r&7Right-click to gain no knockback",
+                    "&r&7and immunity to negative effects",
+                    "&r&7for 10 seconds.",
+                    "",
+                    "&r&7Cooldown: &f20m",
+                ],
+                "nbt" => ['glaciaItem' => 'aegis_ram'],
+            ],
+            "rift_viper" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&5Rift Viper Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &5Pearl Lock",
+                    "&r&7Right-click to disable ender pearls",
+                    "&r&7for enemies within a 3 block radius",
+                    "&r&7for 6 seconds.",
+                    "",
+                    "&r&7Cooldown: &f20m",
+                ],
+                "nbt" => ['glaciaItem' => 'rift_viper'],
+            ],
+            "sunscorch_jackal" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&6Sunscorch Jackal Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &6Apple Scorch",
+                    "&r&7Right-click to lock golden apples",
+                    "&r&7for enemies within a 3 block radius",
+                    "&r&7for 10 seconds.",
+                    "",
+                    "&r&7Cooldown: &f45m",
+                ],
+                "nbt" => ['glaciaItem' => 'sunscorch_jackal'],
+            ],
+            "runesage_owl" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&dRunesage Owl Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &dArcane Surge",
+                    "&r&7Right-click to gain &f+5% &r&7on",
+                    "&r&7enchantment applying rates for",
+                    "&r&75 minutes.",
+                    "",
+                    "&r&7Cooldown: &f12h",
+                ],
+                "nbt" => ['glaciaItem' => 'runesage_owl'],
+            ],
+            "stormcore_behemoth" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&cStormcore Behemoth Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &cOvercharge",
+                    "&r&7Right-click to summon a charged",
+                    "&r&7giga creeper at your location.",
+                    "",
+                    "&r&7Cooldown: &f10m",
+                ],
+                "nbt" => ['glaciaItem' => 'stormcore_behemoth'],
+            ],
+            "veilmoth" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&8Veilmoth Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &8Shade Veil",
+                    "&r&7Right-click to hide yourself",
+                    "&r&7from &f/near &r&7for 1 minute.",
+                    "",
+                    "&r&7Cooldown: &f10m",
+                ],
+                "nbt" => ['glaciaItem' => 'veilmoth'],
+            ],
+            "blastforge_hound" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&4Blastforge Hound Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &4Siege Snare",
+                    "&r&7Right-click to inflict Slowness X",
+                    "&r&7on the nearest enemy for 7 seconds",
+                    "&r&7and become immune to explosive damage.",
+                    "",
+                    "&r&7Cooldown: &f15m",
+                ],
+                "nbt" => ['glaciaItem' => 'blastforge_hound'],
+            ],
+            "pet_tamer" => [
+                "material" => StringToItemParser::getInstance()->parse("lead"),
+                "name" => "&r&l&6Pet Tamer",
+                "lore" => [
+                    "&r&7Drag n' drop onto any pet item",
+                    "&r&7to protect it from one death.",
+                    "",
+                    "&r&7If you die, the pet returns to you",
+                    "&r&7and the Pet Tamer is consumed.",
+                ],
+                "nbt" => ['glaciaItem' => 'pet_tamer'],
             ],
         ];
 

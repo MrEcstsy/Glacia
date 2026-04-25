@@ -13,70 +13,169 @@ item-lore:
 
 rolls:
   - pool: "rewards"
-    count: 1
+    count: 5
     chance: 100
-    mode: "random"
-  - pool: "bonus-rewards"
-    count: 1
-    chance: 35
-    mode: "random"
-  - pool: "jackpot-rewards"
-    count: 1
-    chance: 8
-    mode: "random"
+    mode: "all"
 
 # `mode: random` rolls from the pool `count` times.
 # `mode: all` gives every entry in the pool once.
 
 rewards:
-  - chance: 40
+  - chance: 10
     type: item
-    id: "xpnote"
-    amount: 25000
+    transmogged: true
+    id: "phantom_helmet"
+    enchantments:
+      - enchant: "armored"
+        level: 5
+      - enchant: "drunk"
+        level: 4
+      - enchant: "enlighted"
+        level: 3
+      - enchant: "tank"
+        level: 5
+      - enchant: "heavy"
+        level: 5
+      - enchant: "angelic"
+        level: 5
+      - enchant: "clarity"
+        level: 5
+      - enchant: "dodge"
+        level: 5
+      - enchant: "implants"
+        level: 3
+      - enchant: "valor"
+        level: 5
+      - enchant: "wellfed"
+        level: 3
+      - enchant: "trickster"
+        level: 8
+      - enchant: "endershift"
+        level: 3
+      - enchant: "glowing"
+        level: 1
+      - enchant: "aquatic"
+        level: 1
+        
+  - chance: 10
+    type: item
+    transmogged: true
+    id: "phantom_chestplate"
+    enchantments:
+      - enchant: "armored"
+        level: 5
+      - enchant: "bloodlust"
+        level: 5
+      - enchant: "enlighted"
+        level: 3
+      - enchant: "reforged"
+        level: 10
+      - enchant: "tank"
+        level: 5
+      - enchant: "overload"
+        level: 3
+      - enchant: "angelic"
+        level: 5
+      - enchant: "diminish"
+        level: 4
+      - enchant: "dodge"
+        level: 5
+      - enchant: "valor"
+        level: 5
+      - enchant: "frostbite"
+        level: 5
+      - enchant: "hardened"
+        level: 3
+      - enchant: "blazed"
+        level: 5
+      - enchant: "curse"
+        level: 3
 
-  - chance: 30
-    type: item
-    id: "money_note"
-    amount: 500000
+  - chance: 10
+    type: 
+    transmogged: true
+    id: "phantom_leggings"  
+    enchantments:
+      - enchant: "armored"
+        level: 5
+      - enchant: "enlighted"
+        level: 3
+      - enchant: "reforged"
+        level: 10
+      - enchant: "tank"
+        level: 5
+      - enchant: "angelic"
+        level: 5
+      - enchant: "diminish"
+        level: 4
+      - enchant: "dodge"
+        level: 5
+      - enchant: "lavabound"
+        level: 1
+      - enchant: "valor"
+        level: 5
+      - enchant: "curse"
+        level: 3
+      - enchant: "jellylegs"
+        level: 3
 
-  - chance: 15
+  - chance: 10
     type: item
-    id: "whitescroll"
-    count: 1
+    transmogged: true
+    id: "phantom_boots"
+    enchantments:
+      - enchant: "armored"
+        level: 5
+      - enchant: "enlighted"
+        level: 3
+      - enchant: "tank"
+        level: 5
+      - enchant: "angelic"
+        level: 5
+      - enchant: "diminish"
+        level: 4
+      - enchant: "dodge"
+        level: 5
+      - enchant: "gears"
+        level: 3
+      - enchant: "enderwalker"
+        level: 5
+      - enchant: "metaphysical"
+        level: 4
+      - enchant: "valor"
+        level: 5
+      - enchant: "bounce"
+        level: 3
+      - enchant: "frostbite"
+        level: 5
+      - enchant: "hardened"
+        level: 3
 
-  - chance: 15
+  - chance: 5
     type: item
-    id: "renametag"
-    count: 1
-
-bonus-rewards:
-  - chance: 50
-    type: item
-    id: "simplebook"
-    count: 1
-
-  - chance: 30
-    type: item
-    id: "uniquebook"
-    count: 1
-
-  - chance: 20
-    type: item
-    id: "elitedp"
-    count: 1
-
-jackpot-rewards:
-  - chance: 50
-    type: item
-    id: "mysterymobspawner"
-    count: 1
-
-  - chance: 30
-    type: item
-    id: "legendarydp"
-    count: 1
-
-  - chance: 20
-    type: item
-    id: "heroic_mysterymobspawner"
-    count: 1
+    id: "phantom_sword"
+    enchantments: 
+      - enchant: "deathbringer"
+        level: 3
+      - enchant: "lifesteal"
+        level: 5
+      - enchant: "rage"
+        level: 5
+      - enchant: "silence"
+        level: 5
+      - enchant: "doublestrike"
+        level: 3
+      - enchant: "blind"
+        level: 3
+      - enchant: "execute"
+        level: 5
+      - enchant: "greatsword"
+        level: 5
+      - enchant: "slowness"
+        level: 3
+      - enchant: "vampire"
+        level: 3
+      - enchant: "featherweight"
+        level: 3
+      - enchant: "insomnia"
+        level: 7

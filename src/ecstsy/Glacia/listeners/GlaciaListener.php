@@ -7,6 +7,8 @@ namespace ecstsy\Glacia\listeners;
 use ecstsy\Glacia\blocks\CustomSpawner;
 use ecstsy\Glacia\blocks\tiles\SpawnerTile;
 use ecstsy\Glacia\entity\CombatLoggerEntity;
+use ecstsy\Glacia\entity\gkits\ForsakenChampion;
+use ecstsy\Glacia\entity\zones\ZoneMob;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\managers\BragTracker;
 use ecstsy\Glacia\managers\ChatItemTracker;
@@ -14,9 +16,12 @@ use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\factions\relations\RelationManager;
 use ecstsy\Glacia\server\GraceInstance;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
+use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\Glacia\server\items\pets\PetManager;
 use ecstsy\Glacia\server\items\GlaciaSpawnerItem;
+use ecstsy\Glacia\server\gkits\WarlordRepository;
 use ecstsy\Glacia\server\player\BackLocationManager;
+use ecstsy\Glacia\server\hats\HatManager;
 use ecstsy\Glacia\server\hats\HatPlayer;
 use ecstsy\Glacia\server\items\rename\ItemRenameManager;
 use ecstsy\Glacia\server\items\trackers\TrackerManager;
@@ -24,12 +29,16 @@ use ecstsy\Glacia\server\quests\QuestInstance;
 use ecstsy\Glacia\server\ranks\RankManager;
 use ecstsy\Glacia\server\scoreboard\ScoreboardHelper;
 use ecstsy\Glacia\server\spawners\SpawnerData;
+use ecstsy\Glacia\server\zones\ZoneManager;
+use ecstsy\Glacia\server\zones\ZoneMobManager;
 use ecstsy\Glacia\utils\ChatTypes;
 use ecstsy\Glacia\utils\DiscordLogger;
+use ecstsy\Glacia\utils\EmojiManager;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\Glacia\utils\lang\MessageTemplates;
 use ecstsy\Glacia\utils\screens\spawners\SpawnerStackScreen;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
+use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\block\MonsterSpawner as BlockMonsterSpawner;
 use pocketmine\block\tile\MonsterSpawner;
 use pocketmine\event\block\BlockBreakEvent;
@@ -48,6 +57,7 @@ use pocketmine\event\player\PlayerItemConsumeEvent;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerLoginEvent;
 use pocketmine\event\player\PlayerQuitEvent;
+use pocketmine\event\player\PlayerRespawnEvent;
 use pocketmine\event\entity\EntityTeleportEvent;
 use pocketmine\event\server\CommandEvent;
 use pocketmine\event\server\DataPacketReceiveEvent;
@@ -59,8 +69,12 @@ use pocketmine\item\ItemTypeIds;
 use pocketmine\item\Pickaxe;
 use pocketmine\item\StringToItemParser;
 use pocketmine\entity\object\FireworkRocket;
+use pocketmine\entity\projectile\Projectile;
 use pocketmine\network\mcpe\protocol\TextPacket;
+use pocketmine\network\mcpe\protocol\InventoryTransactionPacket;
+use pocketmine\network\mcpe\protocol\types\inventory\UseItemOnEntityTransactionData;
 use pocketmine\player\Player;
+use pocketmine\scheduler\ClosureTask;
 use pocketmine\Server;
 use pocketmine\utils\AssumptionFailedError;
 use pocketmine\utils\TextFormat as C;
@@ -73,22 +87,55 @@ final class GlaciaListener implements Listener {
     private const REACH_LOG_COOLDOWN = 10;
 
     private array $blockedDotSlashCmds = [
-        "./f disband",
-        "./faction disband",
-        "./factions disband",
+        "./ah",
+        "./auctionhouse",
+        "./bah",
+        "./bin",
+        "./blackmarket",
+        "./bot",
+        "./ce",
         "./cf",
+        "./cbrag",
+        "./citem",
         "./coinflip",
-          "./settings",
-          "./glaciasettings",
-          "./f upgrades",
-          "./faction upgrades",
-          "./factions upgrades",
-          "./f upgrade",
-          "./faction upgrade",
-          "./factions upgrade",
-          "./ah sell",
-          "./auctionhouse sell",
-      ];
+        "./collect",
+        "./disguise",
+        "./disguises",
+        "./dispose",
+        "./ec",
+        "./ecsee",
+        "./enchanter",
+        "./enderchest",
+        "./endersee",
+        "./f disband",
+        "./f upgrade",
+        "./f upgrades",
+        "./faction disband",
+        "./faction upgrade",
+        "./faction upgrades",
+        "./factions disband",
+        "./factions upgrade",
+        "./factions upgrades",
+        "./gkit",
+        "./gkits",
+        "./glaciasettings",
+        "./invsee",
+        "./kit",
+        "./lbtest",
+        "./lootboxtest",
+        "./playervault",
+        "./pv",
+        "./seebrag",
+        "./seeitem",
+        "./settings",
+        "./shop",
+        "./slot",
+        "./slotbot",
+        "./trash",
+        "./vault",
+        "./zone",
+        "./zones",
+    ];
 
     /** @var Player[] */
     private array $online = [];
@@ -98,6 +145,8 @@ final class GlaciaListener implements Listener {
     private array $reachLogCooldowns = [];
     private const GAP_LIMIT = 3;
     private const GAP_WINDOW = 20; // seconds allowed between apples
+    private const CHAT_MESSAGE_COOLDOWN = 0.5;
+    private const CHAT_REPEAT_COOLDOWN = 3.0;
     public static array $lastMessages = [];
     public static array $lastMessageTime = [];
 
@@ -149,6 +198,9 @@ final class GlaciaListener implements Listener {
         $player = $event->getPlayer();
         unset($this->online[$player->getUniqueId()->toString()]);
         ItemRenameManager::abort($player);
+        HatManager::clearRenderedHat($player);
+        Loader::getDisguiseManager()->removeFor($player);
+        RuneManager::clearPlayerCaches($player);
 
         PlayerManager::getInstance()->getSession($player)?->setConnected(false);
 
@@ -174,7 +226,7 @@ final class GlaciaListener implements Listener {
         $event->cancel();
 
         $sender = $event->getPlayer();
-        $message = $event->getMessage();
+        $message = EmojiManager::replaceTokens($event->getMessage());
 
         if (ItemRenameManager::handleChat($sender, $message)) {
             return;
@@ -186,6 +238,13 @@ final class GlaciaListener implements Listener {
         }
 
         $chatType = $session->getCurrentChat();
+        if (($message !== "" && ($message[0] === '!' || $message[0] === '#')) && $this->canUseStaffChat($sender)) {
+            $chatType = ChatTypes::STAFF;
+            $message = ltrim(substr($message, 1));
+            if ($message === "") {
+                return;
+            }
+        }
 
         $rank = $session->getRankObject();
         if ($rank === null) {
@@ -248,6 +307,10 @@ final class GlaciaListener implements Listener {
                         continue;
                     }
                 }
+
+                if ($filterMode === ChatTypes::STAFF && !$this->canUseStaffChat($recipient)) {
+                    continue;
+                }
             }
 
             $relation = 'neutral';
@@ -276,6 +339,21 @@ final class GlaciaListener implements Listener {
 
     public function onDataPacketReceive(DataPacketReceiveEvent $event): void {
         $packet = $event->getPacket();
+
+        if ($packet instanceof InventoryTransactionPacket) {
+            $originPlayer = $event->getOrigin()->getPlayer();
+            $trData = $packet->trData;
+            if (
+                $originPlayer instanceof Player &&
+                $trData instanceof UseItemOnEntityTransactionData &&
+                $trData->getActionType() === UseItemOnEntityTransactionData::ACTION_ATTACK &&
+                Loader::getDisguiseManager()->handleAttackPacket($originPlayer, $trData->getActorRuntimeId())
+            ) {
+                $event->cancel();
+                return;
+            }
+        }
+
         if (!$packet instanceof TextPacket) {
             return;
         }
@@ -301,7 +379,7 @@ final class GlaciaListener implements Listener {
     }
 
     public function onPlayerEmbed(PlayerChatEvent $event): void {
-        $message = $event->getMessage();
+        $message = EmojiManager::replaceTokens($event->getMessage());
         $player = $event->getPlayer();
 
         if (str_contains($message, '[brag]')) {
@@ -317,7 +395,7 @@ final class GlaciaListener implements Listener {
             $item = $player->getInventory()->getItemInHand();
             $replacement = $item->isNull() || $item->getCount() === 0
                 ? C::colorize("&r&f[Air]")
-                : C::colorize("&r&f[" . ($item->getCount() > 1 ? "&d" : "&f") . "{$item->getName()}" . ($item->getCount() > 1 ? " x{$item->getCount()}" : "") . "&f]");
+                : C::colorize("&r&f[" . ($item->getCount() > 1 ? "&d" : "&f") . "{$item->getName()}" . ($item->getCount() > 1 ? "&r&f x{$item->getCount()}" : "") . "&r&f]");
             $message = str_replace('[item]', $replacement, $message);
             ChatItemTracker::setLastItem($player, $item);
         }
@@ -331,6 +409,23 @@ final class GlaciaListener implements Listener {
         if (!$player instanceof Player) {
             return;
         }   
+
+        if (PetManager::hasBlastShield($player)) {
+            $cause = $event->getCause();
+            if ($cause === EntityDamageEvent::CAUSE_BLOCK_EXPLOSION || $cause === EntityDamageEvent::CAUSE_ENTITY_EXPLOSION) {
+                $event->cancel();
+                return;
+            }
+        }
+
+        $stormcoreImmuneUntil = (int) (Loader::getPlayerManager()->getSession($player)?->getSetting("stormcore_self_immunity_until") ?? 0);
+        if ($stormcoreImmuneUntil > time()) {
+            $cause = $event->getCause();
+            if ($cause === EntityDamageEvent::CAUSE_BLOCK_EXPLOSION || $cause === EntityDamageEvent::CAUSE_ENTITY_EXPLOSION) {
+                $event->cancel();
+                return;
+            }
+        }
 
         GlaciaUtils::updateScoreTag($player);
     }
@@ -354,7 +449,7 @@ final class GlaciaListener implements Listener {
             foreach ($graceBlocked as $blocked) {
                 if ($root === $blocked || str_starts_with($root, $blocked)) {
                     $event->cancel();
-                    $event->getSender()->sendMessage(C::colorize("&cYou cannot use this command during the grace period."));
+                    $event->getSender()->sendMessage(C::colorize("&r&cYou cannot use this command during the grace period."));
                     return;
                 }
             }
@@ -369,7 +464,7 @@ final class GlaciaListener implements Listener {
 
             foreach ($combatBlockedExact as $blocked) {
                 if ($root === $blocked) {
-                    $sender->sendMessage(C::colorize("&r&l&c(!) &r&cYou cannot use this command while in combat!"));
+                    $this->sendCombatCommandDenied($sender);
                     $event->cancel();
                     return;
                 }
@@ -377,7 +472,7 @@ final class GlaciaListener implements Listener {
 
             foreach ($combatBlockedPrefix as $blocked) {
                 if ($root === $blocked || str_starts_with($root, $blocked)) {
-                    $sender->sendMessage(C::colorize("&r&l&c(!) &r&cYou cannot use this command while in combat!"));
+                    $this->sendCombatCommandDenied($sender);
                     $event->cancel();
                     return;
                 }
@@ -389,7 +484,7 @@ final class GlaciaListener implements Listener {
         if (GraceInstance::getInstance()->isGraceActive()) {
             $event->cancel();
             foreach (Server::getInstance()->getOnlinePlayers() as $player) {
-                $player->sendToastNotification("Glacia Factions", "§bExplosions are disabled during grace period!");
+                $player->sendToastNotification("Glacia Factions", C::colorize("&bExplosions are disabled during the grace period."));
             }
         }
     }
@@ -403,6 +498,15 @@ final class GlaciaListener implements Listener {
         $player = $event->getEntity();
         $damager = $event->getDamager();
 
+        if ($damager instanceof Projectile && $event->getCause() === EntityDamageEvent::CAUSE_PROJECTILE) {
+            $owner = $damager->getOwningEntity();
+            if ($owner instanceof Player && $player instanceof Player) {
+                if ($damager->getPosition()->y >= ($player->getEyePos()->y - 0.2)) {
+                    PlayerUtils::playSound($owner, "note.pling");
+                }
+            }
+        }
+
         if ($damager instanceof FireworkRocket) {
             $event->cancel();
             return;
@@ -415,16 +519,23 @@ final class GlaciaListener implements Listener {
         $combatManager = Loader::getCombatManager();
         $combatManager->startCombat($player, $damager);
 
-        if ($damager instanceof Player && $damager->isFlying()) {
-            GlaciaUtils::toggleFlight($damager, true);
-        }
-    
-        if ($player instanceof Player && $player->isFlying()) {
-            GlaciaUtils::toggleFlight($player, true);
+        $extraCombat = max(
+            RuneManager::getCombatTagExtensionSeconds($damager),
+            RuneManager::getCombatTagExtensionSeconds($player)
+        );
+        if ($extraCombat > 0) {
+            $combatManager->extendCombat($player, $extraCombat);
+            $combatManager->extendCombat($damager, $extraCombat);
         }
 
-        $event->setKnockBack(0.4);
-        $event->setVerticalKnockBackLimit($player->isOnGround() ? 0.38 : 1.0);
+        if (PetManager::isAegisActive($player)) {
+            $event->setKnockBack(0.0);
+            $event->setVerticalKnockBackLimit(0.0);
+        } else {
+            $event->setKnockBack(0.40);
+            $event->setVerticalKnockBackLimit($player->isOnGround() ? 0.28 : 1.0);
+        }
+        $event->setAttackCooldown(7);
 
         if ($damager instanceof Player && $player instanceof CombatLoggerEntity) {
             Loader::getCombatManager()->startCombat($damager);
@@ -446,6 +557,26 @@ final class GlaciaListener implements Listener {
 
                   $armorPiece->setDamage(min($armorPiece->getMaxDurability(), $armorPiece->getDamage() + $extraDamage));
                   $armorInventory->setItem($slot, $armorPiece);
+              }
+          }
+
+          if ($damager instanceof Player && $player instanceof Player && PetManager::consumeIroncladDisarm($damager)) {
+              $armorInventory = $player->getArmorInventory();
+              $candidates = [];
+              foreach ($armorInventory->getContents() as $slot => $armorPiece) {
+                  if ($armorPiece->isNull()) {
+                      continue;
+                  }
+                  $candidates[] = $slot;
+              }
+
+              if ($candidates !== []) {
+                  $slot = $candidates[array_rand($candidates)];
+                  $removed = $armorInventory->getItem($slot);
+                  $armorInventory->setItem($slot, \pocketmine\item\VanillaItems::AIR());
+                  $player->getWorld()->dropItem($player->getPosition(), $removed);
+                  $player->sendMessage(C::colorize("&r&cAn Ironclad Wyrm ripped away a piece of your armor."));
+                  $damager->sendMessage(C::colorize("&r&aIronclad Wyrm Pet &r&7disarmed a piece of &f" . $player->getName() . "&7's armor."));
               }
           }
       }
@@ -496,11 +627,33 @@ final class GlaciaListener implements Listener {
         );
     }
 
+    private function canUseStaffChat(Player $player): bool
+    {
+        return $player->hasPermission("glacia.staffchat");
+    }
+
     public function onPlayerDeath(PlayerDeathEvent $event): void {
         $player = $event->getPlayer();
+        ZoneMobManager::clearPlayerState($player);
         BackLocationManager::store($player, $player->getLocation());
         $xpDrop = $player->getXpDropAmount();
         $xpBottle = GlaciaItemFactory::xpNote($player, $xpDrop);
+
+        $keptPets = [];
+        $remainingDrops = [];
+        foreach ($event->getDrops() as $drop) {
+            $glaciaTag = $drop->getNamedTag()->getCompoundTag("Glacia");
+            if ($glaciaTag !== null && $glaciaTag->getByte("pet_tamer", 0) === 1) {
+                $keptPets[] = $this->stripPetTamer($drop);
+                continue;
+            }
+
+            $remainingDrops[] = $drop;
+        }
+        if ($keptPets !== []) {
+            PetManager::queueTamedPets($player, $keptPets);
+            $event->setDrops($remainingDrops);
+        }
 
         if ($player->getXpManager()->getCurrentTotalXp() > 0) {
             $player->getWorld()->dropItem($player->getPosition(), $xpBottle);
@@ -515,6 +668,29 @@ final class GlaciaListener implements Listener {
         }
 
         $killer = $cause->getDamager();
+        if ($killer instanceof Projectile) {
+            $owner = $killer->getOwningEntity();
+            if ($owner instanceof Player) {
+                $killer = $owner;
+            }
+        }
+
+        $weaponName = "Unknown";
+        if ($cause->getDamager() instanceof Projectile && $killer instanceof Player) {
+            $weaponName = $killer->getInventory()->getItemInHand()->getName();
+        } elseif ($killer instanceof Player) {
+            $weapon = $killer->getInventory()->getItemInHand();
+            $weaponName = $weapon->isNull() ? "Bare Hands" : $weapon->getName();
+        }
+
+        if ($killer instanceof Player) {
+            $event->setDeathMessage(C::colorize(
+                "&r&c" . $player->getName() .
+                " &7was slain by &f" . $killer->getName() .
+                " &8[&c" . number_format(max(0, $killer->getHealth()), 1) . " HP&8] &7using &f" . $weaponName
+            ));
+        }
+
         if (!$killer instanceof Player || $killer->getUniqueId()->toString() === $player->getUniqueId()->toString()) {
             return;
         }
@@ -525,6 +701,11 @@ final class GlaciaListener implements Listener {
             return;
         }
 
+        $victimSession->setDeaths($victimSession->getDeaths() + 1);
+        $killerSession->setKills($killerSession->getKills() + 1);
+        GlaciaUtils::updateScoreTag($player);
+        GlaciaUtils::updateScoreTag($killer);
+
         $bounty = Loader::getBountyManager()->claimBounty($victimSession);
         if ($bounty <= 0) {
             return;
@@ -533,6 +714,33 @@ final class GlaciaListener implements Listener {
         $killerSession->addBalance($bounty);
         $killer->sendMessage(C::colorize("&r&6Bounty &8| &r&aYou claimed &f$" . number_format($bounty) . " &afor killing &c" . $player->getName() . "&a."));
         Loader::getBountyManager()->broadcastClaim($killer->getName(), $player->getName(), $bounty);
+    }
+
+    public function onPlayerRespawn(PlayerRespawnEvent $event): void
+    {
+        $player = $event->getPlayer();
+        $items = PetManager::claimQueuedTamedPets($player);
+        if ($items === []) {
+            return;
+        }
+
+        Loader::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(
+            function() use ($player, $items): void {
+                if (!$player->isConnected()) {
+                    return;
+                }
+
+                foreach ($items as $item) {
+                    if ($player->getInventory()->canAddItem($item)) {
+                        $player->getInventory()->addItem($item);
+                    } else {
+                        $player->getWorld()->dropItem($player->getPosition(), $item);
+                    }
+                }
+
+                $player->sendMessage(C::colorize("&r&6Pet Tamer &8| &r&7Your protected pet returned to you."));
+            }
+        ), 1);
     }
 
     public function onTeleport(EntityTeleportEvent $event): void {
@@ -552,8 +760,9 @@ final class GlaciaListener implements Listener {
 
         $blockPrototype = $item->getBlock();
         $entityIdFromItem = GlaciaSpawnerItem::getSpawnerEntityId($item); 
+        $isZoneSpawner = GlaciaSpawnerItem::isZoneSpawner($item);
 
-        if (!($blockPrototype instanceof CustomSpawner) && $entityIdFromItem <= 0) {
+        if (!($blockPrototype instanceof CustomSpawner) && $entityIdFromItem <= 0 && !$isZoneSpawner) {
             return;
         }
 
@@ -562,13 +771,16 @@ final class GlaciaListener implements Listener {
             $entityId = $blockPrototype->getLegacyEntityId();
         }
 
-        if ($entityId <= 0) {
+        if ($entityId <= 0 && !$isZoneSpawner) {
             return;
         }
 
 
         $player = $event->getPlayer();
         $transaction = $event->getTransaction();
+        $placedPositions = [];
+        $zoneId = GlaciaSpawnerItem::getZoneSpawnerZoneId($item);
+        $zone = $isZoneSpawner ? ZoneManager::getZone($zoneId) : null;
 
         foreach ($transaction->getBlocks() as [$x, $y, $z, $transBlock]) {
             $pos = $transBlock->getPosition();
@@ -576,6 +788,18 @@ final class GlaciaListener implements Listener {
             try {
                 $world = $pos->getWorld();
             } catch (AssumptionFailedError $e) {
+                continue;
+            }
+
+            if ($isZoneSpawner) {
+                if ($zone === null || !ZoneManager::isInsideZone($pos, $zone)) {
+                    $event->cancel();
+                    $player->sendMessage(C::colorize("&r&cThat zone spawner must be placed inside its assigned zone."));
+                    return;
+                }
+
+                $transaction->addBlock($pos->asVector3(), GlaciaSpawnerItem::MONSTER_SPAWNER()->setLegacyEntityId($entityId > 0 ? $entityId : 32));
+                $placedPositions[] = $pos;
                 continue;
             }
 
@@ -601,6 +825,23 @@ final class GlaciaListener implements Listener {
 
             $transaction->addBlock($pos->asVector3(), GlaciaSpawnerItem::MONSTER_SPAWNER()->setLegacyEntityId($entityId));
          }
+
+        if ($isZoneSpawner && $placedPositions !== []) {
+            Loader::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(
+                function() use ($placedPositions, $zoneId, $entityId): void {
+                    foreach ($placedPositions as $pos) {
+                        $tile = $pos->getWorld()->getTile($pos);
+                        if (!$tile instanceof SpawnerTile) {
+                            continue;
+                        }
+
+                        $tile->setLegacyEntityId($entityId > 0 ? $entityId : 32);
+                        $tile->setMode(SpawnerTile::MODE_ZONE);
+                        $tile->setZoneId($zoneId);
+                    }
+                }
+            ), 1);
+        }
     }
 
     public function onSpawnerBreak(BlockBreakEvent $event): void {
@@ -609,7 +850,20 @@ final class GlaciaListener implements Listener {
         $item = $event->getItem();
         $tile = ($position = $event->getBlock()->getPosition())->getWorld()->getTile($position);
 
-        if (!$tile instanceof SpawnerTile || !$item instanceof Pickaxe || !$item->hasEnchantment(VanillaEnchantments::SILK_TOUCH())) return;
+        if (!$tile instanceof SpawnerTile) return;
+
+        if ($tile->isZoneSpawner()) {
+            $zone = ZoneManager::getZone($tile->getZoneId());
+            $event->setDrops([
+                GlaciaSpawnerItem::createZoneSpawner(
+                    $tile->getZoneId(),
+                    $zone !== null ? C::clean((string) ($zone["display"] ?? $tile->getZoneId())) : $tile->getZoneId()
+                )
+            ]);
+            return;
+        }
+
+        if (!$item instanceof Pickaxe || !$item->hasEnchantment(VanillaEnchantments::SILK_TOUCH())) return;
 
         $stackCount = $tile->getStackCount();
         $entityName = GlaciaUtils::convertMobIdToName($tile->getLegacyEntityId());
@@ -639,6 +893,24 @@ final class GlaciaListener implements Listener {
         }
 
         $this->cooldowns[$name] = $now + 1; 
+
+        if ($tile->isZoneSpawner()) {
+            $zone = ZoneManager::getZone($tile->getZoneId());
+            $status = ZoneMobManager::getSpawnerStatus($tile->getZoneId());
+            $zoneDisplay = $zone !== null ? (string) ($zone["display"] ?? $tile->getZoneId()) : $tile->getZoneId();
+
+            $lines = [
+                "&r&l&dZone Spawner",
+                "&7 Zone: &f{$zoneDisplay}",
+                "&7 Players Inside: &f" . (int) ($status["players"] ?? 0),
+                "&7 Alive Mobs: &f" . (int) ($status["alive"] ?? 0) . "&7/&f" . (int) ($status["desired"] ?? 0),
+                "&7 Spawn Check: &f" . (int) ($status["interval"] ?? 0) . "s"
+            ];
+
+            $player->sendMessage(C::colorize("\n" . implode("\n", $lines) . "\n"));
+            $event->cancel();
+            return;
+        }
 
         if ($player->isSneaking()){
             SpawnerStackScreen::displayForm($player, $tile);
@@ -686,10 +958,33 @@ final class GlaciaListener implements Listener {
         $entity = $event->getEntity();
         $last = $entity->getLastDamageCause();
 
+        if ($entity instanceof ForsakenChampion) {
+            $killerName = "Unknown";
+            if ($last instanceof EntityDamageByEntityEvent && $last->getDamager() instanceof Player) {
+                $killer = $last->getDamager();
+                if (!$killer instanceof Player) return;
+
+                $killerName = $killer->getName();
+            }
+
+            $profile = WarlordRepository::getWarlordById($entity->getWarlordId()) ?? [];
+            $warlordName = (string) ($profile["display"] ?? C::clean($entity->getNameTag()));
+            $message = str_replace(
+                ["{killer}", "{warlord}", "{display}", "{gkit}"],
+                [$killerName, $warlordName, $warlordName, $warlordName],
+                (string) ($profile["death-message"] ?? "&r&f{killer} &r&7defeated &f{warlord}&7.")
+            );
+            Server::getInstance()->broadcastMessage(C::colorize($message));
+        }
+
         if (!$last instanceof EntityDamageByEntityEvent) return;
 
         $damager = $last->getDamager();
         if (!$damager instanceof Player) return;
+
+        if ($entity instanceof ZoneMob) {
+            ZoneMobManager::handleMobKill($damager, $entity);
+        }
 
         $pos = $damager->getPosition();
         $damager->getWorld()->addSound($pos->asVector3(), new XpCollectSound());
@@ -733,6 +1028,12 @@ final class GlaciaListener implements Listener {
         $now = time();
 
         if ($item->getTypeId() === ItemTypeIds::GOLDEN_APPLE) {
+            if (PetManager::isGappleBlocked($player)) {
+                $event->cancel();
+                $player->sendMessage(C::colorize("&r&cA pet effect is preventing you from eating golden apples right now."));
+                return;
+            }
+
             if ($session->isOnCooldown("golden_apple")) {
                 $event->cancel();
                 $player->sendMessage(C::colorize(
@@ -764,6 +1065,12 @@ final class GlaciaListener implements Listener {
         }
 
         if ($item->getTypeId() === ItemTypeIds::ENCHANTED_GOLDEN_APPLE) {
+            if (PetManager::isGappleBlocked($player)) {
+                $event->cancel();
+                $player->sendMessage(C::colorize("&r&cA pet effect is preventing you from eating golden apples right now."));
+                return;
+            }
+
             if (!$session->isOnCooldown("enchanted_golden_apple")) {
                 $session->addCooldown("enchanted_golden_apple", 60);
             } else {
@@ -785,7 +1092,8 @@ final class GlaciaListener implements Listener {
         foreach ($slurs as $slur) {
             if (preg_match($slur, $message)) {
                 $event->cancel();
-                $player->sendMessage(C::colorize("&r&l&c(!) &r&cYour message contained prohibited language!"));
+                $player->sendMessage(C::colorize("&r&cYour message contained prohibited language."));
+                PlayerUtils::playSound($player, "note.bass");
                 return;
             }
         }
@@ -793,28 +1101,65 @@ final class GlaciaListener implements Listener {
         if (!$player->hasPermission("glacia.chat.advertise.bypass")) {
             if (preg_match('/\b([a-z0-9-]+\.)+(com|net|org|gg|co|xyz|io|me|us|uk|ru|ca|de|fr|au|nl|info|biz|site|store)\b/i', $message)) {
                 $event->cancel();
-                $player->sendMessage(C::colorize("&r&l&c(!) &r&cAdvertising is not allowed!"));
+                $player->sendMessage(C::colorize("&r&cAdvertising is not allowed."));
+                PlayerUtils::playSound($player, "note.bass");
                 return;
             }
         }
 
+        $key = strtolower($name);
         $now = microtime(true);
-        $lastMsg = self::$lastMessages[$name] ?? "";
-        $lastTime = self::$lastMessageTime[$name] ?? 0;
+        $normalizedMessage = trim(strtolower($message));
+        $lastMsg = self::$lastMessages[$key] ?? "";
+        $lastTime = self::$lastMessageTime[$key] ?? 0;
+        $timeSinceLastMessage = $now - $lastTime;
 
-        if ($now - $lastTime < 0.5) {
+        if ($timeSinceLastMessage < self::CHAT_MESSAGE_COOLDOWN) {
             $event->cancel();
-            $player->sendMessage(C::colorize("&r&l&c(!) &r&cYou are sending messages too quickly!"));
+            $player->sendMessage(C::colorize("&r&cYou are sending messages too quickly."));
+            PlayerUtils::playSound($player, "note.bass");
             return;
         }
 
-        if (trim(strtolower($message)) === trim(strtolower($lastMsg))) {
+        if ($normalizedMessage !== "" && $normalizedMessage === $lastMsg && $timeSinceLastMessage < self::CHAT_REPEAT_COOLDOWN) {
             $event->cancel();
-            $player->sendMessage(C::colorize("&r&l&c(!) &r&cYou are sending the same message too quickly!"));
+            $player->sendMessage(C::colorize(
+                "&r&cYou can repeat that message again in &f" .
+                number_format(self::CHAT_REPEAT_COOLDOWN - $timeSinceLastMessage, 1) .
+                "s&r&c."
+            ));
+            PlayerUtils::playSound($player, "note.bass");
             return;
         }
 
-        self::$lastMessages[$name] = $message;
-        self::$lastMessageTime[$name] = $now;
+        self::$lastMessages[$key] = $normalizedMessage;
+        self::$lastMessageTime[$key] = $now;
+    }
+
+    private function sendCombatCommandDenied(Player $player): void
+    {
+        $player->sendMessage(C::colorize("&r&cYou cannot use this command while in combat."));
+        PlayerUtils::playSound($player, "note.bass");
+    }
+
+    private function stripPetTamer(\pocketmine\item\Item $item): \pocketmine\item\Item
+    {
+        $root = $item->getNamedTag();
+        $glacia = $root->getCompoundTag("Glacia");
+        if ($glacia === null) {
+            return $item;
+        }
+
+        $glacia->setByte("pet_tamer", 0);
+        $root->setTag("Glacia", $glacia);
+        $item->setNamedTag($root);
+
+        $lore = array_values(array_filter(
+            $item->getLore(),
+            static fn(string $line): bool => !str_contains(C::clean($line), "Pet Tamer:")
+        ));
+        $item->setLore($lore);
+        return $item;
     }
 }
+

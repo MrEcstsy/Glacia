@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\commands\sub\items;
 
 use CortexPE\Commando\args\IntegerArgument;
+use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
+use ecstsy\Glacia\server\items\GlaciaItems;
 use ecstsy\Glacia\server\lootboxes\LootboxRepository;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -18,7 +20,8 @@ final class ListGlaciaItemsSubCommand extends BaseSubCommand {
 
     public function prepare(): void {
         $this->setPermission($this->getPermission());
-        $this->registerArgument(0, new IntegerArgument("page", true));
+        $this->registerArgument(0, new RawStringArgument("category", true));
+        $this->registerArgument(1, new IntegerArgument("page", true));
     }
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void {
@@ -29,20 +32,43 @@ final class ListGlaciaItemsSubCommand extends BaseSubCommand {
 
         $defs = GlaciaItemFactory::$definitions;
         $lootboxes = LootboxRepository::getLookupMap();
+        $rawCategory = trim((string) ($args["category"] ?? ""));
+        $legacyPage = $rawCategory !== "" && ctype_digit($rawCategory) ? (int) $rawCategory : null;
+        $category = $legacyPage === null ? strtolower($rawCategory) : "";
+        $categories = GlaciaItems::getCategoryDisplays();
+
         if (empty($defs) && empty($lootboxes)) {
             $sender->sendMessage(C::YELLOW . "No Glacia custom items are registered.");
             return;
         }
 
-        $itemKeys = array_keys($defs);
-        foreach (array_keys($lootboxes) as $lootboxId) {
-            $itemKeys[] = "lootbox:" . $lootboxId;
+        if ($category !== "" && !isset($categories[$category])) {
+            $sender->sendMessage(C::RED . "Unknown category. Available: " . implode(", ", array_keys($categories)));
+            return;
         }
+
+        if ($category !== "") {
+            $itemKeys = array_values(array_filter(
+                GlaciaItems::getCategoryItems($category),
+                static fn(string $id): bool => isset($defs[$id])
+            ));
+        } else {
+            $itemKeys = array_keys($defs);
+            foreach (array_keys($lootboxes) as $lootboxId) {
+                $itemKeys[] = "lootbox:" . $lootboxId;
+            }
+        }
+
         sort($itemKeys, SORT_NATURAL | SORT_FLAG_CASE);
+
+        if ($itemKeys === []) {
+            $sender->sendMessage(C::YELLOW . "No items were found for that category.");
+            return;
+        }
 
         $totalItems = count($itemKeys);
         $totalPages = (int) ceil($totalItems / self::ITEMS_PER_PAGE);
-        $page = (int) ($args["page"] ?? 1);
+        $page = (int) ($args["page"] ?? $legacyPage ?? 1);
 
         if ($page < 1) {
             $sender->sendMessage(C::RED . "Page must be at least 1.");
@@ -57,7 +83,8 @@ final class ListGlaciaItemsSubCommand extends BaseSubCommand {
         $offset = (int) (($page - 1) * self::ITEMS_PER_PAGE);
         $pageItems = array_slice($itemKeys, $offset, self::ITEMS_PER_PAGE);
 
-        $sender->sendMessage(C::GOLD . "=== Glacia Custom Items (Page {$page}/{$totalPages}) ===");
+        $title = $category !== "" ? ($categories[$category] . " Items") : "Glacia Custom Items";
+        $sender->sendMessage(C::GOLD . "=== {$title} (Page {$page}/{$totalPages}) ===");
 
         foreach ($pageItems as $id) {
             if (str_starts_with($id, "lootbox:")) {

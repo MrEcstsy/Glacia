@@ -1,0 +1,71 @@
+name: "&r&l&3Random Set Generator"
+title: "&r&&Random Set Generator"
+aliases:
+  - "randomsetgenerator"
+  - "armorgen"
+  - "rarmorgen"
+icon: "chest"
+glow: true
+item-name: "&r&l&3Random Set Generator"
+item-lore:
+  - "&r&7Right-click to receive a set armor piece!"
+  - ""
+  - "&r&l&fRandom Loot (&r&71 item&f&l)"
+  - "&r&f&l * &r&5Phantom Set Piece"
+  - "&r&f&l * &r&bYeti Set Piece"
+  - "&r&f&l * &r&3Stormcaller Set Piece"
+
+rolls:
+  - pool: "rewards"
+    count: 1
+    chance: 100
+    mode: "random"
+
+rewards:
+  - chance: 10
+    type: item
+    id: "phantom_helmet"
+  - chance: 10
+    type: item
+    id: "phantom_chestplate"
+  - chance: 10
+    type: item
+    id: "phantom_leggings"
+  - chance: 10
+    type: item
+    id: "phantom_boots"
+  - chance: 5
+    type: item
+    id: "phantom_sword"
+
+  - chance: 10
+    type: item
+    id: "yeti_helmet"
+  - chance: 10
+    type: item
+    id: "yeti_chestplate"
+  - chance: 10
+    type: item
+    id: "yeti_leggings"
+  - chance: 10
+    type: item
+    id: "yeti_boots"
+  - chance: 5
+    type: item
+    id: "yeti_sword"
+
+  - chance: 10
+    type: item
+    id: "yijki_helmet"
+  - chance: 10
+    type: item
+    id: "yijki_chestplate"
+  - chance: 10
+    type: item
+    id: "yijki_leggings"
+  - chance: 10
+    type: item
+    id: "yijki_boots"
+  - chance: 5
+    type: item
+    id: "yijki_sword"

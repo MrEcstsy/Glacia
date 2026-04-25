@@ -9,6 +9,7 @@ use ecstsy\Glacia\entity\GlaciaPrimedTNT;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\customtnt\CustomTNTIds;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
+use ecstsy\Glacia\server\obsidian\ObsidianDurabilityManager;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\block\TNT;
 use pocketmine\block\VanillaBlocks;
@@ -17,11 +18,13 @@ use pocketmine\event\Listener;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\block\BlockPlaceEvent;
 use pocketmine\event\entity\EntityDeathEvent;
+use pocketmine\event\entity\EntityExplodeEvent;
 use pocketmine\event\player\PlayerEntityInteractEvent;
 use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\item\FireCharge;
 use pocketmine\item\FlintSteel;
 use pocketmine\item\Item;
+use pocketmine\item\ItemTypeIds;
 use pocketmine\player\GameMode;
 use pocketmine\utils\TextFormat as C;
 
@@ -51,6 +54,10 @@ final class CustomTNTListener implements Listener {
     public function onBlockBreak(BlockBreakEvent $event): void {
         $block = $event->getBlock();
 
+        if (ObsidianDurabilityManager::isTrackedObsidian($block)) {
+            ObsidianDurabilityManager::clear($block);
+        }
+
         if (!$block instanceof TNT) {
             return;
         }
@@ -78,6 +85,18 @@ final class CustomTNTListener implements Listener {
         $player = $event->getPlayer();
         $block = $event->getBlock();
         $item = $event->getItem();
+
+        if (
+            $item->getTypeId() === ItemTypeIds::POTATO &&
+            ObsidianDurabilityManager::isTrackedObsidian($block) &&
+            $event->getAction() === PlayerInteractEvent::RIGHT_CLICK_BLOCK
+        ) {
+            $hp = ObsidianDurabilityManager::getHp($block);
+            $max = ObsidianDurabilityManager::getMaxHp();
+            $player->sendActionBarMessage(C::colorize("&r&5Obsidian Durability &8| &r&f{$hp}&7/&f{$max}"));
+            PlayerUtils::playSound($player, "random.click");
+            return;
+        }
 
         if (!$block instanceof TNT) {
             return;
@@ -196,5 +215,33 @@ final class CustomTNTListener implements Listener {
         $event->setDrops([
             GlaciaItemFactory::cegg($identifier)
         ]);
+    }
+
+    public function onExplode(EntityExplodeEvent $event): void
+    {
+        $entity = $event->getEntity();
+        if (
+            !$entity instanceof GlaciaPrimedTNT &&
+            !$entity instanceof GlaciaExplosiveCreeper
+        ) {
+            return;
+        }
+
+        $updated = [];
+        foreach ($event->getBlockList() as $block) {
+            if (!ObsidianDurabilityManager::isTrackedObsidian($block)) {
+                $updated[] = $block;
+                continue;
+            }
+
+            $remaining = ObsidianDurabilityManager::damage($block);
+            if ($remaining > 0) {
+                continue;
+            }
+
+            $updated[] = $block;
+        }
+
+        $event->setBlockList($updated);
     }
 }

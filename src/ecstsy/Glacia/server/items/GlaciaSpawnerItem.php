@@ -35,6 +35,9 @@ final class GlaciaSpawnerItem {
     public const MONSTER_SPAWNER_ID = BlockTypeNames::MOB_SPAWNER;
     
     public const TAG_MONSTER_SPAWNER_ENTITY_ID = 'SpawnerEntityId';
+    public const TAG_ZONE_SPAWNER = 'ZoneSpawner';
+    public const TAG_ZONE_ID = 'ZoneSpawnerZoneId';
+    public const TAG_ZONE_UID = 'ZoneSpawnerUid';
 
     public static function getSpawnerEntityId(Item $item) : Int{ return $item->getNamedTag()->getInt(self::TAG_MONSTER_SPAWNER_ENTITY_ID, 0); }
 
@@ -128,6 +131,39 @@ final class GlaciaSpawnerItem {
     public static function setSpawnerEntityId(Item $item, Int $id) : Item{
         $namedtag = $item->getNamedTag();
         $namedtag->setInt('SpawnerEntityId', $id);
+        $item->setNamedTag($namedtag);
+        return $item;
+    }
+
+    public static function isZoneSpawner(Item $item): bool
+    {
+        return $item->getNamedTag()->getByte(self::TAG_ZONE_SPAWNER, 0) === 1;
+    }
+
+    public static function getZoneSpawnerZoneId(Item $item): string
+    {
+        return strtolower(trim($item->getNamedTag()->getString(self::TAG_ZONE_ID, "")));
+    }
+
+    public static function createZoneSpawner(string $zoneId, ?string $display = null): Item
+    {
+        $zoneId = strtolower(trim($zoneId));
+        $display = $display !== null && $display !== "" ? $display : ucwords(str_replace("_", " ", $zoneId));
+
+        $item = clone self::MONSTER_SPAWNER()->asItem();
+        $item = self::setSpawnerEntityId($item, 32);
+        $item->setCount(1);
+        $item->setCustomName(C::colorize("&r&d&lZone Spawner &8(&f{$display}&8)"));
+        $item->setLore([
+            C::colorize("&r&7Place inside &f{$display}&7 to anchor"),
+            C::colorize("&r&7zone mob spawning for that area."),
+            C::colorize("&r&8Zone: &f{$zoneId}")
+        ]);
+
+        $namedtag = $item->getNamedTag();
+        $namedtag->setByte(self::TAG_ZONE_SPAWNER, 1);
+        $namedtag->setString(self::TAG_ZONE_ID, $zoneId);
+        $namedtag->setString(self::TAG_ZONE_UID, bin2hex(random_bytes(8)));
         $item->setNamedTag($namedtag);
         return $item;
     }

@@ -5,21 +5,25 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\regions;
 
 use pocketmine\math\Vector3;
+use pocketmine\world\Position;
 
 final class Region {
     private string $name;
     private Vector3 $min;
     private Vector3 $max;
     private RegionPermissions $permissions;
+    private ?string $world;
 
     public function __construct(
         string $name,
         Vector3 $pos1,
         Vector3 $pos2,
-        RegionPermissions $permissions
+        RegionPermissions $permissions,
+        ?string $world = null
     )
     {
         $this->name = $name;
+        $this->world = $world;
         $this->min = new Vector3(
             min($pos1->x, $pos2->x),
             min($pos1->y, $pos2->y),
@@ -53,6 +57,10 @@ final class Region {
      * Is this world-position inside the cuboid?
      */
     public function contains(Vector3 $pos): bool {
+        if ($this->world !== null && $pos instanceof Position && $pos->getWorld()->getFolderName() !== $this->world) {
+            return false;
+        }
+
         return
             $pos->x >= $this->min->x && $pos->x <= $this->max->x &&
             $pos->y >= $this->min->y && $pos->y <= $this->max->y &&
@@ -70,6 +78,6 @@ final class Region {
     }
 
     public function getWorld(): string {
-        return $this->name;
+        return $this->world ?? $this->name;
     }
 }

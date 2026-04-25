@@ -8,6 +8,7 @@ use ecstsy\Glacia\entity\FloatingTextEntity;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
 use pocketmine\entity\Location;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\player\Player;
@@ -19,7 +20,7 @@ final class RageEnchant implements EntityDamageByEntityEnchantmentHandler {
     private static array $hits = [];
     private static array $active = [];
     private static array $lastHit = [];
-    private const COOLDOWN_SECONDS = 5;
+    private const COOLDOWN_SECONDS = 4;
 
     public static function handle(EntityDamageByEntityEvent $event, CustomEnchantment $enchant, int $level): void {
         $damager = $event->getDamager();
@@ -38,15 +39,15 @@ final class RageEnchant implements EntityDamageByEntityEnchantmentHandler {
         self::$lastHit[$name] = time();
 
         $chance = match($level) {
-            1 => 25,
-            2 => 30,
-            3 => 35,
-            4 => 40,
-            5 => 45,
-            default => 25
+            1 => 6,
+            2 => 8,
+            3 => 10,
+            4 => 12,
+            5 => 14,
+            default => 6
         };
 
-        $procced = mt_rand(1, 100) <= $chance;
+        $procced = ProcLuckManager::roll($damager, "rage", $chance, 1, 6);
 
         if(!(self::$active[$name] ?? false)) {
             if(!$procced) return;
@@ -54,14 +55,18 @@ final class RageEnchant implements EntityDamageByEntityEnchantmentHandler {
             self::$active[$name] = true;
             self::$hits[$name] = 1;
         } else {
-            self::$hits[$name]++;
+            if ($procced) {
+                self::$hits[$name]++;
+            } else {
+                self::$hits[$name] = max(1, self::$hits[$name] - 1);
+            }
         }
 
-        self::$hits[$name] = min(self::$hits[$name], 5);
+        self::$hits[$name] = min(self::$hits[$name], 4);
 
         $stack = self::$hits[$name];
 
-        $event->setBaseDamage($event->getBaseDamage() + $stack);
+        $event->setBaseDamage($event->getBaseDamage() + ($stack * 0.5));
 
         self::spawnFloatingText($victim->getPosition(), $stack);
     }

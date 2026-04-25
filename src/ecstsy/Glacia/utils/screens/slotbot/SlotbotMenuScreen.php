@@ -6,7 +6,9 @@ namespace ecstsy\Glacia\utils\screens\slotbot;
 
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
+use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\Glacia\server\slotbot\SlotbotRewardRepository;
+use ecstsy\Glacia\utils\RewardAnnouncer;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use ecstsy\MartianUtilities\utils\screens\BaseScreen;
 use muqsit\invmenu\InvMenu;
@@ -326,11 +328,22 @@ final class SlotbotMenuScreen extends BaseScreen {
             $session->addSlotCredits(count($rewards));
         }
 
-        $message = "&r&aYou won:";
-        foreach ($rewards as $reward) {
-            $message .= "\n&r&8- &r&ax" . $reward->getCount() . " " . $reward->getName();
+        $savedTickets = 0;
+        if (!$forced && RuneManager::hasPassiveRune($this->player, "slotkeeper")) {
+            foreach ($filledSlots as $slot) {
+                if (mt_rand(1, 100) > RuneManager::getPassiveChance("slotkeeper", 20)) {
+                    continue;
+                }
+
+                $savedTickets++;
+                $refund = $this->createTicketRefund($this->menu->getInventory()->getItem($slot));
+                foreach ($this->player->getInventory()->addItem($refund) as $leftover) {
+                    $session?->addItemToCollection($leftover);
+                }
+            }
         }
-        $this->player->sendMessage(C::colorize($message));
+
+        RewardAnnouncer::announce($this->player, "Slotbot", "Slotbot", $rewards);
         PlayerUtils::playSound($this->player, "random.levelup");
 
         $this->status = self::STATUS_DONE;
@@ -416,12 +429,12 @@ final class SlotbotMenuScreen extends BaseScreen {
 
     private function getSpinReward(): Item
     {
-        return SlotbotRewardRepository::getSpinReward() ?? VanillaItems::BARRIER()->setCustomName(C::colorize("&r&cMissing Reward"));
+        return SlotbotRewardRepository::getSpinReward($this->player) ?? VanillaItems::BARRIER()->setCustomName(C::colorize("&r&cMissing Reward"));
     }
 
     private function getJackpotReward(): Item
     {
-        return SlotbotRewardRepository::getJackpotReward() ?? $this->getSpinReward();
+        return SlotbotRewardRepository::getJackpotReward($this->player) ?? $this->getSpinReward();
     }
 
     private function getDisplayReward(): Item
@@ -451,5 +464,11 @@ final class SlotbotMenuScreen extends BaseScreen {
         return GlaciaItemFactory::isGlaciaItem($item, "heroic_slot_ticket")
             ? GlaciaItemFactory::heroicSlotTicket()
             : GlaciaItemFactory::slotTicket();
+    }
+
+    private function getRewardName(Item $item): string
+    {
+        $customName = $item->getCustomName();
+        return $customName !== "" ? $customName : $item->getName();
     }
 }

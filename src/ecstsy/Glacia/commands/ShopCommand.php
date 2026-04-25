@@ -7,6 +7,7 @@ namespace ecstsy\Glacia\commands;
 use CortexPE\Commando\BaseCommand;
 use ecstsy\Glacia\commands\sub\shop\ShopBuySubCommand;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\utils\screens\shop\ShopFormScreen;
 use ecstsy\Glacia\utils\screens\shop\ShopScreen;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -24,8 +25,13 @@ final class ShopCommand extends BaseCommand {
             return;
         }
 
-        $screen = new ShopScreen();
-        $screen->display($sender);
+        $session = Loader::getPlayerManager()->getSession($sender);
+        if ($session !== null && $session->getSetting("chest_inventories") === false) {
+            ShopFormScreen::display($sender);
+            return;
+        }
+
+        (new ShopScreen())->display($sender);
     }
 
     public function getPermission(): string {

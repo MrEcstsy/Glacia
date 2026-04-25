@@ -8,7 +8,9 @@ use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\utils\GlaciaUtils;
+use ecstsy\Glacia\utils\screens\faction\LeaderTransferConfirmScreen;
 use pocketmine\command\CommandSender;
+use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
 
 final class PromoteSubCommand extends BaseSubCommand {
@@ -18,34 +20,43 @@ final class PromoteSubCommand extends BaseSubCommand {
     }
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void {
-        $sess = Loader::getPlayerManager()->getSession($sender);
-        $fac = $sess->getFaction();
-        if ($fac === null) {
+        if (!$sender instanceof Player) {
+            return;
+        }
+
+        $session = Loader::getPlayerManager()->getSession($sender);
+        $faction = $session?->getFaction();
+        if ($session === null || $faction === null) {
             $sender->sendMessage(GlaciaUtils::format("player.error.no_faction"));
             return;
         }
 
-        $roleOrder = ["recruit","member","officer","leader"];
-        $yourRole = $sess->getFactionRole();
-        $tName = $args["player"];
-        $tSess = Loader::getPlayerManager()->getSessionByName($tName);
-        if (!$tSess || $tSess->getFactionId() !== $fac->getFactionId()) {
-            $sender->sendMessage(GlaciaUtils::format("faction.error.not_in_your_faction", ["player" => $tName]));
+        $roleOrder = ["recruit", "member", "officer", "leader"];
+        $yourRole = $session->getFactionRole();
+        $targetName = (string) ($args["player"] ?? "");
+        $targetSession = Loader::getPlayerManager()->getSessionByPrefix($targetName);
+        if ($targetSession === null || $targetSession->getFactionId() !== $faction->getFactionId()) {
+            $sender->sendMessage(GlaciaUtils::format("faction.error.not_in_your_faction", ["player" => $targetName]));
             return;
         }
-        $theirRole = $tSess->getFactionRole();
 
+        $theirRole = $targetSession->getFactionRole();
         $yourIdx = array_search($yourRole, $roleOrder, true);
-        $tIdx    = array_search($theirRole, $roleOrder, true);
-        if ($yourIdx === false || $yourIdx <= $tIdx || $yourIdx < 2) {
+        $theirIdx = array_search($theirRole, $roleOrder, true);
+        if ($yourIdx === false || $theirIdx === false || $yourIdx <= $theirIdx || $yourIdx < 2) {
             $sender->sendMessage(GlaciaUtils::format("faction.error.permission_denied"));
             return;
         }
 
-        $newRole = $roleOrder[min($tIdx + 1, $yourIdx)];
-        $tSess->setFactionRole($newRole);
-        $sender->sendMessage(C::colorize('&r&l&a(✓) &r&aYou promoted &2' . $tName . ' &r&ato &2' . $newRole . '&a.'));
-        $tSess->getPlayer()?->sendMessage(C::colorize('&r&l&a(✓) &r&aYou have been promoted to &2' . $newRole . '&a.'));
+        $newRole = $roleOrder[min($theirIdx + 1, $yourIdx)];
+        if ($newRole === "leader") {
+            LeaderTransferConfirmScreen::display($sender, $targetSession->getUsername());
+            return;
+        }
+
+        $faction->setMemberRole($faction->getFactionId(), $targetSession->getUuid(), $newRole);
+        $sender->sendMessage(C::colorize('&r&l&a(✓) &r&aYou promoted &2' . $targetName . ' &r&ato &2' . $newRole . '&a.'));
+        $targetSession->getPlayer()?->sendMessage(C::colorize('&r&l&a(✓) &r&aYou have been promoted to &2' . $newRole . '&a.'));
     }
 
     public function getPermission(): string {

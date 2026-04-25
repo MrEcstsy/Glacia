@@ -9,6 +9,7 @@ use ecstsy\Glacia\commands\sub\kit\KitGiveSubCommand;
 use ecstsy\Glacia\commands\sub\kit\KitInfoSubCommand;
 use ecstsy\Glacia\commands\sub\kit\KitResetCooldownSubCommand;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\utils\screens\kits\KitFormScreen;
 use ecstsy\Glacia\utils\screens\kits\KitScreen;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -28,6 +29,12 @@ final class KitCommand extends BaseCommand {
     {
         if (!$sender instanceof Player) {
             $sender->sendMessage(C::colorize("&r&cUsage: /kit <give|resetcooldown|info>"));
+            return;
+        }
+
+        $session = Loader::getPlayerManager()->getSession($sender);
+        if ($session !== null && $session->getSetting("chest_inventories") === false) {
+            KitFormScreen::displayRankKits($sender);
             return;
         }
 

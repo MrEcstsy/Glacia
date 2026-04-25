@@ -6,6 +6,7 @@ namespace ecstsy\Glacia\commands;
 
 use CortexPE\Commando\BaseCommand;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\items\pets\PetManager;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -30,6 +31,9 @@ final class NearCommand extends BaseCommand {
 
         foreach ($sender->getWorld()->getPlayers() as $player) {
             if ($player === $sender) {
+                continue;
+            }
+            if (PetManager::isHiddenFromNear($player)) {
                 continue;
             }
 

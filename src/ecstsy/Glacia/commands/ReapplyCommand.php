@@ -24,6 +24,8 @@ final class ReapplyCommand extends BaseCommand {
             return;
         }
 
+        EnchantEffectManager::clearSuppressedArmorDebuffs($sender);
+
         $air = VanillaItems::AIR();
         $armorInventory = $sender->getArmorInventory();
 

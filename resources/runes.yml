@@ -1,0 +1,60 @@
+remover:
+  success: 80
+
+runes:
+  slotkeeper:
+    mode: passive
+    chance: 20
+    display: "Slotkeeper"
+
+  celerity:
+    mode: applied
+    success: 85
+    applies-to:
+      - "boots"
+    display: "Celerity"
+
+  colossus:
+    mode: applied
+    success: 82
+    applies-to:
+      - "armor"
+    display: "Colossus"
+
+  bloodfang:
+    mode: applied
+    success: 78
+    applies-to:
+      - "armor"
+    display: "Bloodfang"
+
+  verdant:
+    mode: passive
+    display: "Verdant"
+
+  pet_duration:
+    mode: passive
+    multiplier: 1.5
+    display: "Attunement"
+    pets:
+      gale_fox: "Gale Fox"
+      purity_wisp: "Purity Wisp"
+      shatterfang: "Shatterfang"
+      hearthbloom: "Hearthbloom"
+      ironclad_wyrm: "Ironclad Wyrm"
+      aegis_ram: "Aegis Ram"
+      rift_viper: "Rift Viper"
+      sunscorch_jackal: "Sunscorch Jackal"
+      runesage_owl: "Runesage Owl"
+      stormcore_behemoth: "Stormcore Behemoth"
+      veilmoth: "Veilmoth"
+      blastforge_hound: "Blastforge Hound"
+
+  scholar:
+    mode: passive
+    chance: 12
+    display: "Scholar"
+
+  envoy_vacuum:
+    mode: passive
+    display: "Envoy Vacuum"

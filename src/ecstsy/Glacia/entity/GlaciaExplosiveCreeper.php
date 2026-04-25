@@ -25,8 +25,12 @@ use pocketmine\world\World;
 final class GlaciaExplosiveCreeper extends CustomCreeper {
 
     public const TAG_GLACIA_EXPLOSIVE_TYPE = "glacia_explosive_type";
+    public const TAG_OWNER_UUID = "owner_uuid";
+    public const TAG_BLOCK_BREAKING = "block_breaking";
 
     private string $explosiveType = "";
+    private string $ownerUuid = "";
+    private bool $blockBreakingEnabled = true;
     private bool $ignited = false;
 
     public static function register(): void {
@@ -47,6 +51,8 @@ final class GlaciaExplosiveCreeper extends CustomCreeper {
 
         if ($nbt !== null) {
             $this->explosiveType = $nbt->getString(self::TAG_GLACIA_EXPLOSIVE_TYPE, "");
+            $this->ownerUuid = $nbt->getString(self::TAG_OWNER_UUID, "");
+            $this->blockBreakingEnabled = $nbt->getByte(self::TAG_BLOCK_BREAKING, 1) === 1;
         }
 
         $this->updateNameTag();
@@ -55,12 +61,16 @@ final class GlaciaExplosiveCreeper extends CustomCreeper {
     protected function initEntity(CompoundTag $nbt): void {
         parent::initEntity($nbt);
         $this->explosiveType = $nbt->getString(self::TAG_GLACIA_EXPLOSIVE_TYPE, "");
+        $this->ownerUuid = $nbt->getString(self::TAG_OWNER_UUID, "");
+        $this->blockBreakingEnabled = $nbt->getByte(self::TAG_BLOCK_BREAKING, 1) === 1;
         $this->updateNameTag();
     }
 
     public function saveNBT(): CompoundTag {
         $nbt = parent::saveNBT();
         $nbt->setString(self::TAG_GLACIA_EXPLOSIVE_TYPE, $this->explosiveType);
+        $nbt->setString(self::TAG_OWNER_UUID, $this->ownerUuid);
+        $nbt->setByte(self::TAG_BLOCK_BREAKING, $this->blockBreakingEnabled ? 1 : 0);
         return $nbt;
     }
 
@@ -71,6 +81,18 @@ final class GlaciaExplosiveCreeper extends CustomCreeper {
 
     public function getExplosiveType(): string {
         return $this->explosiveType;
+    }
+
+    public function setOwnerUuid(string $uuid): void {
+        $this->ownerUuid = $uuid;
+    }
+
+    public function getOwnerUuid(): string {
+        return $this->ownerUuid;
+    }
+
+    public function setBlockBreakingEnabled(bool $enabled): void {
+        $this->blockBreakingEnabled = $enabled;
     }
 
     public function ignite(): void {
@@ -123,6 +145,7 @@ final class GlaciaExplosiveCreeper extends CustomCreeper {
         }
 
         $ev = new EntityPreExplodeEvent($this, 3.0);
+        $ev->setBlockBreaking($this->blockBreakingEnabled);
         $ev->call();
 
         if ($ev->isCancelled()) {

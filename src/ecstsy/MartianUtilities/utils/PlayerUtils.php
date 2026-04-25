@@ -21,6 +21,11 @@ final class PlayerUtils {
      * @return Player|null The matched player or null if no match is found.
      */
     public static function getPlayerByPrefix(string $name): ?Player {
+        $name = trim($name);
+        if ($name == "") {
+            return null;
+        }
+
         $found = null;
         $name = strtolower($name);
         $delta = PHP_INT_MAX;
@@ -29,6 +34,10 @@ final class PlayerUtils {
         $onlinePlayers = Server::getInstance()->getOnlinePlayers();
 
         foreach ($onlinePlayers as $player) {
+            if (strtolower($player->getName()) === $name) {
+                return $player;
+            }
+
             if (stripos($player->getName(), $name) === 0) {
                 $curDelta = strlen($player->getName()) - strlen($name);
 

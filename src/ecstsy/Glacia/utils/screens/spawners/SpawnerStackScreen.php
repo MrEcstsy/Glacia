@@ -95,6 +95,11 @@ final class SpawnerStackScreen extends BaseScreen {
     }
 
     public static function displayForm(Player $player, SpawnerTile $tile): void {
+        if ($tile->isZoneSpawner()) {
+            $player->sendMessage(C::colorize("&r&eZone spawners do not use stacking controls."));
+            return;
+        }
+
         $screen = new self($player, $tile);
         $player->sendForm($screen->getForm());
     }

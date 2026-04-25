@@ -14,6 +14,42 @@ use pocketmine\plugin\PluginBase;
 
 final class DropPackageRewardPool {
 
+    /**
+     * @return array<int, array{name: string, entries: array<int, array<string, mixed>>}>
+     */
+    public static function getPreviewGroups(string $packageType): array
+    {
+        $config = GeneralUtils::getConfiguration(Loader::getInstance(), "dps/" . ucfirst(strtolower($packageType)) . ".yml");
+        if ($config === null) {
+            return [];
+        }
+
+        $path = strtolower($packageType) . "-loot";
+        $loot = $config->getNested($path, []);
+        if (!is_array($loot)) {
+            return [];
+        }
+
+        $groups = [];
+        foreach ($loot as $rarity => $entries) {
+            if (!is_array($entries)) {
+                continue;
+            }
+
+            $filtered = array_values(array_filter($entries, static fn(mixed $entry): bool => is_array($entry)));
+            if ($filtered === []) {
+                continue;
+            }
+
+            $groups[] = [
+                "name" => ucfirst((string) $rarity),
+                "entries" => $filtered
+            ];
+        }
+
+        return $groups;
+    }
+
     public static function rollReward(string $packageType, string $rarity, ?Player $player = null): array{
         $config = GeneralUtils::getConfiguration(Loader::getInstance(), "dps/" . ucfirst(strtolower($packageType)) . ".yml");
 

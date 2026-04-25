@@ -16,6 +16,7 @@ use ecstsy\Glacia\entity\SpawnerEntity;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\utils\QueryStmts;
 use ecstsy\Glacia\utils\RewardResolver;
+use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\MartianUtilities\entity\BaseHostileEntity;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
@@ -213,7 +214,17 @@ final class EnvoyManager
         Loader::getBlockData()->remove($block);
         $this->removeActivePosition($position);
 
+        $session = Loader::getPlayerManager()->getSession($player);
+        $autoCollect = RuneManager::hasPassiveRune($player, "envoy_vacuum");
+
         foreach ($rewards as $reward) {
+            if ($autoCollect && $session !== null) {
+                foreach ($player->getInventory()->addItem($reward) as $leftover) {
+                    $session->addItemToCollection($leftover);
+                }
+                continue;
+            }
+
             $world->dropItem($dropPosition, $reward);
         }
 
@@ -221,10 +232,12 @@ final class EnvoyManager
         $world->addSound($position, new XpCollectSound());
         $this->spawnFirework($position->x + 0.5, $position->y + 1, $position->z + 0.5, $world, $crateType);
         $remaining = $this->getRemainingCrates();
-        $player->sendMessage(C::colorize(
-            "&r&bEnvoy &8| &r&aYou looted a " . $this->formatTypeName($crateType) . " &r&acrate&7. "
-            . "&f{$remaining} &7remaining."
-        ));
+        $message = "&r&bEnvoy &8| &r&aYou looted a " . $this->formatTypeName($crateType) . " &r&acrate&7. "
+            . "&f{$remaining} &7remaining.";
+        if ($autoCollect) {
+            $message .= " &8(&bVacuumed&8)";
+        }
+        $player->sendMessage(C::colorize($message));
 
         if ($this->active !== null && $this->getRemainingCrates() <= 0) {
             $this->endActiveEvent();

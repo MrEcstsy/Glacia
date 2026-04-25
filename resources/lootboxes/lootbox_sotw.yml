@@ -1,0 +1,149 @@
+name: "&r&l&fLootbox: &eSotw"
+title: "&r&l&fLootbox: &eSotw"
+aliases:
+  - "sotw"
+  - "sotwlb"
+  - ""
+  - ""
+icon: "end_portal_frame"
+glow: false
+item-name: "&r&l&fLootbox: &eSotw"
+item-lore:
+  - "&r&7New treasure awaits, hidden behind"
+  - "&r&7the horizon. This is just the"
+  - "&r&7beginning of something special!"
+  - ""
+  - "&r&l&fRandom Loot (&r&75 items&l&f)"
+  - "&r&l&f * &r&7x1 &l&fWhite Scroll"
+  - "&r&l&f * &r&7x1 &l&fBlack Scroll &l&f(&r&7100%&l&f)"
+  - "&r&l&f * &r&7x2 &l&6Mystery Mob Spawner"
+  - "&r&l&f * &r&7x1 &l&bSoul Compass &l&f(&r&78 uses&l&f)"
+  - "&r&l&f * &r&7x1 &l&6Legendary Ethereal Chest"
+  - "&r&l&f * &r&7x1 &l&eHearthbloom Pet"
+  - "&r&l&f * &r&7x1 &l&bBlocks Broken Tracker"
+  - "&r&l&f * &r&7x12 &l&eLucky Creepers"
+  - "&r&l&f * &r&7x1 &l&aExperience Bottle &l&f(&r&7100,000&l&f)"
+  - "&r&l&f * &r&7x2 &l&6Item Rename Tags"
+  - "&r&l&f * &r&7x1 &l&eCollection Chest"
+  - "&r&l&f * &r&7x1 &l&bCelestial Chunk Buster"
+  - "&r&l&f * &r&7x1 &l&cBloody Note"
+  - "&r&l&f * &r&7x1 &l&6Weapon Enchantment Orb &l&f(&r&712, 50%&l&f)"
+  - "&r&l&f * &r&7x1 &l&6Armor Enchantment Orb &l&f(&r&712, 50%&l&f)"
+  - "&r&l&f * &r&7x1 &l&cRandom TNT Generator"
+  - "&r&l&f * &r&7x3 &l&6Legendary Enchantment Books"
+  - ""
+  - "&r&l&5Jackpot Loot &f(&r&71 item&l&f)"
+  - "&r&l&f * &r&7x2 &l&cGodly Ethereal Chest"
+  - "&r&l&f * &r&7x1 &l&dSlot Bot &5Ticket"
+  - "&r&l&f * &r&7x1 &l&3Random Set Generator"
+  - "&r&l&f * &r&7x1 &l&dRandom Pet Generator"
+
+
+
+  
+rolls:
+  - pool: "rewards"
+    count: 5
+    chance: 100
+    mode: "random"
+  - pool: "jackpot-rewards"
+    count: 1
+    chance: 100
+    mode: "random"
+
+# `mode: random` rolls from the pool `count` times.
+# `mode: all` gives every entry in the pool once.
+
+rewards:
+  - chance: 10
+    type: item
+    id: "whitescroll"
+    count: 1
+
+  - chance: 10
+    type: item
+    id: "blackscroll"
+    success: 100
+    count: 1
+
+  - chance: 16
+    type: item
+    id: "mysterymobspawner"
+    count: 1
+    
+  - chance: 17
+    type: item
+    id: "soul_compass"
+    count: 1
+
+  - chance: 17
+    type: item
+    id: "ethereal_legendary_chest"
+    count: 1
+  
+  - chance: 17
+    type: item
+    id: "hearthbloom"
+    count: 1
+  
+  - chance: 17
+    type: item
+    id: "block_tracker"
+    count: 1
+  
+  - chance: 17
+    type: item
+    id: "cegg_lucky"
+    count: 12
+
+  - chance: 17
+    type: item
+    id: "xpnote"
+    amount: 100000
+    count: 1
+  
+  - chance: 17
+    type: item
+    id: "renametag"
+    count: 1
+
+  - chance: 17
+    type: item
+    id: "collection_chest"
+    count: 1
+  
+  - chance: 17
+    type: item
+    id: "chunk_buster"
+    count: 1
+  
+  - chance: 17
+    type: item
+    id: "bloody_note"
+    count: 1
+
+  - chance: 17
+    type: item
+    id: "weapon_orb"
+    max: 12
+    success: 50
+
+  - chance: 16
+    type: item
+    id: "armor_orb"
+    max: 12
+    success: 50
+  
+  - chance: 16
+    type: item
+    id: "legendarybook"
+    count: 3
+  
+
+  - jackpot-rewards:
+    chance: 100
+    type: item
+    id: "whitescroll"
+    count: 1
+    
+

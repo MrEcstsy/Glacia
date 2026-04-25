@@ -1,52 +1,57 @@
-nether-shortcut-zone: "nether"
+nether-shortcut-zone: "infernal_rift"
 
 zones:
-  frontier:
-    display: "&bFrontier Fields"
-    description: "&7Starter island for early mob grinding."
+  azure_plains:
+    display: "&bAzure Plains"
+    description: "&7Open, bright plains with simple terrain and a safer early-game feel."
     recommended-level: 1
     unlock-level: 1
-    world: "world"
+    world: "flat"
     x: 650
     y: 100
     z: 0
+    radius: 325
 
-  caverns:
-    display: "&3Deep Caverns"
-    description: "&7A stronger mid-game grind spot."
+  irondepths:
+    display: "&8Irondepths"
+    description: "&7Darker, enclosed caves and cliffs built for stronger mid-game grinding."
     recommended-level: 20
     unlock-level: 15
-    world: "world"
+    world: "flat"
     x: 1450
     y: 100
     z: 0
+    radius: 325
 
-  frozen:
-    display: "&fFrozen Reach"
-    description: "&7Harder overworld island before the nether."
+  frostreach:
+    display: "&fFrostreach"
+    description: "&7Snow and ice with harsher terrain and less room to breathe."
     recommended-level: 40
     unlock-level: 35
-    world: "world"
+    world: "flat"
     x: 2350
     y: 100
     z: 0
+    radius: 325
 
-  nether:
+  infernal_rift:
     display: "&cInfernal Rift"
-    description: "&7Late beta zone with stronger PvE."
+    description: "&7A scorched late-game rift with dangerous PvE and hotter pressure."
     recommended-level: 65
     unlock-level: 60
     world: "world_nether"
     x: 0
     y: 90
     z: 0
+    full-world: true
 
-  end:
-    display: "&dAstral End"
-    description: "&7Endgame island for your final beta push."
+  endfall:
+    display: "&dThe Endfall"
+    description: "&7The final endgame zone, unstable and built for your strongest push."
     recommended-level: 90
     unlock-level: 85
     world: "world_the_end"
     x: 0
     y: 80
     z: 0
+    full-world: true

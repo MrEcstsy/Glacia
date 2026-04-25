@@ -106,7 +106,9 @@ final class GlaciaPlayer {
         $amountToAdd = min($amount, $remainingAmount);
 
         if ($amountToAdd <= 0) {
-            $player->sendMessage(C::colorize("&r&l&4(!) &r&cYou have reached the maximum amount of money!"));
+            if ($player !== null) {
+                $player->sendMessage(C::colorize("&r&cYou have reached the maximum amount of money."));
+            }
             return;
         }
 
@@ -235,7 +237,15 @@ final class GlaciaPlayer {
      */
     public function getSetting(string $key): mixed
     {
-        $decodedSettings = json_decode($this->settings, true);
+        $decodedSettings = json_decode($this->settings, true) ?? [];
+        if ($key === "notifications" && !array_key_exists("notifications", $decodedSettings)) {
+            return $decodedSettings["loot_announcer"] ?? true;
+        }
+
+        if ($key === "loot_announcer" && !array_key_exists("loot_announcer", $decodedSettings)) {
+            return $decodedSettings["notifications"] ?? true;
+        }
+
         return $decodedSettings[$key] ?? null;
     }
 
@@ -248,7 +258,7 @@ final class GlaciaPlayer {
      */
     public function setSetting(string $key, mixed $value): void
     {
-        $decodedSettings = json_decode($this->settings, true);
+        $decodedSettings = json_decode($this->settings, true) ?? [];
         $decodedSettings[$key] = $value;
         $this->settings = json_encode($decodedSettings);
         $this->updateDb();
@@ -262,10 +272,60 @@ final class GlaciaPlayer {
      */
     public function toggleSetting(string $key): void
     {
-        $settings = json_decode($this->settings, true);
-        $settings[$key] = !($settings[$key] ?? false);
+        $settings = json_decode($this->settings, true) ?? [];
+        $settings[$key] = !((bool) $this->getSetting($key));
         $this->settings = json_encode($settings);
         $this->updateDb();
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getExtraPermissions(): array
+    {
+        $permissions = $this->getSetting("extra_permissions");
+        if (!is_array($permissions)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(array_map(
+            static fn(mixed $value): string => strtolower(trim((string) $value)),
+            $permissions
+        ))));
+    }
+
+    public function hasExtraPermission(string $permission): bool
+    {
+        return in_array(strtolower(trim($permission)), $this->getExtraPermissions(), true);
+    }
+
+    public function addExtraPermission(string $permission): void
+    {
+        $permission = strtolower(trim($permission));
+        if ($permission === "") {
+            return;
+        }
+
+        $permissions = $this->getExtraPermissions();
+        if (!in_array($permission, $permissions, true)) {
+            $permissions[] = $permission;
+            $this->setSetting("extra_permissions", $permissions);
+        }
+    }
+
+    public function removeExtraPermission(string $permission): void
+    {
+        $permission = strtolower(trim($permission));
+        $permissions = array_values(array_filter(
+            $this->getExtraPermissions(),
+            static fn(string $value): bool => $value !== $permission
+        ));
+        $this->setSetting("extra_permissions", $permissions);
+    }
+
+    public function clearExtraPermissions(): void
+    {
+        $this->setSetting("extra_permissions", []);
     }
 
     public function getSellMultiplier(): float {
@@ -303,12 +363,9 @@ final class GlaciaPlayer {
      */
     public function addCooldown(string $cooldownName, int $duration): void
     {
-        $cooldowns = json_decode($this->cooldowns, true) ?? [];
-
-        $cooldowns[$this->getUuid()->toString()][$cooldownName] = time() + $duration;
-
+        $cooldowns = $this->decodeCooldowns();
+        $cooldowns[$cooldownName] = time() + max(0, $duration);
         $this->cooldowns = json_encode($cooldowns);
-
         $this->updateDb();
     }
 
@@ -319,12 +376,9 @@ final class GlaciaPlayer {
      */
     public function getCooldown(string $cooldownName): ?int
     {
-        $cooldowns = json_decode($this->cooldowns, true);
-
-        if ($cooldowns !== null && isset($cooldowns[$this->getUuid()->toString()][$cooldownName])) {
-            $cooldownExpireTime = $cooldowns[$this->getUuid()->toString()][$cooldownName];
-            $remainingCooldown = $cooldownExpireTime - time();
-            return max(0, $remainingCooldown);
+        $cooldowns = $this->decodeCooldowns();
+        if (isset($cooldowns[$cooldownName])) {
+            return max(0, ((int) $cooldowns[$cooldownName]) - time());
         }
 
         return null;
@@ -337,17 +391,8 @@ final class GlaciaPlayer {
 
     public function clearCooldown(string $cooldownName): void
     {
-        $cooldowns = json_decode($this->cooldowns, true) ?? [];
-        $uuid = $this->getUuid()->toString();
-
-        if (isset($cooldowns[$uuid][$cooldownName])) {
-            unset($cooldowns[$uuid][$cooldownName]);
-        }
-
-        if (isset($cooldowns[$uuid]) && $cooldowns[$uuid] === []) {
-            unset($cooldowns[$uuid]);
-        }
-
+        $cooldowns = $this->decodeCooldowns();
+        unset($cooldowns[$cooldownName]);
         $this->cooldowns = json_encode($cooldowns);
         $this->updateDb();
     }
@@ -388,12 +433,12 @@ final class GlaciaPlayer {
         $itemData = ItemUtils::encodeItem($item);
 
         if ($itemData === false) {
-            $this->getPlayer()->sendMessage(C::colorize("&r&cFailed to serialize item!"));
+            $this->getPlayer()?->sendMessage(C::colorize("&r&cFailed to serialize item."));
             return;
         }
         
         if (in_array($itemData, $collection, true)) {
-            $this->getPlayer()->sendMessage(C::colorize("&r&cItem is already in the collection!"));
+            $this->getPlayer()?->sendMessage(C::colorize("&r&cThat item is already in your collection."));
             return;
         }
 
@@ -401,7 +446,7 @@ final class GlaciaPlayer {
         $this->collection = json_encode($collection);
         $this->updateDb();
 
-        $this->getPlayer()->sendMessage(C::colorize("&r&aItem has been added to your collection."));
+        $this->getPlayer()?->sendMessage(C::colorize("&r&aItem added to your collection."));
     }
 
     public function removeItemFromCollection(Item $item): void
@@ -414,9 +459,9 @@ final class GlaciaPlayer {
             $this->collection = json_encode(array_values($collection));
             $this->updateDb();
 
-            $this->getPlayer()->sendMessage(C::colorize("&r&aItem has been removed from your collection."));
+            $this->getPlayer()?->sendMessage(C::colorize("&r&aItem removed from your collection."));
         } else {
-            $this->getPlayer()->sendMessage(C::colorize("&r&cItem not found in the collection!"));
+            $this->getPlayer()?->sendMessage(C::colorize("&r&cThat item was not found in your collection."));
         }
     }
 
@@ -541,5 +586,30 @@ final class GlaciaPlayer {
             'deaths' => $this->deaths,
             'slot_credits' => $this->slotCredits
         ]);
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function decodeCooldowns(): array
+    {
+        $decoded = json_decode($this->cooldowns, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $uuid = $this->getUuid()->toString();
+        if (isset($decoded[$uuid]) && is_array($decoded[$uuid])) {
+            $decoded = $decoded[$uuid];
+        }
+
+        $cooldowns = [];
+        foreach ($decoded as $key => $value) {
+            if (is_string($key) && is_numeric($value)) {
+                $cooldowns[$key] = (int) $value;
+            }
+        }
+
+        return $cooldowns;
     }
 }

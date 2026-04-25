@@ -13,6 +13,8 @@ use ecstsy\Glacia\server\capture\CaptureManager;
 use ecstsy\Glacia\server\BlackMarketAuctionInstance;
 use ecstsy\Glacia\server\CoinFlipInstance;
 use ecstsy\Glacia\server\CombatManagerInstance;
+use ecstsy\Glacia\server\database\SchemaMigrationManager;
+use ecstsy\Glacia\server\disguises\DisguiseManager;
 use ecstsy\Glacia\server\envoys\EnvoyManager;
 use ecstsy\Glacia\server\GlobalFundManager;
 use ecstsy\Glacia\server\factions\FactionManager;
@@ -75,6 +77,7 @@ final class Loader extends PluginBase {
     private static BountyManager $bountyManager;
     private static GlobalFundManager $globalFundManager;
     private static EnvoyManager $envoyManager;
+    private static DisguiseManager $disguiseManager;
     private static BlockData $blockData;
 
     public function onLoad(): void {
@@ -106,6 +109,7 @@ final class Loader extends PluginBase {
         self::$connector->executeGeneric(QueryStmts::AUCTION_HOUSE_COLLECTION_INIT);
         self::$connector->executeGeneric(QueryStmts::PLAYER_VAULTS_INIT);
         self::$connector->waitAll();
+        SchemaMigrationManager::migrate($this);
 
         self::$regionManager = new RegionManager();
         self::$playerManager = new PlayerManager($this);
@@ -129,6 +133,7 @@ final class Loader extends PluginBase {
         self::$bountyManager = new BountyManager();
         self::$globalFundManager = new GlobalFundManager();
         self::$envoyManager = new EnvoyManager();
+        self::$disguiseManager = new DisguiseManager($this);
 
         GlaciaUtils::initAll($this);
 
@@ -172,6 +177,11 @@ final class Loader extends PluginBase {
 
     public static function getBlockData(): BlockData {
         return self::$blockData;
+    }
+
+    public static function getDisguiseManager(): DisguiseManager
+    {
+        return self::$disguiseManager;
     }
 
     public static function getDatabase(): DataConnector {

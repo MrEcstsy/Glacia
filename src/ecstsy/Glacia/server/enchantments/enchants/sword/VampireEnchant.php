@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\server\enchantments\enchants\sword;
 
-use ecstsy\Glacia\player\PlayerManager;
+use ecstsy\Glacia\entity\gkits\ForsakenChampion;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
+use pocketmine\entity\Living;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\player\Player;
 
@@ -23,37 +25,32 @@ final class VampireEnchant implements EntityDamageByEntityEnchantmentHandler {
         $damager = $event->getDamager();
         $victim  = $event->getEntity();
 
-        if (!$damager instanceof Player || !$victim instanceof Player) {
+        if (!$damager instanceof Living || !$victim instanceof Living) {
             return;
         }
 
-        $item = $damager->getInventory()->getItemInHand();
+        $item = $damager instanceof Player ? $damager->getInventory()->getItemInHand() : ($damager instanceof ForsakenChampion ? $damager->getCombatItem() : null);
+        if ($item === null) {
+            return;
+        }
         if (!CustomEnchantmentManager::hasEnchantment($item, "vampire")) {
             return;
         }
 
-        $session = PlayerManager::getInstance()->getSession($damager);
-
-        if ($session->isOnCooldown("vampire")) {
-            return;
-        }
-
         $cfg = match ($level) {
-            1 => ["chance" => 12, "healMin" => 1, "healMax" => 2, "cd" => 10],
-            2 => ["chance" => 18, "healMin" => 1, "healMax" => 3, "cd" => 10],
-            3 => ["chance" => 24, "healMin" => 2, "healMax" => 3, "cd" => 10],
-            default => ["chance" => 10, "healMin" => 1, "healMax" => 2, "cd" => 10]
+            1 => ["chance" => 1, "healMin" => 0.5, "healMax" => 1.0],
+            2 => ["chance" => 1, "healMin" => 0.75, "healMax" => 1.25],
+            3 => ["chance" => 1, "healMin" => 1.0, "healMax" => 1.5],
+            default => ["chance" => 1, "healMin" => 0.5, "healMax" => 1.0]
         };
 
-        if (mt_rand(1, 100) > $cfg["chance"]) {
+        if (!ProcLuckManager::roll($damager, "vampire", $cfg["chance"], 1, 1)) {
             return;
         }
 
-        $heal = mt_rand($cfg["healMin"], $cfg["healMax"]);
+        $heal = $cfg["healMin"] + (lcg_value() * ($cfg["healMax"] - $cfg["healMin"]));
 
         $newHealth = min($damager->getMaxHealth(), $damager->getHealth() + $heal);
         $damager->setHealth($newHealth);
-
-        $session->addCooldown("vampire", $cfg["cd"]);
     }
 }

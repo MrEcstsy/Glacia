@@ -126,6 +126,10 @@ final class PlayerLevelManager {
             return 0;
         }
 
+        if (method_exists($entity, "getLevelXpDropAmount")) {
+            return max(0, (int) $entity->getLevelXpDropAmount());
+        }
+
         $key = self::normalizeMobKey($entity::class);
         return self::$mobXp[$key] ?? self::$defaultMobXp;
     }

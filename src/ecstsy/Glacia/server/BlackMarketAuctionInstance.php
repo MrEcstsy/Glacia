@@ -9,6 +9,7 @@ use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\blackmarket\BlackMarketAuctionManager;
 use ecstsy\Glacia\utils\QueryStmts;
 use ecstsy\MartianUtilities\utils\ItemUtils;
+use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\item\Item;
 use pocketmine\player\Player;
 use pocketmine\utils\SingletonTrait;
@@ -19,7 +20,6 @@ final class BlackMarketAuctionInstance {
 
     private bool $enabled = false;
     private int $nextAuctionTime = 0;
-
     private int $currentBid = 0;
     private int $startingBid = 0;
     private int $endTime = 0;
@@ -47,7 +47,7 @@ final class BlackMarketAuctionInstance {
                         break;
 
                     case GlaciaServerKeys::BAH_HISTORY:
-                        $decoded = json_decode((string) $row["value"], true);
+                        $decoded = json_decode((string) $row['value'], true);
                         $this->history = is_array($decoded) ? $decoded : [];
                         break;
                 }
@@ -99,7 +99,6 @@ final class BlackMarketAuctionInstance {
 
     public function startAuction(): void {
         $listing = BlackMarketAuctionManager::getInstance()->rollListing();
-
         if ($listing === null) {
             $this->startCountdown(60);
             return;
@@ -109,7 +108,7 @@ final class BlackMarketAuctionInstance {
         $this->startingBid = $listing->getStartingBid();
         $this->endTime = time() + BlackMarketAuctionManager::getInstance()->getAuctionDuration();
         $this->highestBidder = "";
-        $this->listingName = $listing->getName();
+        $this->listingName = self::sanitizeText($listing->getName());
         $this->currentItem = $listing->getItem();
         $this->nextAuctionTime = 0;
 
@@ -117,7 +116,7 @@ final class BlackMarketAuctionInstance {
         $this->save(GlaciaServerKeys::BAH_NEXT_AUCTION, "0");
 
         $message = "&r&l&6BAH &r&8» &eA new item is up for auction: {$this->listingName} &7(Starting Bid: &a$" . number_format($this->startingBid) . "&7)";
-        BlackMarketAuctionManager::getInstance()->messageAll(TextFormat::colorize($message));
+        BlackMarketAuctionManager::getInstance()->messageAll(TextFormat::colorize(self::sanitizeText($message)));
     }
 
     public function finishAuction(): void {
@@ -131,14 +130,14 @@ final class BlackMarketAuctionInstance {
             BlackMarketAuctionManager::getInstance()->giveAuctionToWinner($winner, $item, $finalBid);
 
             $message = "&r&l&6BAH &r&8» &e{$winner} &ewon {$listingName} &efor &a$" . number_format($finalBid) . " &7(Starting Bid: &a$" . number_format($this->startingBid) . "&7)";
-            BlackMarketAuctionManager::getInstance()->messageAll(TextFormat::colorize($message));
+            BlackMarketAuctionManager::getInstance()->messageAll(TextFormat::colorize(self::sanitizeText($message)));
         } else {
             if ($item !== null || $listingName !== "") {
                 $this->addHistoryEntry($listingName, $item, "", 0, $this->startingBid, false);
             }
 
             $message = "&r&l&6BAH &r&8» &eThe Black Market Auction ended with no bids.";
-            BlackMarketAuctionManager::getInstance()->messageAll(TextFormat::colorize($message));
+            BlackMarketAuctionManager::getInstance()->messageAll(TextFormat::colorize(self::sanitizeText($message)));
         }
 
         $this->currentBid = 0;
@@ -239,7 +238,7 @@ final class BlackMarketAuctionInstance {
     }
 
     public function setListingName(string $name): void {
-        $this->listingName = $name;
+        $this->listingName = self::sanitizeText($name);
     }
 
     public function getListingName(): string {
@@ -285,31 +284,30 @@ final class BlackMarketAuctionInstance {
         }
 
         if ($this->highestBidder !== "" && strcasecmp($this->highestBidder, $player->getName()) === 0) {
-            $player->sendMessage("§cYou are already the highest bidder.");
+            $player->sendMessage(TextFormat::colorize("&r&cYou are already the highest bidder."));
             return false;
         }
 
         $amount = $this->getNextBidAmount();
         if ($session->getBalance() < $amount) {
-            $player->sendMessage("§cYou do not have enough money to bid §f$" . number_format($amount) . "§c.");
+            $player->sendMessage(TextFormat::colorize("&r&cYou do not have enough money to bid &f$" . number_format($amount) . "&r&c."));
             return false;
         }
 
         $previousBid = $this->currentBid;
         $previousBidder = $this->highestBidder;
         if ($previousBidder !== "") {
-            $previousPlayer = Loader::getInstance()->getServer()->getPlayerExact($previousBidder);
+            $previousPlayer = PlayerUtils::getPlayerByPrefix($previousBidder);
             if ($previousPlayer !== null && $previousPlayer->isOnline()) {
                 $previousSession = PlayerManager::getInstance()->getSession($previousPlayer);
                 if ($previousSession !== null) {
                     $previousSession->addBalance($previousBid);
-                    $previousPlayer->sendMessage("§eYou have been outbid on the Black Market Auction.");
+                    $previousPlayer->sendMessage(TextFormat::colorize("&r&eYou have been outbid on the Black Market Auction."));
                 }
             }
         }
 
         $session->removeBalance($amount);
-
         $this->currentBid = $amount;
         $this->highestBidder = $player->getName();
 
@@ -321,14 +319,12 @@ final class BlackMarketAuctionInstance {
         }
 
         $message = "&r&l&6BAH &r&8» &e{$player->getName()} &ebid &a$" . number_format($amount) . " &eon &f{$this->listingName}" . ($extended ? " &7(+{$antiSnipe}s anti-snipe)" : "");
-        BlackMarketAuctionManager::getInstance()->messageAll(TextFormat::colorize($message));
-
+        BlackMarketAuctionManager::getInstance()->messageAll(TextFormat::colorize(self::sanitizeText($message)));
         return true;
     }
 
     public function setNextAuctionTime(int $time): void {
         $this->nextAuctionTime = max(0, $time);
-
         $this->save(GlaciaServerKeys::BAH_ACTIVE, $this->enabled ? "1" : "0");
         $this->save(GlaciaServerKeys::BAH_NEXT_AUCTION, (string) $this->nextAuctionTime);
     }
@@ -344,13 +340,13 @@ final class BlackMarketAuctionInstance {
 
     private function addHistoryEntry(string $listingName, ?Item $item, string $winner, int $finalBid, int $startingBid, bool $sold): void {
         $entry = [
-            "name" => $listingName !== "" ? $listingName : ($item?->getName() ?? "Unknown Item"),
-            "item_data" => $item !== null ? ItemUtils::encodeItem($item) : null,
-            "winner" => $winner,
-            "final_bid" => $finalBid,
-            "starting_bid" => $startingBid,
-            "sold" => $sold ? 1 : 0,
-            "ended_at" => time()
+            'name' => self::sanitizeText($listingName !== '' ? $listingName : ($item?->getName() ?? 'Unknown Item')),
+            'item_data' => $item !== null ? ItemUtils::encodeItem($item) : null,
+            'winner' => $winner,
+            'final_bid' => $finalBid,
+            'starting_bid' => $startingBid,
+            'sold' => $sold ? 1 : 0,
+            'ended_at' => time()
         ];
 
         array_unshift($this->history, $entry);
@@ -360,5 +356,26 @@ final class BlackMarketAuctionInstance {
         }
 
         $this->save(GlaciaServerKeys::BAH_HISTORY, json_encode($this->history, JSON_THROW_ON_ERROR));
+    }
+
+    private static function sanitizeText(string $text): string
+    {
+        if (preg_match('//u', $text) === 1) {
+            return $text;
+        }
+
+        if (function_exists('iconv')) {
+            $converted = iconv('UTF-8', 'UTF-8//IGNORE', $text);
+            if (is_string($converted) && preg_match('//u', $converted) === 1) {
+                return $converted;
+            }
+        }
+
+        $converted = utf8_encode(utf8_decode($text));
+        if (preg_match('//u', $converted) === 1) {
+            return $converted;
+        }
+
+        return preg_replace('/[^\x09\x0A\x0D\x20-\x7E]/', '', $text) ?? '';
     }
 }

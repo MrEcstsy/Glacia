@@ -7,10 +7,10 @@ namespace ecstsy\Glacia\listeners;
 use ecstsy\Glacia\server\regions\RegionManager;
 use pocketmine\block\Anvil;
 use pocketmine\block\DragonEgg;
+use pocketmine\block\Trapdoor;
 use pocketmine\block\tile\Beacon;
 use pocketmine\block\tile\Chest;
 use pocketmine\block\tile\Hopper;
-use pocketmine\block\Trapdoor;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\block\BlockPlaceEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
@@ -22,6 +22,7 @@ use pocketmine\event\player\PlayerBucketEmptyEvent;
 use pocketmine\event\player\PlayerBucketFillEvent;
 use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\event\player\PlayerMoveEvent;
+use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\event\server\CommandEvent;
 use pocketmine\item\FireCharge;
 use pocketmine\item\FlintSteel;
@@ -30,7 +31,10 @@ use pocketmine\utils\TextFormat as C;
 
 final class RegionListener implements Listener {
 
-    private $playerRegions = [];
+    /** @var array<string, string|null> */
+    private array $playerRegions = [];
+    /** @var array<string, int> */
+    private array $denyMessageCooldowns = [];
 
     private RegionManager $regionManager;
 
@@ -44,123 +48,153 @@ final class RegionListener implements Listener {
         $this->regionManager = $regionManager;
     }
 
-    public function onPlayerMove(PlayerMoveEvent $ev): void {
-        $p = $ev->getPlayer();
-        $region = $this->regionManager->getRegionAt($p->getPosition());
-        $prev = $this->playerRegions[$p->getName()] ?? null;
-        if ($region !== $prev) {
-            if ($region !== null) {
-                $p->sendActionBarMessage(C::colorize("§a>> Entered ".$region->getName()));
-            } else {
-                $p->sendActionBarMessage(C::colorize("§c>> Left region"));
-            }
-            $this->playerRegions[$p->getName()] = $region;
-        }
-    }
-
-    public function onBlockBreak(BlockBreakEvent $ev): void {
-        $p = $ev->getPlayer();
-
-        if ($this->isIgnoredWorld($p->getWorld()->getFolderName())) {
+    public function onPlayerMove(PlayerMoveEvent $event): void
+    {
+        $from = $event->getFrom();
+        $to = $event->getTo();
+        if (
+            $to === null ||
+            (
+                $from->getFloorX() === $to->getFloorX() &&
+                $from->getFloorY() === $to->getFloorY() &&
+                $from->getFloorZ() === $to->getFloorZ() &&
+                $from->getWorld()->getFolderName() === $to->getWorld()->getFolderName()
+            )
+        ) {
             return;
         }
 
-        $block = $ev->getBlock();
-        $region = $this->regionManager->getRegionAt($block->getPosition());
-
-        if (!$p->hasPermission("glacia.admin") && $region !== null && !$region->permissions()->canBreak) {
-            $ev->cancel();
-            $p->sendMessage(C::colorize("&r&l&cHey! &r&fYou can't do that here!"));
-        }
-    }
-
-    public function onBlockPlace(BlockPlaceEvent $event)
-    {
         $player = $event->getPlayer();
-        $region = $this->regionManager->getRegionAt($player->getPosition());
+        $playerKey = strtolower($player->getName());
+        $regionName = $this->regionManager->getRegionAt($to)?->getName();
+        $previousRegionName = $this->playerRegions[$playerKey] ?? null;
 
-        if (!$player->hasPermission("glacia.admin")) {
-            if ($region !== null && !$region->permissions()->build) {
-                $event->cancel();
-                $player->sendMessage(C::colorize("&r&l&cHey! &r&fYou can't do that here!"));
-            }
+        if ($regionName === $previousRegionName) {
+            return;
         }
+
+        if ($regionName !== null) {
+            $player->sendActionBarMessage(C::colorize("&r&a>> Entered &f" . $regionName));
+        } elseif ($previousRegionName !== null) {
+            $player->sendActionBarMessage(C::colorize("&r&c>> Left &f" . $previousRegionName));
+        }
+
+        $this->playerRegions[$playerKey] = $regionName;
     }
 
-    public function onEntityDamageByEntity(EntityDamageByEntityEvent $event)
+    public function onQuit(PlayerQuitEvent $event): void
     {
-        $player = $event->getDamager();
-
-        if ($player instanceof Player) {
-            $region = $this->regionManager->getRegionAt($player->getPosition());
-
-            if (!$player->hasPermission("glacia.admin")) {
-                if ($region !== null && !$region->permissions()->pvp) {
-                    $event->cancel();
-                    $player->sendMessage(C::colorize("&r&l&cHey! &r&fYou can't do that here!"));
-                }
-            }
-        }
+        $playerKey = strtolower($event->getPlayer()->getName());
+        unset($this->playerRegions[$playerKey], $this->denyMessageCooldowns[$playerKey]);
     }
 
-    public function onDamage(EntityDamageEvent $event)
+    public function onBlockBreak(BlockBreakEvent $event): void
     {
-        $player = $event->getEntity();
-
-        if ($player instanceof Player) {
-            $region = $this->regionManager->getRegionAt($player->getPosition());
-
-            if ($region !== null && !$region->permissions()->fallDamage) {
-                if ($event->getCause() === EntityDamageEvent::CAUSE_FALL) {
-                    $event->cancel();
-                }
-            }
-        }
-    }
-
-    public function onInteract(PlayerInteractEvent $event): void {
         $player = $event->getPlayer();
 
         if ($this->isIgnoredWorld($player->getWorld()->getFolderName())) {
             return;
         }
 
-        $block = $event->getBlock();
-        $item = $event->getItem();
-
-        $region = $this->regionManager->getRegionAt($player->getPosition());
-
-        if ($region !== null && !$region->permissions()->interact) {
-            if ($block instanceof DragonEgg || $block instanceof Chest || $block instanceof Hopper || $block instanceof Beacon || $block instanceof Anvil || $item instanceof FlintSteel || $item instanceof FireCharge || $item instanceof Trapdoor) {
-                $event->cancel();
-                $player->sendMessage(C::colorize("&r&l&cHey! &r&fYou can't do that here!"));
-            }
+        $region = $this->regionManager->getRegionAt($event->getBlock()->getPosition());
+        if (!$player->hasPermission("glacia.admin") && $region !== null && !$region->permissions()->canBreak) {
+            $event->cancel();
+            $this->sendDeniedMessage($player);
         }
     }
 
-    public function onEntityExplode(EntityExplodeEvent $event): void {
-        $worldName = $event->getPosition()->getWorld()->getFolderName();
+    public function onBlockPlace(BlockPlaceEvent $event): void
+    {
+        $player = $event->getPlayer();
+        if ($player->hasPermission("glacia.admin")) {
+            return;
+        }
 
+        $region = $this->regionManager->getRegionAt($player->getPosition());
+        if ($region !== null && !$region->permissions()->build) {
+            $event->cancel();
+            $this->sendDeniedMessage($player);
+        }
+    }
+
+    public function onEntityDamageByEntity(EntityDamageByEntityEvent $event): void
+    {
+        $player = $event->getDamager();
+        if (!$player instanceof Player || $player->hasPermission("glacia.admin")) {
+            return;
+        }
+
+        $region = $this->regionManager->getRegionAt($player->getPosition());
+        if ($region !== null && !$region->permissions()->pvp) {
+            $event->cancel();
+            $this->sendDeniedMessage($player);
+        }
+    }
+
+    public function onDamage(EntityDamageEvent $event): void
+    {
+        $player = $event->getEntity();
+        if (!$player instanceof Player) {
+            return;
+        }
+
+        $region = $this->regionManager->getRegionAt($player->getPosition());
+        if ($region !== null && !$region->permissions()->fallDamage && $event->getCause() === EntityDamageEvent::CAUSE_FALL) {
+            $event->cancel();
+        }
+    }
+
+    public function onInteract(PlayerInteractEvent $event): void
+    {
+        $player = $event->getPlayer();
+
+        if ($this->isIgnoredWorld($player->getWorld()->getFolderName())) {
+            return;
+        }
+
+        $region = $this->regionManager->getRegionAt($player->getPosition());
+        if ($region === null || $region->permissions()->interact) {
+            return;
+        }
+
+        $block = $event->getBlock();
+        $item = $event->getItem();
+        if (
+            $block instanceof DragonEgg ||
+            $block instanceof Chest ||
+            $block instanceof Hopper ||
+            $block instanceof Beacon ||
+            $block instanceof Anvil ||
+            $block instanceof Trapdoor ||
+            $item instanceof FlintSteel ||
+            $item instanceof FireCharge
+        ) {
+            $event->cancel();
+            $this->sendDeniedMessage($player);
+        }
+    }
+
+    public function onEntityExplode(EntityExplodeEvent $event): void
+    {
+        $worldName = $event->getPosition()->getWorld()->getFolderName();
         if ($this->isIgnoredWorld($worldName)) {
             return;
         }
 
         $region = $this->regionManager->getRegionAt($event->getPosition());
-
         if ($region !== null && !$region->permissions()->explosions) {
             $event->cancel();
         }
     }
 
-    public function onExplosion(EntityPreExplodeEvent $event): void {
+    public function onExplosion(EntityPreExplodeEvent $event): void
+    {
         $worldName = $event->getEntity()->getWorld()->getFolderName();
-
         if ($this->isIgnoredWorld($worldName)) {
             return;
         }
 
         $region = $this->regionManager->getRegionAt($event->getEntity()->getPosition());
-
         if ($region !== null && !$region->permissions()->explosions) {
             $event->cancel();
             $event->setBlockBreaking(false);
@@ -170,28 +204,30 @@ final class RegionListener implements Listener {
     public function useBucket(PlayerBucketFillEvent $event): void
     {
         $player = $event->getPlayer();
+        if ($player->hasPermission("glacia.admin")) {
+            return;
+        }
 
-        if ($player instanceof Player) {
-            $region = $this->regionManager->getRegionAt($player->getPosition());
+        $region = $this->regionManager->getRegionAt($player->getPosition());
 
-            if ($region !== null && !$region->permissions()->interact) {
-                $event->cancel();
-                $player->sendMessage(C::colorize("&r&l&cHey! &r&fYou can't do that here!"));
-            }
+        if ($region !== null && !$region->permissions()->interact) {
+            $event->cancel();
+            $this->sendDeniedMessage($player);
         }
     }
 
     public function useBucketEmpty(PlayerBucketEmptyEvent $event): void
     {
         $player = $event->getPlayer();
+        if ($player->hasPermission("glacia.admin")) {
+            return;
+        }
 
-        if ($player instanceof Player) {
-            $region = $this->regionManager->getRegionAt($player->getPosition());
+        $region = $this->regionManager->getRegionAt($player->getPosition());
 
-            if ($region !== null && !$region->permissions()->interact) {
-                $event->cancel();
-                $player->sendMessage(C::colorize("&r&l&cHey! &r&fYou can't do that here!"));
-            }
+        if ($region !== null && !$region->permissions()->interact) {
+            $event->cancel();
+            $this->sendDeniedMessage($player);
         }
     }
 
@@ -201,17 +237,31 @@ final class RegionListener implements Listener {
         if (!$sender instanceof Player) {
             return;
         }
-        $command = strtolower($event->getCommand());
-        if ($command === "f claim") {
+
+        $command = strtolower(trim($event->getCommand()));
+        if ($command === "f claim" || str_starts_with($command, "f claim ")) {
             $region = $this->regionManager->getRegionAt($sender->getPosition());
             if ($region !== null) {
                 $event->cancel();
-                $sender->sendMessage(C::colorize("&r&l&cHey! &r&fYou can't claim here!"));
+                $sender->sendMessage(C::colorize("&r&cYou can't claim in this region."));
             }
         }
     }
 
-    private function isIgnoredWorld(string $worldName): bool {
+    private function isIgnoredWorld(string $worldName): bool
+    {
         return in_array(strtolower($worldName), $this->ignoredWorlds, true);
+    }
+
+    private function sendDeniedMessage(Player $player): void
+    {
+        $key = strtolower($player->getName());
+        $now = time();
+        if (($this->denyMessageCooldowns[$key] ?? 0) > $now) {
+            return;
+        }
+
+        $this->denyMessageCooldowns[$key] = $now + 1;
+        $player->sendMessage(C::colorize("&r&cYou can't do that here."));
     }
 }

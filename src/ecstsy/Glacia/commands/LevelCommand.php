@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\commands;
 
-use CortexPE\Commando\args\IntegerArgument;
 use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\levels\PlayerLevelManager;
+use ecstsy\MartianUtilities\utils\GeneralUtils;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -21,7 +21,7 @@ final class LevelCommand extends BaseCommand {
         $this->setPermission($this->getPermission());
         $this->registerArgument(0, new RawStringArgument("arg1", true));
         $this->registerArgument(1, new RawStringArgument("arg2", true));
-        $this->registerArgument(2, new IntegerArgument("amount", true));
+        $this->registerArgument(2, new RawStringArgument("amount", true));
     }
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void
@@ -41,7 +41,7 @@ final class LevelCommand extends BaseCommand {
             $lookup = (string) $args["arg1"];
             $target = PlayerUtils::getPlayerByPrefix($lookup) ?? $sender;
             if ($target === $sender && strcasecmp($sender->getName(), $lookup) !== 0) {
-                $session = Loader::getPlayerManager()->getSessionByName($lookup);
+                $session = Loader::getPlayerManager()->getSessionByPrefix($lookup);
                 if ($session === null) {
                     $sender->sendMessage(C::colorize("&r&cThat player could not be found."));
                     return;
@@ -69,14 +69,14 @@ final class LevelCommand extends BaseCommand {
         }
 
         $lookup = (string) ($args["arg2"] ?? "");
-        $value = (int) ($args["amount"] ?? 0);
+        $value = GeneralUtils::parseShorthandNumber((string) ($args["amount"] ?? ""));
         if ($lookup === "" || $value <= 0) {
             $sender->sendMessage(C::colorize("&r&cUsage: /level {$mode} <player> <amount>"));
             return;
         }
 
         $player = PlayerUtils::getPlayerByPrefix($lookup);
-        $session = $player !== null ? Loader::getPlayerManager()->getSession($player) : Loader::getPlayerManager()->getSessionByName($lookup);
+        $session = $player !== null ? Loader::getPlayerManager()->getSession($player) : Loader::getPlayerManager()->getSessionByPrefix($lookup);
         if ($session === null) {
             $sender->sendMessage(C::colorize("&r&cThat player could not be found."));
             return;

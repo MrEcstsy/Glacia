@@ -141,7 +141,7 @@ final class DropPackageScreen extends BaseScreen {
 
             Loader::getInstance()->getScheduler()->scheduleRepeatingTask(
                 new DropPackageAnimationTask($player, $this, $this->session),
-                10
+                4
             );
         }
     }
@@ -253,7 +253,7 @@ final class DropPackageScreen extends BaseScreen {
     }
 
     public function getRandomAnimatedRarityItem(): Item{
-        $rarities = ["simple", "unique", "elite", "ultimate", "legendary"];
+        $rarities = ["simple", "unique", "elite", "exotic", "legendary"];
         return $this->createRarityPane($rarities[array_rand($rarities)], false);
     }
 
@@ -270,7 +270,7 @@ final class DropPackageScreen extends BaseScreen {
         $material = match($rarity){
             "unique" => "lime_stained_glass_pane",
             "elite" => "light_blue_stained_glass_pane",
-            "ultimate" => "yellow_stained_glass_pane",
+            "exotic" => "yellow_stained_glass_pane",
             "legendary" => "orange_stained_glass_pane",
             default => "white_stained_glass_pane"
         };
@@ -278,7 +278,7 @@ final class DropPackageScreen extends BaseScreen {
         $name = match($rarity){
             "unique" => "&r&l&aUnique Mystery Item",
             "elite" => "&r&l&bElite Mystery Item",
-            "ultimate" => "&r&l&eUltimate Mystery Item",
+            "exotic" => "&r&l&eExotic Mystery Item",
             "legendary" => "&r&l&6Legendary Mystery Item",
             default => "&r&l&fSimple Mystery Item"
         };
@@ -344,7 +344,7 @@ final class DropPackageScreen extends BaseScreen {
         $material = match($rarity){
             "unique" => "lime_stained_glass_pane",
             "elite" => "light_blue_stained_glass_pane",
-            "ultimate" => "yellow_stained_glass_pane",
+            "exotic" => "yellow_stained_glass_pane",
             "legendary" => "orange_stained_glass_pane",
             default => "white_stained_glass_pane"
         };
@@ -352,7 +352,7 @@ final class DropPackageScreen extends BaseScreen {
         $name = match($rarity){
             "unique" => "&r&l&aUnique Mystery Item",
             "elite" => "&r&l&bElite Mystery Item",
-            "ultimate" => "&r&l&eUltimate Mystery Item",
+            "exotic" => "&r&l&eExotic Mystery Item",
             "legendary" => "&r&l&6Legendary Mystery Item",
             default => "&r&l&fSimple Mystery Item"
         };

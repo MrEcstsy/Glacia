@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\server\enchantments\enchants\sword;
 
+use ecstsy\Glacia\entity\gkits\ForsakenChampion;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\entity\Living;
@@ -23,12 +25,13 @@ final class SlownessEnchant implements EntityDamageByEntityEnchantmentHandler {
         $damager = $event->getDamager();
         $victim  = $event->getEntity();
 
-        if (!$damager instanceof Player) return;
+        if (!$damager instanceof Living) return;
         if (!$victim instanceof Living) return;
 
-        $session = PlayerManager::getInstance()->getSession($damager);
+        $session = $damager instanceof Player ? PlayerManager::getInstance()->getSession($damager) : null;
 
-        $item = $damager->getInventory()->getItemInHand();
+        $item = $damager instanceof Player ? $damager->getInventory()->getItemInHand() : ($damager instanceof ForsakenChampion ? $damager->getCombatItem() : null);
+        if ($item === null) return;
         if (!CustomEnchantmentManager::hasEnchantment($item, "slowness")) return;
 
         $data = [
@@ -39,8 +42,8 @@ final class SlownessEnchant implements EntityDamageByEntityEnchantmentHandler {
 
         $cfg = $data[$level] ?? $data[1];
 
-        if (mt_rand(1, 100) > $cfg["chance"]) return;
-        if ($session->isOnCooldown("slowness")) return;
+        if (!ProcLuckManager::roll($damager, "slowness", $cfg["chance"], 2, 12)) return;
+        if ($session !== null && $session->isOnCooldown("slowness")) return;
 
         if (!$victim->getEffects()->has(VanillaEffects::SLOWNESS())) {
             $victim->getEffects()->add(new EffectInstance(
@@ -48,7 +51,9 @@ final class SlownessEnchant implements EntityDamageByEntityEnchantmentHandler {
                 $cfg["duration"] * 20,
                 $cfg["effectLevel"]
             ));
-            $session->addCooldown("slowness", $cfg["cd"]);
+            if ($session !== null) {
+                $session->addCooldown("slowness", 1);
+            }
         }
     }
 }

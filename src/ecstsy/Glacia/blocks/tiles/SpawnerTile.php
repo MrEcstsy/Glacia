@@ -12,6 +12,8 @@ use ecstsy\Glacia\server\items\GlaciaSpawnerItem;
 use ecstsy\Glacia\server\factions\claims\ClaimManager;
 use ecstsy\Glacia\server\spawners\SpawnerData;
 use ecstsy\Glacia\server\spawners\SpawnerWorthManager;
+use ecstsy\Glacia\server\zones\ZoneManager;
+use ecstsy\Glacia\server\zones\ZoneMobManager;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use pocketmine\block\tile\Spawnable;
 use pocketmine\data\bedrock\LegacyEntityIdToStringIdMap;
@@ -42,6 +44,11 @@ class SpawnerTile extends Spawnable
     protected const TAG_SPAWNER_VALUE = "SpawnerValue";
     protected const TAG_SPAWNER_STACK = "SpawnerStack";
     protected const TAG_SPAWNER_MAX_STACK = "SpawnerMaxStack";
+    protected const TAG_SPAWNER_MODE = "SpawnerMode";
+    protected const TAG_ZONE_ID = "ZoneSpawnerZoneId";
+
+    public const MODE_FARM = "farm";
+    public const MODE_ZONE = "zone";
 
     private int $spawnDelay = 0;
     private int $minSpawnDelay = 200;
@@ -51,6 +58,8 @@ class SpawnerTile extends Spawnable
     private int $stackCount = 1;
     private int $maxStack = 10;
     private int $recordedFactionWorth = 0;
+    private string $mode = self::MODE_FARM;
+    private string $zoneId = "";
 
     protected int $legacyEntityTypeId = 0;
     protected string $entityTypeId = ":";
@@ -72,7 +81,7 @@ class SpawnerTile extends Spawnable
 
     public function onUpdate(): void {
         if ($this->closed) {
-            $this->handler->cancel();
+            $this->handler?->cancel();
             return;
         }
 
@@ -81,6 +90,12 @@ class SpawnerTile extends Spawnable
         }
 
         if (--$this->spawnDelay > 0) {
+            return;
+        }
+
+        if ($this->isZoneSpawner()) {
+            $this->spawnDelay = max(1, ZoneMobManager::getSpawnIntervalSeconds());
+            ZoneMobManager::tickSpawner($this->getPosition(), $this->zoneId);
             return;
         }
 
@@ -127,6 +142,8 @@ class SpawnerTile extends Spawnable
         $this->spawnRange = $nbt->getShort(self::TAG_SPAWN_RANGE, 5);
         $this->requiredPlayerRange = $nbt->getShort(self::TAG_REQUIRED_PLAYER_RANGE, 16);
         $this->legacyEntityTypeId = $nbt->getShort(self::TAG_LEGACY_ENTITY_TYPE_ID, 0);
+        $this->mode = $nbt->getString(self::TAG_SPAWNER_MODE, self::MODE_FARM);
+        $this->zoneId = strtolower($nbt->getString(self::TAG_ZONE_ID, ""));
 
         $legacyIdTag = $nbt->getTag(self::TAG_LEGACY_ENTITY_TYPE_ID);
 
@@ -138,6 +155,10 @@ class SpawnerTile extends Spawnable
 
         $this->stackCount = max(1, (int)$nbt->getInt(self::TAG_SPAWNER_STACK, 1));
         $this->maxStack = max(1, (int)$nbt->getInt(self::TAG_SPAWNER_MAX_STACK, 10));
+        if ($this->isZoneSpawner()) {
+            $this->stackCount = 1;
+            $this->maxStack = 1;
+        }
 
         $world = $this->getPosition()->getWorld();
         $world->scheduleDelayedBlockUpdate($this->getPosition(), 1);
@@ -146,6 +167,11 @@ class SpawnerTile extends Spawnable
 
     public function canUpdate(): Bool
     {
+        if ($this->isZoneSpawner()) {
+            $zone = ZoneManager::getZone($this->zoneId);
+            return $zone !== null && ZoneMobManager::getZoneConfig($this->zoneId) !== null;
+        }
+
         return (
             $this->entityTypeId !== ":" and
             $this->getPosition()->getWorld()->getNearestEntity($this->getPosition(), $this->requiredPlayerRange, Player::class) !== null
@@ -163,6 +189,8 @@ class SpawnerTile extends Spawnable
         $nbt->setInt(self::TAG_SPAWNER_VALUE, $this->getSpawnerValue());
         $nbt->setInt(self::TAG_SPAWNER_STACK, $this->stackCount);
         $nbt->setInt(self::TAG_SPAWNER_MAX_STACK, $this->maxStack);
+        $nbt->setString(self::TAG_SPAWNER_MODE, $this->mode);
+        $nbt->setString(self::TAG_ZONE_ID, $this->zoneId);
     }
 
     public function getStackCount(): int { return $this->stackCount; }
@@ -172,6 +200,9 @@ class SpawnerTile extends Spawnable
     public function getDelay(): int { return $this->minSpawnDelay; }
     public function getMinDelay(): int { return $this->minSpawnDelay; }
     public function getMaxDelay(): int { return $this->maxSpawnDelay; }
+    public function getMode(): string { return $this->mode; }
+    public function getZoneId(): string { return $this->zoneId; }
+    public function isZoneSpawner(): bool { return $this->mode === self::MODE_ZONE; }
 
     private function findNearestEntity(string $type): ?SpawnerEntity
     {
@@ -195,6 +226,10 @@ class SpawnerTile extends Spawnable
 
     public function getSpawnerValue(): int
     {
+        if ($this->isZoneSpawner()) {
+            return 0;
+        }
+
         return SpawnerWorthManager::getWorth($this->entityTypeId);
     }
 
@@ -224,8 +259,29 @@ class SpawnerTile extends Spawnable
 
     public function setStackCount(int $count): void
     {
+        if ($this->isZoneSpawner()) {
+            $this->stackCount = 1;
+            return;
+        }
+
         $this->stackCount = max(1, min($count, $this->maxStack));
         $this->refreshFactionWorthContribution();
+    }
+
+    public function setMode(string $mode): void
+    {
+        $this->mode = $mode === self::MODE_ZONE ? self::MODE_ZONE : self::MODE_FARM;
+        if ($this->isZoneSpawner()) {
+            $this->stackCount = 1;
+            $this->maxStack = 1;
+            $this->spawnDelay = max(1, ZoneMobManager::getSpawnIntervalSeconds());
+        }
+        $this->refreshFactionWorthContribution();
+    }
+
+    public function setZoneId(string $zoneId): void
+    {
+        $this->zoneId = strtolower(trim($zoneId));
     }
 
     public function setDelay(int $delay): void
@@ -246,6 +302,9 @@ class SpawnerTile extends Spawnable
 
     public function changeStackBy(int $delta): void
     {
+        if ($this->isZoneSpawner()) {
+            return;
+        }
         $this->setStackCount($this->stackCount + $delta);
     }
 
@@ -284,6 +343,10 @@ class SpawnerTile extends Spawnable
 
     public function addToStackFromPlayerInventory(Player $player, int $count): int
     {
+        if ($this->isZoneSpawner()) {
+            return 0;
+        }
+
         if ($count <= 0) return 0;
 
         $inv = $player->getInventory();
@@ -325,6 +388,10 @@ class SpawnerTile extends Spawnable
 
     public function removeFromStackToPlayer(Player $player, int $count, int $minRemaining = 1): int
     {
+        if ($this->isZoneSpawner()) {
+            return 0;
+        }
+
         if ($count <= 0) return 0;
 
         $available = max(0, $this->stackCount - $minRemaining);
@@ -371,6 +438,8 @@ class SpawnerTile extends Spawnable
             'max' => $this->getMaxStack(),
             'delay' => $this->minSpawnDelay,
             'baseCount'=> 1,
+            'mode' => $this->mode,
+            'zoneId' => $this->zoneId,
         ];
     }
 }

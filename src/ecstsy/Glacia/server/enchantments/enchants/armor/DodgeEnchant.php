@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\server\enchantments\enchants\armor;
 
+use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
@@ -26,6 +27,11 @@ final class DodgeEnchant implements EntityDamageByEntityEnchantmentHandler {
             return;
         }
 
+        $session = PlayerManager::getInstance()->getSession($victim);
+        if ($session === null || $session->isOnCooldown("dodge")) {
+            return;
+        }
+
         $chance = match ($level) {
             1 => 4,
             2 => 6,
@@ -40,6 +46,7 @@ final class DodgeEnchant implements EntityDamageByEntityEnchantmentHandler {
         }
 
         if (mt_rand(1, 100) <= $chance) {
+            $session->addCooldown("dodge", 8);
             $event->cancel();
         }
     }

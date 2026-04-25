@@ -43,7 +43,7 @@ final class GiveBookSubCommand extends BaseSubCommand {
 
         $enchant = $args["enchantment"] ?? null;
         if ($enchant === null) {
-            $sender->sendMessage(C::colorize("&c{enchant} is not a valid enchant!"));
+            $sender->sendMessage(C::colorize("&r&cUsage: " . $this->getUsage()));
             return;
         }
 
@@ -69,7 +69,8 @@ final class GiveBookSubCommand extends BaseSubCommand {
             )));
             PlayerUtils::playSound($sender, "random.orb");
         } else {
-            $sender->getWorld()->dropItem($sender->getPosition()->asVector3(), $book);
+            $player->getWorld()->dropItem($player->getPosition()->asVector3(), $book);
+            $sender->sendMessage(C::colorize("&r&e" . $player->getName() . "'s inventory was full, so the book was dropped at their feet."));
         }
     }
 

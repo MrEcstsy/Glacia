@@ -1,0 +1,198 @@
+settings:
+  tick-interval-seconds: 8
+  edge-padding: 16
+  player-activation-range: 56
+  default-base-alive: 3
+  default-mobs-per-player: 2
+  default-max-alive: 12
+  default-anchor-radius: 22
+
+zones:
+  azure_plains:
+    enabled: true
+    base-alive: 3
+    mobs-per-player: 2
+    max-alive: 10
+    spawn-batch: 2
+    streak-rewards: {}
+    mobs:
+      meadow_husk:
+        entity: zombie
+        display: "&bMeadow Husk"
+        health: 28
+        damage: 3
+        speed: 0.18
+        target-range: 14
+        xp: 18
+        weight: 70
+        rewards:
+          - chance: 55
+            type: vanilla
+            id: rotten_flesh
+            count: "1-2"
+          - chance: 15
+            type: vanilla
+            id: wheat
+            count: 1
+      plains_stray:
+        entity: skeleton
+        display: "&bPlains Stray"
+        health: 34
+        damage: 4
+        speed: 0.19
+        target-range: 15
+        xp: 24
+        weight: 30
+        rewards:
+          - chance: 50
+            type: vanilla
+            id: bone
+            count: "1-2"
+
+  irondepths:
+    enabled: true
+    base-alive: 3
+    mobs-per-player: 2
+    max-alive: 12
+    spawn-batch: 2
+    streak-rewards: {}
+    mobs:
+      cave_stalker:
+        entity: spider
+        display: "&8Cave Stalker"
+        health: 58
+        damage: 6
+        speed: 0.20
+        target-range: 16
+        xp: 42
+        weight: 65
+        rewards:
+          - chance: 45
+            type: vanilla
+            id: coal
+            count: "1-3"
+      ironbound_guard:
+        entity: iron_golem
+        display: "&7Ironbound Guard"
+        health: 74
+        damage: 7
+        speed: 0.18
+        target-range: 15
+        xp: 55
+        weight: 35
+        rewards:
+          - chance: 35
+            type: vanilla
+            id: iron_nugget
+            count: "2-5"
+
+  frostreach:
+    enabled: true
+    base-alive: 4
+    mobs-per-player: 2
+    max-alive: 13
+    spawn-batch: 2
+    streak-rewards: {}
+    mobs:
+      frostbitten:
+        entity: zombie
+        display: "&fFrostbitten"
+        health: 92
+        damage: 9
+        speed: 0.20
+        target-range: 17
+        xp: 76
+        weight: 65
+        rewards:
+          - chance: 45
+            type: vanilla
+            id: snowball
+            count: "2-6"
+      icebound_brute:
+        entity: snow_golem
+        display: "&bIcebound Brute"
+        health: 122
+        damage: 11
+        speed: 0.17
+        target-range: 15
+        xp: 96
+        weight: 35
+        rewards:
+          - chance: 30
+            type: vanilla
+            id: packed_ice
+            count: 1
+
+  infernal_rift:
+    enabled: true
+    base-alive: 4
+    mobs-per-player: 2
+    max-alive: 14
+    spawn-batch: 2
+    streak-rewards: {}
+    mobs:
+      rift_cinder:
+        entity: blaze
+        display: "&cRift Cinder"
+        health: 155
+        damage: 14
+        speed: 0.21
+        target-range: 18
+        xp: 125
+        weight: 60
+        rewards:
+          - chance: 40
+            type: vanilla
+            id: blaze_powder
+            count: "1-3"
+      ember_revenant:
+        entity: zombie_pigman
+        display: "&6Ember Revenant"
+        health: 190
+        damage: 16
+        speed: 0.19
+        target-range: 17
+        xp: 155
+        weight: 40
+        rewards:
+          - chance: 30
+            type: vanilla
+            id: magma_cream
+            count: "1-2"
+
+  endfall:
+    enabled: true
+    base-alive: 4
+    mobs-per-player: 2
+    max-alive: 15
+    spawn-batch: 2
+    streak-rewards: {}
+    mobs:
+      endfall_wraith:
+        entity: enderman
+        display: "&dEndfall Wraith"
+        health: 230
+        damage: 19
+        speed: 0.22
+        target-range: 18
+        xp: 190
+        weight: 65
+        rewards:
+          - chance: 35
+            type: vanilla
+            id: ender_pearl
+            count: 1
+      voidbound_knight:
+        entity: iron_golem
+        display: "&5Voidbound Knight"
+        health: 285
+        damage: 22
+        speed: 0.19
+        target-range: 17
+        xp: 230
+        weight: 35
+        rewards:
+          - chance: 25
+            type: vanilla
+            id: chorus_fruit
+            count: "1-2"

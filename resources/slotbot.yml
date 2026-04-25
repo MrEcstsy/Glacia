@@ -2,40 +2,126 @@
 jackpot-chance: 1.0
 
 rewards:
-  - item: "diamond"
-    amount: 1
+  - type: item
+    chance: 10
+    id: "diamond"
+    count: 1
     name: "&r&l&8Diamond Sword"  # optional
     lore:  # optional
       - "&r&7Diamond Sword won from slotbot!"
     enchantments: # optional
       - enchant: "unbreaking"
         level: 1
-  - item: "arrow"
-    amount: 1
-  - item: "apple"
-    amount: 1
-  - item: "beetroot"
-    amount: 1
-  - item: "emerald"
-    amount: 1
-  - item: "lapis_lazuli"
-    amount: 1
-  - item: "chainmail_chestplate"
-    amount: 1
-  - item: "diamond_axe"
-    amount: 1
-  - item: "baked_potato"
-    amount: 1
-  - item: "amethyst_shard"
-    amount: 1
-  - item: "acacia_sign"
-    amount: 1
+  - type: item
+    chance: 10
+    id: "ultimatebook"
+    count: 4
+  - type: item
+    chance: 10
+    id: "ultimatebook"
+    count: 5
+  - type: item
+    chance: 10
+    id: "legendarybook"
+    count: 2
+  - type: item
+    chance: 10
+    id: "legendarybook"
+    count: 3
+  - type: item
+    chance: 10
+    id: "snowman_spawner"
+    count: 1
+  - type: item
+    chance: 10
+    id: "snowman_spawner"
+    count: 2
+  - type: item
+    chance: 10
+    id: "snowman_spawner"
+    count: 3
+  - type: item
+    chance: 10
+    id: "heroic_mysterymobspawner"
+    count: 1
+  - type: item
+    chance: 10
+    id: "heroic_slot_ticket"
+    count: 1
+  - type: item
+    chance: 10
+    id: "glacial_blessing"
+    count: 2
+  - type: item
+    chance: 10
+    id: "weapon_orb"
+    max: 12
+    success: 75
+    count: 1
+  - type: item
+    chance: 10
+    id: "weapon_orb"
+    max: 13
+    success: 33
+    count: 1
+  - type: item
+    chance: 10
+    id: "armor_orb"
+    max: 12
+    success: 75
+    count: 1
+  - type: item
+    chance: 10
+    id: "armor_orb"
+    max: 13
+    success: 33
+    count: 1
+  - type: item
+    chance: 10
+    id: "blackscroll"
+    success: 66
+    count: 2
+  - type: item
+    chance: 10
+    id: "blackscroll"
+    success: 100
+    count: 3
+  - type: item
+    chance: 10
+    id: "legendarydp"
+    count: 3
+  - type: item
+    chance: 10
+    id: "goddp"
+    count: 1
+  - type: item
+    chance: 10
+    id: "eternal_sigil"
+    count: 1
+  - type: item
+    chance: 10
+    id: "astral_devourer"
+    count: 1
+  - type: item
+    chance: 10
+    id: "xpbottle"
+    amount: 200000
+  - type: item
+    chance: 10
+    id: "xpbottle"
+    amount: 275000
 
 # Jackpot rewards
 jackpot-rewards:
-  - item: "xpnote"
+  - type: item
+    chance: 10
+    id: "xpnote"
     amount: 100000
-  - item: "mysterymobspawner"
-    amount: 1
-  - item: "whitescroll"
-    amount: 1
+  - type: item
+    chance: 10
+    id: "mysterymobspawner"
+    count: 1
+  - type: item
+    chance: 10
+    id: "whitescroll"
+    count: 1

@@ -16,7 +16,9 @@ shop:
       buy: 85
     - id: "strong_healing_splash_potion"
       buy: 75
+
   raid: []
+  
   spawners:
     - id: "chicken_spawner"
       buy: 30000
@@ -47,12 +49,224 @@ shop:
     - id: "mysterymobspawner"
       buy: 3000000
 
-  blocks: []
-  ores: []
-  food: []
-  drops: []
+  blocks:
+    - id: "stone"
+      buy: 50
+    - id: "granite"
+      buy: 45
+    - id: "diorite"
+      buy: 45
+    - id: "andesite"
+      buy: 45
+    - id: "grass"
+      buy: 100
+    - id: "dirt"
+      buy: 20
+    - id: "cobblestone"
+      buy: 25
+    - id: "sand"
+      buy: 20
+    - id: "sandstone"
+      buy: 50
+    - id: "glass"
+      buy: 35
+    - id: "gravel"
+      buy: 30
+    - id: "oak_wood"
+      buy: 75
+    - id: "birch_wood"
+      buy: 75
+    - id: "jungle_wood"
+      buy: 75
+    - id: "acacia_wood"
+      buy: 75
+    - id: "dark_oak_wood"
+      buy: 75
+    - id: "oak_leaves"
+      buy: 25
+    - id: "bricks"
+      buy: 100
+    - id: "mossy_cobblestone"
+      buy: 55
+    - id: "obsidian"
+      buy: 450
+    - id: "snow_layer"
+      buy: 40
+    - id: "netherrack"
+      buy: 55
+    - id: "soul_sand"
+      buy: 85
+    - id: "glowstone"
+      buy: 90
+    - id: "stonebrick"
+      buy: 70
+    - id: "chiseled_stonebrick"
+      buy: 80
+    - id: "mycelium"
+      buy: 50
+    - id: "end_stone"
+      buy: 115
+    - id: "quartz_block"
+      buy: 150
+    - id: "prismarine"
+      buy: 95
+    - id: "dark_prismarine"
+      buy: 95
+    - id: "sea_lantern"
+      buy: 65
+    - id: "purpur_block"
+      buy: 215
+
+
+
+  ores:
+    - id: "coal"
+      buy: 400
+    - id: "iron_ingot"
+      buy: 750
+    - id: "gold_ingot"
+      buy: 825
+    - id: lapis_lazuli"
+      buy: 850
+    - id: "diamond"
+      buy: 1350
+    - id: "emerald"
+      buy: 1800
+    - id: "coal_block"
+      buy: 3600
+    - id: "iron_block"
+      buy: 6750
+    - id: "gold_block"
+      buy: 7425
+    - id: "lapis_block"
+      buy: 7650
+    - id: "diamond_block"
+      buy: 12150
+    - id: "emerald_block"
+      buy: 16200
+      
+  food: 
+    - id: "apple"
+      buy: 120
+    - id: "golden_apple"
+      buy: 2500
+    - id: "bread"
+      buy: 120
+    - id: "cooked_porkchop"
+      buy: 350
+    - id: "cooked_fish"
+      buy: 2000
+    - id: "cooked_salmon"
+      buy: 2000
+    - id: "melon"
+      buy: 140
+    - id: "cooked_beef"
+      buy: 350
+    - id: "cooked_chicken"
+      buy: 350
+    - id: "pumpkin_pie"
+      buy: 220
+    - id: "cooked_mutton"
+      buy: 250
+    - id: "beetroot"
+      buy: 140
+
+  drops:
+    -  id: "blaze_rod"
+       buy: 750
+    -  id: "gunpowder"
+       buy: 500
+    -  id: "ender_pearl"
+       buy: 200
+    -  id: "ghast_tear"
+       buy: 1500
+    -  id: "magma_cream"
+       buy: 1275
+    -  id: "bone"
+       buy: 130
+    -  id: "arrow"
+       buy: 200
+    -  id: "slime_ball"
+       buy: 770
+    -  id: "ink_sack"
+       buy: 200
+    -  id: "rotten_flesh"
+       buy: 420
+    -  id: "leather"
+       buy: 150
+    -  id: "raw_beef"
+       buy: 250
+    -  id: "raw_pork"
+       buy: 250
+    -  id: "raw_chicken"
+       buy: 250
+    -  id: "feather"
+       buy: 220
+    -  id: "raw_mutton"
+       buy: 175
+    -  id: "string"
+       buy: 220
+    -  id: "spider_eye"
+       buy: 300 
+           
   special: []
   brewing: []
-  wool: []
+
+  wool: 
+    - id: "wool"
+      buy: 70
+    - id: "orange_wool"
+      buy: 85
+    - id: "magenta_wool"
+      buy: 85
+    - id: "light_blue_wool"
+      buy: 85
+    - id: "yellow_wool"
+      buy: 85
+    - id: "lime_wool"
+      buy: 85
+    - id: "pink_wool"
+      buy: 85
+    - id: "gray_wool"
+      buy: 85
+    - id: "light_gray_wool"
+      buy: 85
+    - id: "cyan_wool"
+      buy: 85
+    - id: "purple_wool"
+      buy: 85
+    - id: "blue_wool"
+      buy: 85
+    - id: "brown_wool"
+      buy: 85
+    - id: "green_wool"
+      buy: 85
+    - id: "red_wool"
+      buy: 85
+    - id: "black_wool"
+      buy: 85
   glass: []
-  base: []
+  base:
+    - id: "sand_gen_bucket_up"
+      buy: 5000
+    - id: "cobble_gen_bucket_up"
+      buy: 15000
+    - id: "obsidian_gen_bucket_up"
+      buy: 22500
+    - id: "bucket"
+      buy: 500
+    - id: "water_bucket"
+      buy: 1000
+    - id: "lava_bucket"
+      buy: 1000
+    - id: packed_ice
+      buy: 250
+    
+    
+    
+    
+    
+    
+  
+  
+  

@@ -380,7 +380,7 @@ rank-kits:
       - chance: 8
         type: item
         id: "slime_spawner"
-      - chance: 8 
+      - chance: 8
         type: item
         id: "enderman_spawner"
       - chance: 8
@@ -399,6 +399,399 @@ rank-kits:
         type: item
         id: "renametag"
 
-gkits: {}
+gkits:
+  soulrender:
+    display: "&r&5&lSoulrender GKit"
+    description: "&r&7A relic forged PvP kit built for\n&r&7relentless pressure and survival."
+    cooldown: "1m"
+    slot: 10
+    warlord: "stormcaller"
+    max-level: 5
+    upgrade-chance-per-level: 8
+    icon:
+      type: item
+      material: "end_crystal"
+      name: "&r&5&lSoulrender"
+    gem-name: "&r&l&5Soulrender Gem"
+    levels:
+      1:
+        enchantments:
+          overload:
+            minimum-level: 1
+            max-level: 2
+          gears:
+            minimum-level: 1
+            max-level: 2
+      2:
+        upgrade-chance-per-enchantment: 10
+        enchantments:
+          overload:
+            minimum-level: 1
+            max-level: 3
+    items:
+      - type: item
+        name: "&r&5Soulrender Headpiece"
+        rune: "bloodfang"
+        material: "diamond_helmet"
+        enchantments:
+          - enchant: "overload"
+            level: 1
+      - type: item
+        material: "diamond_chestplate"
+        enchantments:
+          - enchant: "gears"
+            level: 1
+      - type: item
+        material: "diamond_leggings"
+      - type: item
+        material: "diamond_boots"
+      - type: item
+        material: "diamond_sword"
+        enchantments:
+          - enchant: "lifesteal"
+            level: 1
+            max-level: 5
+      - type: item
+        id: "whitescroll"
+        count: 2
+  nightreign:
+    display: "&r&l&9Nightreign &r&7G-Kit"
+    description: "&r&7A relic forged PvP kit built for\n&r&7relentless pressure and survival."
+    cooldown: "7d"
+    slot: 11
+    warlord: "slimeball"
+    max-level: 5
+    upgrade-chance-per-level: 8
+    icon:
+      type: item
+      material: "leather"
+      name: "&r&l&9Nightreign"
+    gem-name: "&r&l&9Nightreign Gem"
+    levels:
+      1:
+        enchantments:
+          overload:
+            minimum-level: 1
+            max-level: 2
+          gears:
+            minimum-level: 1
+            max-level: 2
+      2:
+        upgrade-chance-per-enchantment: 10
+        enchantments:
+          overload:
+            minimum-level: 1
+            max-level: 3
+    items:
+      - type: item
+        material: "diamond_helmet"
+        enchantments:
+          - enchant: "overload"
+            level: 1
+      - type: item
+        material: "diamond_chestplate"
+        enchantments:
+          - enchant: "gears"
+            level: 1
+      - type: item
+        material: "diamond_leggings"
+      - type: item
+        material: "diamond_boots"
+      - type: item
+        material: "diamond_sword"
+        enchantments:
+          - enchant: "lifesteal"
+            level: 1
+            max-level: 5
+      - type: item
+        id: "whitescroll"
+        count: 2
+  skywarden:
+    display: "&r&l&dSkywarden &r&7G-Kit"
+    description: "&r&7Tales speak of the hidden caches\n&r&7rumoured to be scattered by some\n&r&7floating islands, or was it pyramids?\n\n&r&l&f * &r&dSkywarden Helmet\n&r&l&f * &r&dSkywarden Hammer"
+    cooldown: "1m"
+    slot: 12
+    warlord: "skywarden"
+    max-level: 5
+    upgrade-chance-per-level: 8
+    icon:
+      type: item
+      material: "blaze_rod"
+      name: "&r&l&dSkywarden"
+    gem-name: "&r&l&dSkywarden Gem"
+    levels:
+      1:
+        enchantments:
+          drunk:
+            minimum-level: 1
+            max-level: 1
+          glowing:
+            minimum-level: 1
+            max-level: 1
+          trickster:
+            minimum-level: 1
+            max-level: 1
+          disarmor:
+            minimum-level: 1
+            max-level: 1
+          holy:
+            minimum-level:
+            max-level: 1
+          confusion:
+            minimum-level: 1
+            max-level: 1
+          pummel:
+            minimum-level: 1
+            max-level: 1
 
+      2:
+        upgrade-chance-per-enchantment: 10
+        enchantments:
+          overload:
+            minimum-level: 1
+            max-level: 3
+    items:
+      - type: item
+        name: "&r&dSkywarden Helmet"
+        transmogged: true
+        rune: "colossus"
+        material: "diamond_helmet"
+        enchantments:
+          - enchant: "protection"
+            level: 4
+          - enchant: "unbreaking"
+            level: 3
+          - enchant: "drunk"
+            level: 1
+          - enchant: "glowing"
+            level: 1
+          - enchant: "trickster"
+            level: 1
+
+      - type: item
+        name: "&r&dSkywarden Hammer"
+        transmogged: true
+        material: "diamond_axe"
+        enchantments:
+          - enchant: "disarmor"
+            level: 1
+          - enchant: "holy"
+            level: 1
+          - enchant: "confusion"
+            level: 1
+          - enchant: "pummel"
+            level: 1
+
+
+
+  kyrostellar:
+    display: "&r&l&sKryostellar &r&7G-Kit"
+    description: "&r&7A living vestige that hums\n&r&7with unstable celestial energy.\n\n&r&l&f * &r&sKyrostellar Helmet\n&r&l&f * &r&sKyrostellar Chestplate\n&r&l&f * &r&sKyrostellar Leggings\n&r&l&f * &r&sKyrostellar Bouncepad\n&r&l&f * &r&sKyrostellar Excalibur"
+    cooldown: "1m"
+    slot: 13
+    warlord: "kyrostellar"
+    max-level: 5
+    upgrade-chance-per-level: 8
+    icon:
+      type: item
+      material: "nether_star"
+      name: "&r&l&sKyrostellar"
+    gem-name: "&r&l&sKyrostellar Gem"
+    levels:
+      1:
+        enchantments:
+          overload:
+            minimum-level: 1
+            max-level: 2
+          gears:
+            minimum-level: 1
+            max-level: 2
+      2:
+        upgrade-chance-per-enchantment: 10
+        enchantments:
+          overload:
+            minimum-level: 1
+            max-level: 3
+    items:
+      - type: item
+        material: "diamond_helmet"
+        enchantments:
+          - enchant: "overload"
+            level: 1
+      - type: item
+        material: "diamond_chestplate"
+        enchantments:
+          - enchant: "gears"
+            level: 1
+      - type: item
+        material: "diamond_leggings"
+      - type: item
+        material: "diamond_boots"
+      - type: item
+        material: "diamond_sword"
+        enchantments:
+          - enchant: "lifesteal"
+            level: 1
+            max-level: 5
+      - type: item
+        id: "whitescroll"
+        count: 2
+  astralmancer:
+    display: "&r&l&eAstralmancer &r&7G-Kit"
+    description: "&r&7A relic forged PvP kit built for\n&r&7relentless pressure and survival."
+    cooldown: "7d"
+    slot: 14
+    warlord: "astralmancer"
+    max-level: 5
+    upgrade-chance-per-level: 8
+    icon:
+      type: item
+      material: "experience_bottle"
+      name: "&r&l&eAstralmancer"
+    gem-name: "&r&leAstralmancer Gem"
+    levels:
+      1:
+        enchantments:
+          overload:
+            minimum-level: 1
+            max-level: 2
+          gears:
+            minimum-level: 1
+            max-level: 2
+      2:
+        upgrade-chance-per-enchantment: 10
+        enchantments:
+          overload:
+            minimum-level: 1
+            max-level: 3
+    items:
+      - type: item     
+        rune: "bloodfang"
+        material: "diamond_helmet"
+        enchantments:
+          - enchant: "overload"
+            level: 1
+      - type: item
+        material: "diamond_chestplate"
+        enchantments:
+          - enchant: "gears"
+            level: 1
+      - type: item
+        material: "diamond_leggings"
+      - type: item
+        material: "diamond_boots"
+      - type: item
+        material: "diamond_sword"
+        enchantments:
+          - enchant: "lifesteal"
+            level: 1
+            max-level: 5
+      - type: item
+        id: "whitescroll"
+        count: 2
+  gravebound:
+    display: "&r&l&4Gravebound &r&7G-Kit"
+    description: "&r&7A relic forged PvP kit built for\n&r&7relentless pressure and survival."
+    cooldown: "7d"
+    slot: 15
+    warlord: "gravebound"
+    max-level: 5
+    upgrade-chance-per-level: 8
+    icon:
+      type: item
+      material: "golden_carrot"
+      name: "&r&l&4Gravebound"
+    gem-name: "&r&l&4Gravebound Gem"
+    levels:
+      1:
+        enchantments:
+          overload:
+            minimum-level: 1
+            max-level: 2
+          gears:
+            minimum-level: 1
+            max-level: 2
+      2:
+        upgrade-chance-per-enchantment: 10
+        enchantments:
+          overload:
+            minimum-level: 1
+            max-level: 3
+    items:
+      - type: item
+        material: "diamond_helmet"
+        rune: "bloodfang"
+        enchantments:
+          - enchant: "overload"
+            level: 1
+      - type: item
+        material: "diamond_chestplate"
+        enchantments:
+          - enchant: "gears"
+            level: 1
+      - type: item
+        material: "diamond_leggings"
+      - type: item
+        material: "diamond_boots"
+      - type: item
+        material: "diamond_sword"
+        enchantments:
+          - enchant: "lifesteal"
+            level: 1
+            max-level: 5
+      - type: item
+        id: "whitescroll"
+        count: 2
+  everfrost:
+    display: "&r&l&bEverfrost &r&7G-Kit"
+    description: "&r&7A relic forged PvP kit built for\n&r&7relentless pressure and survival."
+    cooldown: "7d"
+    slot: 16
+    warlord: "everfrost"
+    max-level: 5
+    upgrade-chance-per-level: 8
+    icon:
+      type: item
+      material: "quartz"
+      name: "&r&l&bEverfrost"
+    gem-name: "&r&l&bEverfrost Gem"
+    levels:
+      1:
+        enchantments:
+          overload:
+            minimum-level: 1
+            max-level: 2
+          gears:
+            minimum-level: 1
+            max-level: 2
+      2:
+        upgrade-chance-per-enchantment: 10
+        enchantments:
+          overload:
+            minimum-level: 1
+            max-level: 3
+    items:
+      - type: item
+        material: "diamond_helmet"      
+        enchantments:
+          - enchant: "overload"
+            level: 1
+      - type: item
+        material: "diamond_chestplate"
+        enchantments:
+          - enchant: "gears"
+            level: 1
+      - type: item
+        material: "diamond_leggings"
+      - type: item
+        material: "diamond_boots"
+      - type: item
+        material: "diamond_sword"
+        enchantments:
+          - enchant: "lifesteal"
+            level: 1
+            max-level: 5
+      - type: item
+        id: "whitescroll"
+        count: 2
 vkits: {}

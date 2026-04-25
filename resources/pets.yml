@@ -17,3 +17,33 @@ pets:
     heal: 2
     food: 20
     saturation: 20
+
+  ironclad_wyrm:
+    cooldown: "1h"
+
+  aegis_ram:
+    cooldown: "20m"
+    duration: "10s"
+
+  rift_viper:
+    cooldown: "20m"
+    duration: "6s"
+
+  sunscorch_jackal:
+    cooldown: "45m"
+    duration: "10s"
+
+  runesage_owl:
+    cooldown: "12h"
+    duration: "5m"
+
+  stormcore_behemoth:
+    cooldown: "10m"
+
+  veilmoth:
+    cooldown: "10m"
+    duration: "1m"
+
+  blastforge_hound:
+    cooldown: "15m"
+    duration: "7s"

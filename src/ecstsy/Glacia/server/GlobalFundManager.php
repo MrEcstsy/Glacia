@@ -8,6 +8,7 @@ use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\utils\QueryStmts;
 use ecstsy\Glacia\utils\RewardResolver;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
+use pocketmine\console\ConsoleCommandSender;
 use pocketmine\player\Player;
 use pocketmine\Server;
 use pocketmine\utils\TextFormat as C;
@@ -21,6 +22,7 @@ final class GlobalFundManager
     private int $interval = 7200;
     /** @var int[] */
     private array $milestones = [25, 50, 75, 100];
+    private int $defaultMinimumContribution = 50000;
 
     /** @var array<string, mixed>|null */
     private ?array $activeFund = null;
@@ -39,6 +41,7 @@ final class GlobalFundManager
         $this->config = $config?->getAll() ?? [];
         $this->enabled = (bool) ($this->config["enabled"] ?? true);
         $this->interval = max(60, GeneralUtils::parseTimeString((string) ($this->config["interval"] ?? "2h")));
+        $this->defaultMinimumContribution = max(1, GeneralUtils::parseRandomNumber($this->config["minimum-contribution"] ?? 50000));
 
         $milestones = array_map(
             static fn(mixed $value): int => max(1, min(100, (int) $value)),
@@ -316,6 +319,10 @@ final class GlobalFundManager
             "display_name" => $displayName,
             "description" => $description,
             "goal" => $goal,
+            "minimum_contribution" => max(
+                1,
+                GeneralUtils::parseRandomNumber($selected["minimum-contribution"] ?? $this->config["minimum-contribution"] ?? 50000)
+            ),
             "contributed" => 0,
             "contributors" => [],
             "starts_at" => time(),
@@ -409,7 +416,11 @@ final class GlobalFundManager
 
     private function getMinimumContribution(): int
     {
-        return max(1, (int) GeneralUtils::parseRandomNumber($this->config["minimum-contribution"] ?? 50000));
+        if ($this->activeFund !== null) {
+            return max(1, (int) ($this->activeFund["minimum_contribution"] ?? $this->defaultMinimumContribution));
+        }
+
+        return $this->defaultMinimumContribution;
     }
 
     private function broadcastMilestones(string $contributor, int $contribution): void
@@ -466,19 +477,19 @@ final class GlobalFundManager
 
                     $amount = max(1, GeneralUtils::parseRandomNumber($reward["amount"] ?? 0));
                     $session->addBalance($amount);
-                    $player->sendMessage(C::colorize("&r&aFund Reward: &f$" . number_format($amount)));
+                    $this->sendRewardMessage($player, "$" . number_format($amount));
                     break;
 
                 case "xp":
                     $amount = max(1, GeneralUtils::parseRandomNumber($reward["amount"] ?? 0));
                     $player->getXpManager()->addXp($amount);
-                    $player->sendMessage(C::colorize("&r&aFund Reward: &f" . number_format($amount) . " XP"));
+                    $this->sendRewardMessage($player, number_format($amount) . " XP");
                     break;
 
                 case "command":
                     $command = str_replace("{player}", $player->getName(), (string) ($reward["command"] ?? ""));
                     if ($command !== "") {
-                        Server::getInstance()->dispatchCommand(Server::getInstance()->getConsoleSender(), $command);
+                        Server::getInstance()->dispatchCommand(new ConsoleCommandSender(Server::getInstance(), Server::getInstance()->getLanguage()), $command);
                     }
                     break;
 
@@ -492,7 +503,7 @@ final class GlobalFundManager
                         $player->getWorld()->dropItem($player->getPosition(), $leftover);
                     }
 
-                    $player->sendMessage(C::colorize("&r&aFund Reward: &f" . $item->getName()));
+                    $this->sendRewardMessage($player, $item->getName());
                     break;
             }
         }
@@ -508,6 +519,11 @@ final class GlobalFundManager
                 $online->sendMessage(C::colorize($line));
             }
         }
+    }
+
+    private function sendRewardMessage(Player $player, string $rewardText): void
+    {
+        $player->sendMessage(C::colorize("&r&aFund Reward: &f" . $rewardText));
     }
 
     private function loadState(): void

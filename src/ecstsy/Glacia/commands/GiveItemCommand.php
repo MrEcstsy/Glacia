@@ -138,6 +138,16 @@ class GiveItemCommand extends BaseCommand {
 
                     $item = GlaciaItemFactory::factionXpBooster($multiplier, $durationInput);
                     break;
+                case 'disguise_unlock':
+                case 'disguise':
+                    $disguiseId = $args['extra1'] ?? null;
+                    if ($disguiseId === null) {
+                        $sender->sendMessage(C::RED . "Usage: /giveitem {$itemName} <amount> <disguise>");
+                        return;
+                    }
+
+                    $item = GlaciaItemFactory::disguiseUnlock((string) $disguiseId);
+                    break;
                 case 'lootbox':
                 case 'loot_box':
                 case 'lb':

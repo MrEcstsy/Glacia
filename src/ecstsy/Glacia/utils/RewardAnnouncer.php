@@ -1,0 +1,48 @@
+<?php
+
+declare(strict_types=1);
+
+namespace ecstsy\Glacia\utils;
+
+use ecstsy\Glacia\Loader;
+use pocketmine\item\Item;
+use pocketmine\player\Player;
+use pocketmine\utils\TextFormat as C;
+
+final class RewardAnnouncer {
+
+    /**
+     * @param Item[] $rewards
+     */
+    public static function announce(Player $opener, string $sourceType, string $sourceName, array $rewards): void
+    {
+        if ($rewards === []) {
+            return;
+        }
+
+        $header = strtolower($sourceType) === "slotbot"
+            ? "&r&3&l(!) &r&b" . $opener->getName() . " spun the &fSlotbot&b and received"
+            : "&r&3&l(!) &r&b" . $opener->getName() . " opened a &f{$sourceType}&b: &r{$sourceName}&r&b and received";
+        $message = C::colorize($header);
+        foreach ($rewards as $reward) {
+            $message .= "\n" . C::colorize("&r&5* &r&f" . $reward->getCount() . "x &r" . self::getItemName($reward));
+        }
+
+        foreach (Loader::getInstance()->getServer()->getOnlinePlayers() as $player) {
+            $session = Loader::getPlayerManager()->getSession($player);
+            if ((bool) ($session?->getSetting("notifications") ?? true)) {
+                $player->sendMessage($message);
+            }
+        }
+    }
+
+    private static function getItemName(Item $item): string
+    {
+        $customName = $item->getCustomName();
+        if ($customName !== "") {
+            return $customName;
+        }
+
+        return C::WHITE . $item->getName();
+    }
+}

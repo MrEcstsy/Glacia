@@ -403,7 +403,7 @@ final class CustomEnchantments {
         ],
         'armored' => [
             'display' => '{group-color}Armored',
-            'description' => 'Decreases damage from enemy swords by \n1.85% per level, this enchantment is stackable',
+            'description' => 'Decreases damage from enemy swords by \n0.75% per level, this enchantment is stackable',
             'group' => 'LEGENDARY',
             'maxLevel' => 5,
             'flags' => [ItemEnchantmentTags::HELMET, ItemEnchantmentTags::CHESTPLATE, ItemEnchantmentTags::LEGGINGS, ItemEnchantmentTags::BOOTS],

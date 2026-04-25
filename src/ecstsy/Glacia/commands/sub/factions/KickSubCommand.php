@@ -33,7 +33,7 @@ final class KickSubCommand extends BaseSubCommand {
             return;
         }        
         
-        $tSess = Loader::getPlayerManager()->getSessionByName($targetName);
+        $tSess = Loader::getPlayerManager()->getSessionByPrefix($targetName);
         if ($tSess === null || $tSess->getFactionId() !== $fac->getFactionId()) {
             $sender->sendMessage(GlaciaUtils::format("player.error.not_in_your_faction", ["name" => $targetName]));
             return;

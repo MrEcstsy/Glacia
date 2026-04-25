@@ -39,8 +39,8 @@ final class ArmoredEnchant implements EntityDamageByEntityEnchantmentHandler {
             return;
         }
 
-        // 1.85% per level
-        $reduction = 0.0185 * $level;
+        // 0.75% per level
+        $reduction = 0.0075 * $level;
 
         $event->setBaseDamage($base * (1 - $reduction));
     }

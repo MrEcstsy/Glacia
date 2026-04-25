@@ -9,6 +9,7 @@ use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\ranks\RankManager;
 use ecstsy\Glacia\utils\GlaciaUtils;
+use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
@@ -25,34 +26,31 @@ final class AddPlayerPermissionSubCommand extends BaseSubCommand {
         $permission = trim((string) $args["permission"]);
         $name = (string) $args["player"];
 
-        $target = Loader::getPlayerManager()->getSessionByName($name)?->getPlayer();
-        if (!$target instanceof Player) {
-            $sender->sendMessage(C::colorize("&r&cError: Player '$name' not found or offline."));
+        $session = Loader::getPlayerManager()->getSessionByPrefix($name);
+        if ($session === null) {
+            $sender->sendMessage(C::colorize("&r&cError: Player '$name' not found."));
             return;
         }
 
+        $target = PlayerUtils::getPlayerByPrefix($session->getUsername());
         $rankManager = RankManager::getInstance();
-        try {
-            $attachment = $rankManager->getAttachment($target);
-        } catch (\RuntimeException) {
-            $attachment = $target->addAttachment(Loader::getInstance());
-            $rankManager->setAttachment($target, $attachment);
-        }
-
-        if (($attachment->getPermissions()[$permission] ?? false) === true) {
+        if ($session->hasExtraPermission($permission)) {
             $sender->sendMessage(C::colorize("&r&ePlayer already has '$permission'."));
             return;
         }
 
-        $attachment->setPermission($permission, true);
-        $target->recalculatePermissions();
+        $session->addExtraPermission($permission);
 
-        $sender->sendMessage(C::colorize("&r&aGave player '{$target->getName()}' permission '$permission'."));
-        $target->sendMessage(C::colorize("&r&aYou have been granted permission '$permission'."));
+        if ($target instanceof Player) {
+            $rankManager->updatePermission($target);
+            $target->sendMessage(C::colorize("&r&aYou have been granted permission '$permission'."));
+        }
+
+        $sender->sendMessage(C::colorize("&r&aGave player '{$session->getUsername()}' permission '$permission'."));
 
         GlaciaUtils::logAdminAction("Add Player Permission", [
             "admin" => $sender->getName(),
-            "target" => $target->getName(),
+            "target" => $session->getUsername(),
             "permission" => $permission
         ]);
     }

@@ -25,7 +25,7 @@ final class DropPackageAnimationTask extends Task {
     private const STAGE_REVEAL_REWARDS = 1;
     private const STAGE_FINISH = 2;
 
-    private const BATCH_SIZE = 2;
+    private const BATCH_SIZE = 4;
 
     public function __construct(
         private readonly Player $player,

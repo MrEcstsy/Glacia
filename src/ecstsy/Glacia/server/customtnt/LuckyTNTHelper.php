@@ -60,6 +60,10 @@ final class LuckyTNTHelper {
     }
 
     private static function createSpawnerDrop(SpawnerTile $tile): Item {
+        if ($tile->isZoneSpawner()) {
+            return GlaciaSpawnerItem::createZoneSpawner($tile->getZoneId());
+        }
+
         $legacyId = $tile->getLegacyEntityId();
 
         $entityString = LegacyEntityIdToStringIdMap::getInstance()->legacyToString($legacyId);

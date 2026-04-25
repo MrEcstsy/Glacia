@@ -9,6 +9,7 @@ use pocketmine\block\MobHead;
 use pocketmine\item\Item;
 use pocketmine\item\ItemBlock;
 use pocketmine\player\Player;
+use pocketmine\Server;
 
 final class HatManager {
 
@@ -24,6 +25,7 @@ final class HatManager {
         }
 
         $item = $player->getRenderedHat()->getSourceItem();
+        $player->getRenderedHat()->removeFrom($player, ...Server::getInstance()->getOnlinePlayers());
         $player->setRenderedHat(null);
         return $item;
     }

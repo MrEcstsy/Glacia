@@ -6,6 +6,7 @@ namespace ecstsy\Glacia\utils\screens\lootboxes;
 
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\lootboxes\LootboxRepository;
+use ecstsy\Glacia\utils\RewardAnnouncer;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use ecstsy\MartianUtilities\utils\screens\BaseScreen;
 use muqsit\invmenu\InvMenu;
@@ -23,10 +24,12 @@ use pocketmine\utils\TextFormat as C;
 
 final class LootboxAnimationScreen extends BaseScreen {
 
-    private const TOTAL_SECONDS = 8;
-    private const UPDATE_INTERVAL_TICKS = 4;
+    private const TOTAL_SECONDS = 5;
+    private const UPDATE_INTERVAL_TICKS = 2;
 
     private InvMenu $menu;
+    /** @var array<string, float> */
+    private static array $soundCooldowns = [];
     /** @var Item[] */
     private array $finalRewards;
     /** @var Item[] */
@@ -96,11 +99,7 @@ final class LootboxAnimationScreen extends BaseScreen {
 
                 $remainingSeconds = max(1, self::TOTAL_SECONDS - intdiv($step, $stepsPerSecond));
                 $this->renderFrame($remainingSeconds);
-                PlayerUtils::playSound($this->viewer, "random.orb");
-
-                if ($step % $stepsPerSecond === 0) {
-                    PlayerUtils::playSound($this->viewer, "note.hat");
-                }
+                $this->playThrottledSound("random.click", 0.18);
 
                 $step++;
                 if ($step >= $maxSteps) {
@@ -143,10 +142,16 @@ final class LootboxAnimationScreen extends BaseScreen {
 
         $message = "&r&aLootbox opened! You received:";
         foreach ($this->finalRewards as $reward) {
-            $message .= "\n&r&8- &r&ax" . $reward->getCount() . " " . $reward->getName();
+            $message .= "\n&r&8- &r&ax" . $reward->getCount() . " " . $this->getRewardName($reward);
         }
         $this->viewer->sendMessage(C::colorize($message));
-        PlayerUtils::playSound($this->viewer, "random.levelup");
+        RewardAnnouncer::announce(
+            $this->viewer,
+            "Lootbox",
+            (string) ($this->definition["name"] ?? $this->definition["title"] ?? "Mystery"),
+            $this->finalRewards
+        );
+        $this->playThrottledSound("random.levelup", 1.1);
     }
 
     private function renderFrame(int $remainingSeconds): void
@@ -197,5 +202,23 @@ final class LootboxAnimationScreen extends BaseScreen {
     private function getRandomDisplayItem(): Item
     {
         return clone $this->displayItems[array_rand($this->displayItems)];
+    }
+
+    private function playThrottledSound(string $sound, float $cooldownSeconds): void
+    {
+        $key = $this->viewer->getUniqueId()->toString() . ":" . $sound;
+        $now = microtime(true);
+        if (($now - (self::$soundCooldowns[$key] ?? 0.0)) < $cooldownSeconds) {
+            return;
+        }
+
+        self::$soundCooldowns[$key] = $now;
+        PlayerUtils::playSound($this->viewer, $sound);
+    }
+
+    private function getRewardName(Item $item): string
+    {
+        $customName = $item->getCustomName();
+        return $customName !== "" ? $customName : $item->getName();
     }
 }

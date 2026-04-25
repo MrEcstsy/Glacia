@@ -88,6 +88,16 @@ final class BlackMarketLootTableScreen extends BaseScreen {
             $inv->setItem(45, $prev);
         }
 
+        if (count($this->getEntries()) > self::ITEMS_PER_PAGE) {
+            $indicator = VanillaItems::BOOK();
+            $indicator->setCustomName(C::colorize("&r&bPage &f{$this->page}&7/&f" . $this->getTotalPages()));
+            $indicator->setLore([
+                C::colorize("&r&7Browse the pool without"),
+                C::colorize("&r&7reopening the preview.")
+            ]);
+            $inv->setItem(48, $indicator);
+        }
+
         $back = VanillaBlocks::CHEST()->asItem();
         $back->setCustomName(C::colorize("&r&eBack"));
         $back->setLore([C::colorize("&r&7Click to return to the black market.")]);
@@ -108,5 +118,10 @@ final class BlackMarketLootTableScreen extends BaseScreen {
     private function getPageEntries(): array
     {
         return array_slice($this->getEntries(), ($this->page - 1) * self::ITEMS_PER_PAGE, self::ITEMS_PER_PAGE);
+    }
+
+    private function getTotalPages(): int
+    {
+        return max(1, (int) ceil(count($this->getEntries()) / self::ITEMS_PER_PAGE));
     }
 }

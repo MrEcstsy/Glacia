@@ -1,0 +1,36 @@
+defaults:
+  summoner-name: "&r&f&lWarlord&r&f: {name}"
+  summoner-lore:
+    - "&r&7Summons a warlord equipped with"
+    - "&r&7the {name} &r&7equipment."
+    - ""
+    - "&r&7Defeat this warlord for a guaranteed"
+    - "&r&7drop of the &f/gkit item(s) &7and a"
+    - "&r&fchance &7to get a &f/gkit Redemption Gem"
+    - "&r&7that can be used to unlock the /gkit"
+    - "&r&7on your account for regular use!"
+    - ""
+    - "&r&l&cWARNING&r&c: &7This boss can only be summoned in warzone."
+  entity-name: "&r&l&fWarlord&r&f: {name}"
+  spawn-title: "&r&8Warlord Summoned"
+  spawn-subtitle: "{name} &r&7has entered the Warzone."
+  spawn-message: "&r&8A shattered warlord of {name} &r&8has emerged in the Warzone."
+  death-message: "&r&f{killer} &r&7has defeated the &8Warlord &7of {name}&7."
+  gem-redeem-title: "{name} &r&7Empowered"
+  gem-redeem-subtitle: "&r&7Level &f{level}"
+  gem-redeem-message: "&r&aYou have {verb} {name}&r&a to level &f{level}&a."
+  health: 80
+  damage: 9
+  move-speed: 0.24
+  attack-reach: 2.2
+  attack-cooldown: 9
+  target-range: 24
+  jump-height: 0.42
+  gem-drop-chance: 35
+  gear-drop-chance: 65
+
+warlords:
+  soulrender:
+    id: "soulrender"
+    gkit: "soulrender"
+    display: "&r&5&lSoulrender"

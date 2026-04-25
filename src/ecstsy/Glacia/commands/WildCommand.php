@@ -6,18 +6,39 @@ namespace ecstsy\Glacia\commands;
 
 use CortexPE\Commando\BaseCommand;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\factions\claims\ClaimManager;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
+use pocketmine\block\Block;
+use pocketmine\block\BlockTypeIds;
+use pocketmine\block\Liquid;
 use pocketmine\command\CommandSender;
-use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\scheduler\Task;
 use pocketmine\utils\TextFormat as C;
 use pocketmine\world\Position;
 use pocketmine\world\World;
-use pocketmine\world\WorldException;
 
 final class WildCommand extends BaseCommand {
+
+    private const DEFAULT_MIN_RADIUS = 6000;
+    private const DEFAULT_MAX_RADIUS = 7000;
+    private const DEFAULT_ATTEMPTS = 28;
+    private const HARD_MAX_RADIUS = 7000;
+    private const NEARBY_LAND_SEARCH_RADIUS = 8;
+    private const POPULATION_RETRY_DELAY = 40;
+
+    /** @var int[] */
+    private const UNSAFE_FOOTING = [
+        BlockTypeIds::WATER,
+        BlockTypeIds::LAVA,
+        BlockTypeIds::CACTUS,
+        BlockTypeIds::MAGMA,
+        BlockTypeIds::FIRE,
+        BlockTypeIds::SOUL_FIRE,
+        BlockTypeIds::SWEET_BERRY_BUSH,
+        BlockTypeIds::COBWEB
+    ];
 
     public function prepare(): void
     {
@@ -37,9 +58,10 @@ final class WildCommand extends BaseCommand {
         }
 
         $config = GeneralUtils::getConfiguration(Loader::getInstance(), "misc.yml");
-        $minRadius = max(1, (int) ($config?->get("wild-min-radius", 6000) ?? 6000));
-        $maxRadius = max($minRadius, (int) ($config?->get("wild-max-radius", 10500) ?? 10500));
-        $attempts = max(1, (int) ($config?->get("wild-attempts", 18) ?? 18));
+        $minRadius = max(1, (int) ($config?->get("wild-min-radius", self::DEFAULT_MIN_RADIUS) ?? self::DEFAULT_MIN_RADIUS));
+        $configuredMaxRadius = (int) ($config?->get("wild-max-radius", self::DEFAULT_MAX_RADIUS) ?? self::DEFAULT_MAX_RADIUS);
+        $maxRadius = max($minRadius, min(self::HARD_MAX_RADIUS, $configuredMaxRadius));
+        $attempts = max(1, (int) ($config?->get("wild-attempts", self::DEFAULT_ATTEMPTS) ?? self::DEFAULT_ATTEMPTS));
 
         $sender->sendMessage(C::colorize("&r&bSearching the wilderness for a safe location..."));
         self::searchAndTeleport($sender, $world, $minRadius, $maxRadius, $attempts);
@@ -57,6 +79,7 @@ final class WildCommand extends BaseCommand {
                 return;
             }
         }
+
         $player->sendMessage(C::colorize("&r&cFailed to find a safe wilderness location. Try again."));
     }
 
@@ -68,31 +91,36 @@ final class WildCommand extends BaseCommand {
 
         $chunkX = $x >> 4;
         $chunkZ = $z >> 4;
-
         if (!$world->isChunkLoaded($chunkX, $chunkZ)) {
             if (!$allowPopulateRetry) {
                 return false;
             }
 
             $world->orderChunkPopulation($chunkX, $chunkZ, null);
-            Loader::getInstance()->getScheduler()->scheduleDelayedTask(new class($player, $world, $minRadius, $x, $z, $distance) extends Task {
+            Loader::getInstance()->getScheduler()->scheduleDelayedTask(
+                new class($player, $world, $minRadius, $x, $z, $distance) extends Task {
 
-                public function __construct(
-                    private Player $player,
-                    private World $world,
-                    private int $minRadius,
-                    private int $x,
-                    private int $z,
-                    private int $distance
-                ) {}
+                    public function __construct(
+                        private Player $player,
+                        private World $world,
+                        private int $minRadius,
+                        private int $x,
+                        private int $z,
+                        private int $distance
+                    ) {}
 
-                public function onRun(): void
-                {
-                    if (!WildCommand::teleportAtCandidate($this->player, $this->world, $this->minRadius, $this->x, $this->z, $this->distance, false) && $this->player->isConnected()) {
-                        $this->player->sendMessage(C::colorize("&r&cFailed to find a safe wilderness location. Try again."));
+                    public function onRun(): void
+                    {
+                        if (
+                            !WildCommand::teleportAtCandidate($this->player, $this->world, $this->minRadius, $this->x, $this->z, $this->distance, false) &&
+                            $this->player->isConnected()
+                        ) {
+                            $this->player->sendMessage(C::colorize("&r&cFailed to find a safe wilderness location. Try again."));
+                        }
                     }
-                }
-            }, 40);
+                },
+                self::POPULATION_RETRY_DELAY
+            );
             return true;
         }
 
@@ -116,23 +144,150 @@ final class WildCommand extends BaseCommand {
         $distance = mt_rand($minRadius, $maxRadius);
         $x = (int) round($spawnX + cos($angle) * $distance);
         $z = (int) round($spawnZ + sin($angle) * $distance);
+
         return [$x, $z, $distance];
     }
 
     private static function resolveSafeSpawn(World $world, int $x, int $z, int $minRadius): ?Position
     {
         $spawn = $world->getSpawnLocation();
-        try {
-            $safe = $world->getSafeSpawn(new Vector3($x, $spawn->getY(), $z));
-        } catch (WorldException) {
+
+        $surfaceY = self::resolveSurfaceY($world, $x, $z);
+        if ($surfaceY === null) {
             return null;
         }
 
-        if ($safe->distanceSquared($spawn) < ($minRadius * $minRadius)) {
+        $candidate = new Position($x + 0.5, $surfaceY, $z + 0.5, $world);
+        if ($candidate->distanceSquared($spawn) < ($minRadius * $minRadius)) {
             return null;
         }
 
-        return $safe;
+        if (self::isValidSpawnPosition($candidate)) {
+            return $candidate;
+        }
+
+        return self::findNearbySafePosition($candidate, self::NEARBY_LAND_SEARCH_RADIUS, $spawn, $minRadius);
+    }
+
+    private static function resolveSurfaceY(World $world, int $x, int $z): ?int
+    {
+        $topY = $world->getHighestBlockAt($x, $z);
+        if ($topY <= 0) {
+            return null;
+        }
+
+        $topBlock = $world->getBlockAt($x, $topY, $z);
+        if (!self::isUnsafeTopBlock($topBlock)) {
+            return $topY + 1;
+        }
+
+        for ($y = $topY; $y >= max(1, $topY - 12); --$y) {
+            $ground = $world->getBlockAt($x, $y, $z);
+            if (!$ground->isSolid() || self::isUnsafeGround($ground)) {
+                continue;
+            }
+
+            $feet = $world->getBlockAt($x, $y + 1, $z);
+            $head = $world->getBlockAt($x, $y + 2, $z);
+            if (self::isPassableForSpawn($feet) && self::isPassableForSpawn($head)) {
+                return $y + 1;
+            }
+        }
+
+        return null;
+    }
+
+    private static function findNearbySafePosition(Position $origin, int $radius, Position $spawn, int $minRadius): ?Position
+    {
+        $world = $origin->getWorld();
+        $originX = $origin->getFloorX();
+        $originZ = $origin->getFloorZ();
+
+        for ($r = 1; $r <= $radius; $r++) {
+            for ($dx = -$r; $dx <= $r; $dx++) {
+                for ($dz = -$r; $dz <= $r; $dz++) {
+                    if (max(abs($dx), abs($dz)) !== $r) {
+                        continue;
+                    }
+
+                    $x = $originX + $dx;
+                    $z = $originZ + $dz;
+                    if (!$world->isChunkLoaded($x >> 4, $z >> 4)) {
+                        continue;
+                    }
+
+                    $surfaceY = self::resolveSurfaceY($world, $x, $z);
+                    if ($surfaceY === null) {
+                        continue;
+                    }
+
+                    $candidate = new Position($x + 0.5, $surfaceY, $z + 0.5, $world);
+                    if ($candidate->distanceSquared($spawn) < ($minRadius * $minRadius)) {
+                        continue;
+                    }
+
+                    if (self::isValidSpawnPosition($candidate)) {
+                        return $candidate;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static function isValidSpawnPosition(Position $position): bool
+    {
+        $world = $position->getWorld();
+        $x = $position->getFloorX();
+        $y = $position->getFloorY();
+        $z = $position->getFloorZ();
+
+        if ($y <= 1) {
+            return false;
+        }
+
+        $ground = $world->getBlockAt($x, $y - 1, $z);
+        $feet = $world->getBlockAt($x, $y, $z);
+        $head = $world->getBlockAt($x, $y + 1, $z);
+
+        if (!$ground->isSolid() || self::isUnsafeGround($ground)) {
+            return false;
+        }
+
+        if (!self::isPassableForSpawn($feet) || !self::isPassableForSpawn($head)) {
+            return false;
+        }
+
+        if (ClaimManager::getInstance()->getClaimAtPosition($position) !== null) {
+            return false;
+        }
+
+        if (Loader::getRegionManager()->getRegionAt($position) !== null) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static function isPassableForSpawn(Block $block): bool
+    {
+        return !$block->isSolid() && !($block instanceof Liquid) && !self::isUnsafeBlockId($block->getTypeId());
+    }
+
+    private static function isUnsafeGround(Block $block): bool
+    {
+        return $block instanceof Liquid || !$block->isSolid() || $block->isTransparent() || self::isUnsafeBlockId($block->getTypeId());
+    }
+
+    private static function isUnsafeTopBlock(Block $block): bool
+    {
+        return $block instanceof Liquid || self::isUnsafeBlockId($block->getTypeId());
+    }
+
+    private static function isUnsafeBlockId(int $typeId): bool
+    {
+        return in_array($typeId, self::UNSAFE_FOOTING, true);
     }
 
     public function getPermission(): string

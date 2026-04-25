@@ -1,7 +1,6 @@
 enabled: true
 interval: "2h"
 default-duration: "30m"
-minimum-contribution: 50000
 milestone-broadcasts:
   - 25
   - 50

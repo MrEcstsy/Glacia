@@ -1,12 +1,35 @@
-normal:
-  heal: 7.0
+# NOTE:
+# Values are in HEALTH, not hearts.
+# 1.0 = half a heart
+# 2.0 = one full heart
+healing-potions:
+  enabled: true 
 
-strong:
-  heal: 9.0
+  self-splash:
+    enabled: true
 
-self-splash:
-  max-impact-distance: 2.35
-  min-intensity: 0.90
-  pitch-assist:
-    min-look-up-pitch: -55.0
-    bonus-intensity: 0.10
+    max-impact-distance: 2.6 # Max distance (in blocks) from impact point to player for self-splash bonus to apply
+                             # Increase = more forgiving self-pots
+                             # Decrease = more precise timing/position required
+
+    normal-bonus: 0.75 # Extra health added to NORMAL healing splash potions (1.0 = half a heart)
+    strong-bonus: 1.5  # Extra health added to STRONG healing splash potions
+
+    direct-hit:
+      enabled: true 
+
+      normal-bonus: 0.75 # Bonus when a NORMAL potion directly hits the player (chest/head hit)
+      strong-bonus: 1.5  # Bonus when a STRONG potion directly hits the player
+
+      # Direct hits usually occur when throwing forward and the potion clips your body
+
+    pitch-assist:
+      enabled: true 
+
+      min-look-up-pitch: -42.0 # Minimum pitch required to activate this bonus
+                              # Lower (e.g. -30) = easier to trigger
+                              # Higher (e.g. -60) = requires looking more upward
+
+      bonus-heal: 0.25 # Additional health given when pitch assist is active
+
+      # This helps reward proper "self-potting" angles without requiring perfect aim

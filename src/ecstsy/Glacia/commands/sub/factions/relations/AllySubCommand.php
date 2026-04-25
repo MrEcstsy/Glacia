@@ -82,7 +82,7 @@ final class AllySubCommand extends BaseSubCommand {
         }
 
         $leaderName = $targetFaction->getLeaderName();
-        $targetPlayer = Loader::getInstance()->getServer()->getPlayerExact($leaderName);
+        $targetPlayer = PlayerUtils::getPlayerByPrefix($leaderName);
         if ($targetPlayer === null) {
             $sender->sendMessage(C::colorize("&r&l&c(✘) &r&cThis faction has no leader online."));
             return;

@@ -8,8 +8,9 @@ use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\utils\GlaciaUtils;
+use ecstsy\Glacia\utils\screens\faction\LeaderTransferConfirmScreen;
 use pocketmine\command\CommandSender;
-use pocketmine\utils\TextFormat as C;
+use pocketmine\player\Player;
 
 final class TransferSubCommand extends BaseSubCommand {
 
@@ -17,21 +18,26 @@ final class TransferSubCommand extends BaseSubCommand {
         $this->setPermission($this->getPermission());
         $this->registerArgument(0, new RawStringArgument("player", false));
     }
+
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void {
-        $sess = Loader::getPlayerManager()->getSession($sender);
-        $fac  = $sess->getFaction();
-        if (!$fac || $sess->getFactionRole() !== "leader") {
+        if (!$sender instanceof Player) {
+            return;
+        }
+
+        $session = Loader::getPlayerManager()->getSession($sender);
+        $faction = $session?->getFaction();
+        if ($session === null || $faction === null || $session->getFactionRole() !== "leader") {
             $sender->sendMessage(GlaciaUtils::format("faction.error.permission_denied"));
             return;
         }
-        $newL = Loader::getPlayerManager()->getSessionByName($args["player"]);
-        if (!$newL || $newL->getFactionId() !== $fac->getFactionId()) {
-            $sender->sendMessage(GlaciaUtils::format("faction.error.not_in_your_faction", ["player" => $args["player"]]));
+
+        $target = Loader::getPlayerManager()->getSessionByPrefix((string) ($args["player"] ?? ""));
+        if ($target === null || $target->getFactionId() !== $faction->getFactionId()) {
+            $sender->sendMessage(GlaciaUtils::format("faction.error.not_in_your_faction", ["player" => (string) ($args["player"] ?? "")]));
             return;
         }
-        $fac->transferLeadership($fac->getFactionId(), $newL->getUuid());
-        $sender->sendMessage(C::colorize("&r&l&a(✓) &r&aYou transferred leadership to &2" . $args["player"] . "&a."));
-        $newL->getPlayer()?->sendMessage(C::colorize("&r&l&a(✓) &r&aYou are now the leader of &2" . $fac->getName() . "&a."));
+
+        LeaderTransferConfirmScreen::display($sender, $target->getUsername());
     }
 
     public function getPermission(): string {

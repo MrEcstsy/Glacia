@@ -253,13 +253,13 @@ final class QuestInstance {
     {
         $data = self::$tiers[$tier] ?? null;
         if ($data === null) {
-            $player->sendMessage(C::colorize("&cInvalid quest tier."));
+            self::sendQuestMessage($player, "&r&cThat quest tier does not exist.");
             return;
         }
 
         $quest = $data["quests"][$questIndex] ?? null;
         if ($quest === null) {
-            $player->sendMessage(C::colorize("&cInvalid quest selection."));
+            self::sendQuestMessage($player, "&r&cThat quest could not be found.");
             return;
         }
 
@@ -277,8 +277,12 @@ final class QuestInstance {
         $item->setNamedTag($nbt);
 
         self::updateQuestLore($item);
-        $player->getInventory()->addItem($item);
-        $player->sendMessage(C::colorize("&aYou received the quest: &f{$quest['name']}&a."));
+        $leftovers = $player->getInventory()->addItem($item);
+        foreach ($leftovers as $leftover) {
+            $player->getWorld()->dropItem($player->getPosition(), $leftover);
+        }
+
+        self::sendQuestMessage($player, "&r&aYou received the quest &f{$quest['name']}&a.");
     }
 
     public static function updateQuestLore(Item $item): void
@@ -296,10 +300,7 @@ final class QuestInstance {
             return;
         }
 
-        $progressData = json_decode($nbt->getString("glacia_quest_progress", "[]"), true);
-        if (!is_array($progressData)) {
-            $progressData = [];
-        }
+        $progressData = self::decodeProgressData($nbt);
 
         $lore = [];
         $lore[] = C::colorize("&r&7A mystical sigil that records your deeds.");
@@ -365,10 +366,7 @@ final class QuestInstance {
                 continue;
             }
 
-            $progressData = json_decode($nbt->getString("glacia_quest_progress", "[]"), true);
-            if (!is_array($progressData)) {
-                $progressData = [];
-            }
+            $progressData = self::decodeProgressData($nbt);
 
             $updated = false;
             foreach ($quest["objectives"] as $objectiveIndex => $objective) {
@@ -601,5 +599,28 @@ final class QuestInstance {
         $empty = str_repeat("|", $barLength - $fillCount);
         $percent = min(100, (int) round(($progress / max(1, $goal)) * 100));
         return "&r&7[{$color}{$filled}&8{$empty}&7] &f{$percent}%";
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private static function decodeProgressData(CompoundTag $nbt): array
+    {
+        $progressData = json_decode($nbt->getString("glacia_quest_progress", "[]"), true);
+        if (!is_array($progressData)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($progressData as $index => $value) {
+            $normalized[(int) $index] = max(0, (int) $value);
+        }
+
+        return $normalized;
+    }
+
+    private static function sendQuestMessage(Player $player, string $message): void
+    {
+        $player->sendMessage(C::colorize($message));
     }
 }

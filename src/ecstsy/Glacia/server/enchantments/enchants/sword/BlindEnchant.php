@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\server\enchantments\enchants\sword;
 
+use ecstsy\Glacia\entity\gkits\ForsakenChampion;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\entity\Living;
@@ -21,15 +23,16 @@ final class BlindEnchant implements EntityDamageByEntityEnchantmentHandler {
         if ($event->isCancelled()) return;
 
         $damager = $event->getDamager();
-        if (!$damager instanceof Player) return;
+        if (!$damager instanceof Living) return;
 
         $victim = $event->getEntity();
         if (!$victim instanceof Living) return;
 
-        $item = $damager->getInventory()->getItemInHand();
+        $item = $damager instanceof Player ? $damager->getInventory()->getItemInHand() : ($damager instanceof ForsakenChampion ? $damager->getCombatItem() : null);
+        if ($item === null) return;
         if (!CustomEnchantmentManager::hasEnchantment($item, "blind")) return;
 
-        $session = PlayerManager::getInstance()->getSession($damager);
+        $session = $damager instanceof Player ? PlayerManager::getInstance()->getSession($damager) : null;
 
         $data = [
             1 => ["chance" => 25, "cd" => 2, "duration" => 60,  "effectLevel" => 0],
@@ -39,10 +42,12 @@ final class BlindEnchant implements EntityDamageByEntityEnchantmentHandler {
 
         $cfg = $data[$level] ?? $data[1];
 
-        if (mt_rand(1, 100) > $cfg["chance"]) return;
-        if ($session->isOnCooldown("blind")) return;
+        if (!ProcLuckManager::roll($damager, "blind", $cfg["chance"], 2, 12)) return;
+        if ($session !== null && $session->isOnCooldown("blind")) return;
 
-        $session->addCooldown("blind", $cfg["cd"]);
+        if ($session !== null) {
+            $session->addCooldown("blind", 1);
+        }
 
         $victim->getEffects()->add(
             new EffectInstance(

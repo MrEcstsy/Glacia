@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\kits;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\player\GlaciaPlayer;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\utils\RewardResolver;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
@@ -206,17 +207,7 @@ final class KitRepository {
             return false;
         }
 
-        $overflow = [];
-        foreach ($items as $item) {
-            $leftovers = $player->getInventory()->addItem(clone $item);
-            foreach ($leftovers as $leftover) {
-                $overflow[] = $leftover;
-            }
-        }
-
-        foreach ($overflow as $item) {
-            $session->addItemToCollection($item);
-        }
+        $overflow = self::deliverItems($player, $session, $items);
 
         $cooldown = (int) ($kit["cooldown"] ?? 0);
         if ($cooldown > 0) {
@@ -248,17 +239,7 @@ final class KitRepository {
             return false;
         }
 
-        $overflow = [];
-        foreach ($items as $item) {
-            $leftovers = $player->getInventory()->addItem(clone $item);
-            foreach ($leftovers as $leftover) {
-                $overflow[] = $leftover;
-            }
-        }
-
-        foreach ($overflow as $item) {
-            $session->addItemToCollection($item);
-        }
+        $overflow = self::deliverItems($player, $session, $items);
 
         PlayerUtils::playSound($player, "random.levelup");
         $player->sendMessage(TextFormat::colorize("&r&aReceived &f" . ((string) $kit["display"]) . "&r&a."));
@@ -325,5 +306,23 @@ final class KitRepository {
     private static function getDisplayItemCount(array $kit): int
     {
         return count($kit["items"] ?? []) + max(0, (int) ($kit["random-rolls"] ?? 0));
+    }
+
+    /**
+     * @param list<Item> $items
+     * @return list<Item>
+     */
+    private static function deliverItems(Player $player, GlaciaPlayer $session, array $items): array
+    {
+        $overflow = [];
+        foreach ($items as $item) {
+            $leftovers = $player->getInventory()->addItem(clone $item);
+            foreach ($leftovers as $leftover) {
+                $overflow[] = $leftover;
+                $session->addItemToCollection($leftover);
+            }
+        }
+
+        return $overflow;
     }
 }

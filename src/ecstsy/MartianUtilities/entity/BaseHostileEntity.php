@@ -11,6 +11,7 @@ use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\math\Vector3;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\player\Player;
+use pocketmine\utils\TextFormat;
 use pocketmine\world\Position;
 
 abstract class BaseHostileEntity extends Living {
@@ -54,6 +55,10 @@ abstract class BaseHostileEntity extends Living {
 
         if ($this->attackCooldown > 0) {
             $this->attackCooldown -= $tickDiff;
+        }
+
+        if (($this->ticksLived % 10) === 0) {
+            $this->updateHealthNameTag();
         }
 
         if ($this->pathCooldown > 0) {
@@ -416,6 +421,18 @@ abstract class BaseHostileEntity extends Living {
 
     protected function getSeparationStrength(): float {
         return 0.18;
+    }
+
+    protected function updateHealthNameTag(): void {
+        $health = max(0, (int) ceil($this->getHealth()));
+        $max = max(1, (int) ceil($this->getMaxHealth()));
+        $color = $health <= ($max * 0.3) ? TextFormat::RED : ($health <= ($max * 0.6) ? TextFormat::YELLOW : TextFormat::GREEN);
+
+        $this->setNameTag(TextFormat::colorize(
+            "&r&l" . $this->getName() . "\n&r" . $color . "HP &f{$health}&7/&f{$max}"
+        ));
+        $this->setNameTagVisible(true);
+        $this->setNameTagAlwaysVisible(true);
     }
     
 }

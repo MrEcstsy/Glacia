@@ -1,0 +1,59 @@
+name: "&r&l&vArmor Crown Jewels"
+title: "&r&l&vArmor Crown Jewels"
+aliases:
+  - "acj"
+  - ""
+  - ""
+icon: "clock"
+glow: true
+item-name: "&r&l&vArmor Crown Jewels"
+item-lore:
+  - "&r&7Unmatched destructive power, soul-"
+  - "&r&7crushing strikes and an aura that"
+  - "&r&7will make your foes flee in panic."
+  - ""
+  - "&r&l&fCommon Loot (&r&76 items&l&f)"
+  - "&r&f&l * &r&7x2 &l&6Armor Enchantment Orb &l&f(&r&714 lore, 100%&l&f)"
+  - "&r&f&l * &r&7x6 &l&fBlack Scrolls &l&f(&r&790%&l&f)"
+  - "&r&f&l * &r&7x2 &l&4Mastery Black Scrolls &l&f(&r&755%&l&f)"
+  - "&r&f&l * &r&7x2 &l&tHoly White Scroll"
+  - "&r&l&f * &l&aExperience Bottle &l&f(&r&710,000,000&l&f)"
+  - "&r&l&f * &l&3Nearly Max Armor Set Generator"
+  - ""
+  - "&r&l&eBonus Loot &l&f(&r&71 item&l&f)"
+  - "&r&l&f * &r&l&6Easter &e2026 &6Armor &eEnchantment &6Table"
+
+rolls:
+  - pool: "rewards"
+    count: 1
+    chance: 100
+    mode: "random"
+
+rewards:
+  - chance: 25
+    type: item
+    id: "armor_orb"
+    max: 14
+    success: 100
+
+  - chance: 25
+    type: item
+    id: "blackscroll"
+    success: 90
+    count: 6
+
+  - chance: 25
+    type: item
+    id: "xpnote"
+    count: 10000000
+
+  - chance: 25
+    type: item
+    id: "ultimatebook"
+    count: 1
+    
+  - jackpot-rewards:
+    chance: 25
+    type: item
+    id: "legendarybook"
+    count: 1

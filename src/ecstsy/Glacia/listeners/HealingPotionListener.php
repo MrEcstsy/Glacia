@@ -6,11 +6,11 @@ namespace ecstsy\Glacia\listeners;
 
 use ecstsy\Glacia\server\combat\potions\HealingPotionSettings;
 use pocketmine\entity\effect\VanillaEffects;
-use pocketmine\entity\Living;
 use pocketmine\entity\projectile\SplashPotion;
+use pocketmine\event\entity\ProjectileHitEntityEvent;
+use pocketmine\event\entity\ProjectileHitEvent;
 use pocketmine\event\Listener;
 use pocketmine\player\Player;
-use pocketmine\potion\VanillaPotions;
 
 final class HealingPotionListener implements Listener {
 
@@ -18,67 +18,32 @@ final class HealingPotionListener implements Listener {
         private HealingPotionSettings $settings
     ){}
 
-    public function onPotionSplash(PotionSplashEvent $event): void
+    public function onProjectileHit(ProjectileHitEvent $event): void
     {
         if(!$this->settings->isEnabled()){
             return;
         }
 
-        $potion = $event->getPotion();
-        if(!$potion instanceof SplashPotion){
+        $projectile = $event->getEntity();
+        if(!$projectile instanceof SplashPotion){
             return;
         }
 
-        $strong = null;
-        if(!$this->isHealingPotion($potion, $strong)){
-            return;
-        }
-
-        $baseHeal = $strong ? $this->settings->getStrongHeal() : $this->settings->getNormalHeal();
-
-        $affected = $event->getAffectedEntities();
-
-        foreach($affected as $entity){
-            if(!$entity instanceof Living || !$entity->isAlive()){
-                continue;
-            }
-
-            $intensity = max(0.0, min($this->settings->getMaxIntensity(), $event->getIntensity($entity)));
-
-            // Prevent vanilla instant-heal from applying
-            $event->setIntensity($entity, 0.0);
-
-            if($intensity <= 0.0){
-                continue;
-            }
-
-            $this->healEntity($entity, $baseHeal * $intensity);
-        }
-
-        $this->handleSelfSplashAssist($event, $potion, $baseHeal, $affected);
-    }
-
-    /**
-     * Gives the thrower a more reliable self-pot if the impact is close enough.
-     *
-     * @param list<Living> $affected
-     */
-    private function handleSelfSplashAssist(
-        PotionSplashEvent $event,
-        SplashPotion $potion,
-        float $baseHeal,
-        array $affected
-    ): void {
-        if(!$this->settings->isSelfSplashEnabled()){
-            return;
-        }
-
-        $owner = $potion->getOwningEntity();
+        $owner = $projectile->getOwningEntity();
         if(!$owner instanceof Player || !$owner->isAlive()){
             return;
         }
 
-        $impactPosition = $potion->getPosition();
+        $strong = false;
+        if(!$this->isHealingPotion($projectile, $strong)){
+            return;
+        }
+
+        if(!$this->settings->isSelfSplashEnabled()){
+            return;
+        }
+
+        $impactPosition = $projectile->getPosition();
         if(!$impactPosition->isValid()){
             return;
         }
@@ -88,70 +53,46 @@ final class HealingPotionListener implements Listener {
             return;
         }
 
-        $currentIntensity = 0.0;
-        $alreadyAffected = false;
+        $directHitOnOwner =
+            $event instanceof ProjectileHitEntityEvent &&
+            $event->getEntityHit() === $owner;
 
-        foreach($affected as $entity){
-            if($entity === $owner){
-                $alreadyAffected = true;
-                $currentIntensity = $event->getIntensity($owner);
-                break;
-            }
+        if($directHitOnOwner && $this->settings->isDirectHitEnabled()){
+            $bonus = $strong
+                ? $this->settings->getDirectHitStrongBonus()
+                : $this->settings->getDirectHitNormalBonus();
+        }else{
+            $bonus = $strong
+                ? $this->settings->getStrongSelfBonus()
+                : $this->settings->getNormalSelfBonus();
         }
-
-        $targetIntensity = $this->settings->getMinSelfIntensity();
 
         if(
             $this->settings->isPitchAssistEnabled() &&
             $owner->getLocation()->getPitch() <= $this->settings->getPitchAssistMinLookUpPitch()
         ){
-            $targetIntensity += $this->settings->getPitchAssistBonusIntensity();
+            $bonus += $this->settings->getPitchAssistBonusHeal();
         }
 
-        $targetIntensity = max(0.0, min($this->settings->getMaxIntensity(), $targetIntensity));
-
-        if($alreadyAffected){
-            // Vanilla heal was disabled above, so only give the missing difference.
-            $missingIntensity = max(0.0, $targetIntensity - $currentIntensity);
-            if($missingIntensity > 0.0){
-                $this->healEntity($owner, $baseHeal * $missingIntensity);
-            }
+        if($bonus <= 0){
             return;
         }
 
-        // Not affected at all by vanilla splash, but impact was close enough to count as a self-pot.
-        $this->healEntity($owner, $baseHeal * $targetIntensity);
+        $owner->setHealth(
+            min($owner->getMaxHealth(), $owner->getHealth() + $bonus)
+        );
     }
 
-    private function healEntity(Living $entity, float $amount): void
-    {
-        if($amount <= 0.0 || !$entity->isAlive()){
-            return;
-        }
-
-        $maxHealth = $entity->getMaxHealth();
-        $newHealth = min($maxHealth, $entity->getHealth() + $amount);
-
-        if($newHealth > $entity->getHealth()){
-            $entity->setHealth($newHealth);
-        }
-    }
-
-    private function isHealingPotion(SplashPotion $potion, ?bool &$strong = false): bool
+    private function isHealingPotion(SplashPotion $potion, bool &$strong = false): bool
     {
         $strong = false;
 
-        $type = $potion->getPotionType();
-
-        foreach($type->getEffects() as $effect){
-            $effectType = $effect->getType();
-
-            if($effectType !== VanillaEffects::INSTANT_HEALTH()){
+        foreach($potion->getPotionType()->getEffects() as $effect){
+            if($effect->getType() !== VanillaEffects::INSTANT_HEALTH()){
                 continue;
             }
 
-            $amplifier = method_exists($effect, "getAmplifier") ? $effect->getAmplifier() : 0;
-            $strong = $amplifier >= 1;
+            $strong = $effect->getAmplifier() >= 1;
             return true;
         }
 

@@ -17,6 +17,7 @@ use ecstsy\Glacia\commands\BanCommand;
 use ecstsy\Glacia\commands\BlackMarketCommand;
 use ecstsy\Glacia\commands\CreateHomeCommand;
 use ecstsy\Glacia\commands\CreateWarpCommand;
+use ecstsy\Glacia\commands\DisguiseCommand;
 use ecstsy\Glacia\commands\EcoCommand;
 use ecstsy\Glacia\commands\EnchanterCommand;
 use ecstsy\Glacia\commands\EnderChestCommand;
@@ -33,6 +34,7 @@ use ecstsy\Glacia\commands\GraceCommand;
 use ecstsy\Glacia\commands\HomeCommand;
 use ecstsy\Glacia\commands\HomesCommand;
 use ecstsy\Glacia\commands\InvSeeCommand;
+use ecstsy\Glacia\commands\ItemCategoryCommand;
 use ecstsy\Glacia\commands\KickCommand;
 use ecstsy\Glacia\commands\ListWarpsCommand;
 use ecstsy\Glacia\commands\LootboxTestCommand;
@@ -53,6 +55,7 @@ use ecstsy\Glacia\commands\TPACommand;
 use ecstsy\Glacia\commands\TPADenyCommand;
 use ecstsy\Glacia\commands\TPAHereCommand;
 use ecstsy\Glacia\commands\TrashCommand;
+use ecstsy\Glacia\commands\UndisguiseCommand;
 use ecstsy\Glacia\commands\ReapplyCommand;
 use ecstsy\Glacia\commands\WithdrawCommand;
 use ecstsy\Glacia\commands\WarpCommand;
@@ -70,6 +73,7 @@ use ecstsy\Glacia\commands\FeedCommand;
 use ecstsy\Glacia\commands\FundCommand;
 use ecstsy\Glacia\commands\FlyCommand;
 use ecstsy\Glacia\commands\GamemodeCommand;
+use ecstsy\Glacia\commands\GKitCommand;
 use ecstsy\Glacia\commands\HatCommand;
 use ecstsy\Glacia\commands\HealCommand;
 use ecstsy\Glacia\commands\JackpotCommand;
@@ -77,6 +81,7 @@ use ecstsy\Glacia\commands\MoreCommand;
 use ecstsy\Glacia\commands\PingCommand;
 use ecstsy\Glacia\commands\SeeBragCommand;
 use ecstsy\Glacia\commands\SeeItemCommand;
+use ecstsy\Glacia\commands\ScoreboardCommand;
 use ecstsy\Glacia\commands\SettingsCommand;
 use ecstsy\Glacia\commands\ShopCommand;
 use ecstsy\Glacia\commands\SlotbotCommand;
@@ -93,11 +98,24 @@ use ecstsy\Glacia\entity\envoys\EnvoySlime;
 use ecstsy\Glacia\entity\envoys\EnvoyZombie;
 use ecstsy\Glacia\entity\envoys\EnvoyZombiePigman;
 use ecstsy\Glacia\entity\FloatingTextEntity;
+use ecstsy\Glacia\entity\gkits\ForsakenChampion;
 use ecstsy\Glacia\entity\GlaciaExplosiveCreeper;
 use ecstsy\Glacia\entity\mobs\GlaciaLightningStrike;
 use ecstsy\Glacia\entity\GlaciaPrimedTNT;
+use ecstsy\Glacia\entity\GlaciaSplashPotion;
 use ecstsy\Glacia\entity\RiftEntity;
 use ecstsy\Glacia\entity\RiftWalkerEntity;
+use ecstsy\Glacia\entity\zones\ZoneMob;
+use ecstsy\Glacia\entity\zones\ZoneMobBlaze;
+use ecstsy\Glacia\entity\zones\ZoneMobCreeper;
+use ecstsy\Glacia\entity\zones\ZoneMobEnderman;
+use ecstsy\Glacia\entity\zones\ZoneMobIronGolem;
+use ecstsy\Glacia\entity\zones\ZoneMobMagmaCube;
+use ecstsy\Glacia\entity\zones\ZoneMobPigman;
+use ecstsy\Glacia\entity\zones\ZoneMobSkeleton;
+use ecstsy\Glacia\entity\zones\ZoneMobSlime;
+use ecstsy\Glacia\entity\zones\ZoneMobSnowGolem;
+use ecstsy\Glacia\entity\zones\ZoneMobSpider;
 use ecstsy\Glacia\listeners\CustomArmorListener;
 use ecstsy\Glacia\listeners\CollectionChestListener;
 use ecstsy\Glacia\listeners\CustomTNTListener;
@@ -110,12 +128,16 @@ use ecstsy\Glacia\listeners\ItemListener;
 use ecstsy\Glacia\listeners\LevelListener;
 use ecstsy\Glacia\listeners\QuestListener;
 use ecstsy\Glacia\listeners\RegionListener;
+use ecstsy\Glacia\listeners\VanillaEnchantmentSyncListener;
 use ecstsy\Glacia\listeners\WorldBorderListener;
+use ecstsy\Glacia\listeners\ZoneListener;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\combat\potions\HealingPotionSettings;
 use ecstsy\Glacia\server\economy\SellHandler;
+use ecstsy\Glacia\server\disguises\DisguiseManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
+use ecstsy\Glacia\server\enchantments\manager\EnchantEffectManager;
 use ecstsy\Glacia\server\enchantments\enchants\armor\AngelicEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\armor\ArmoredEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\armor\CurseEnchant;
@@ -166,6 +188,7 @@ use ecstsy\Glacia\server\enchantments\enchants\sword\SilenceEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\SlownessEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\VampireEnchant;
 use ecstsy\Glacia\server\enchantments\manager\EnchantEventRegistry;
+use ecstsy\Glacia\server\enchantments\vanilla\ExtendedVanillaEnchantmentRegistry;
 use ecstsy\Glacia\server\factions\claims\FactionClaim;
 use ecstsy\Glacia\server\factions\relations\RelationManager;
 use ecstsy\Glacia\server\FloatingTextInstance;
@@ -173,6 +196,7 @@ use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\server\items\GlaciaItems;
 use ecstsy\Glacia\server\items\GlaciaSpawnerItem;
 use ecstsy\Glacia\server\items\genbuckets\GenBucketManager;
+use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\Glacia\server\lootboxes\LootboxRepository;
 use ecstsy\Glacia\server\levels\PlayerLevelManager;
 use ecstsy\Glacia\server\quests\QuestInstance;
@@ -184,6 +208,7 @@ use ecstsy\Glacia\server\scoreboard\ScoreboardHelper;
 use ecstsy\Glacia\server\spawners\SpawnerWorthManager;
 use ecstsy\Glacia\server\worldborder\WorldBorderManager;
 use ecstsy\Glacia\server\zones\ZoneManager;
+use ecstsy\Glacia\server\zones\ZoneMobManager;
 use ecstsy\Glacia\tasks\AutoPlanterTask;
 use ecstsy\Glacia\tasks\BlackMarketAuctionTickTask;
 use ecstsy\Glacia\tasks\CombatTickTask;
@@ -227,6 +252,7 @@ use pocketmine\world\particle\PortalParticle;
 use pocketmine\world\sound\EndermanTeleportSound;
 use pocketmine\world\World;
 use SOFe\AwaitGenerator\Await;
+use ecstsy\Glacia\utils\screens\disguises\DisguiseScreen;
 
 final class GlaciaUtils
 {
@@ -237,14 +263,26 @@ final class GlaciaUtils
 
     public static function initAll(Loader $loader): void
     {
+        ExtendedVanillaEnchantmentRegistry::registerDefaults();
         self::ensureRanks();
         MessageTemplates::load();
         self::initDiscordWebhooks($loader);
         GlaciaItems::init();
 
+        $files = array_merge(
+            ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml", "kits.yml", "warlords.yml", "slotbot.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml", "messages.yml", "announcer.yml", "zone_mobs.yml", "faction_upgrades.yml", "pets.yml", "runes.yml", "fund.yml", "envoy.yml", "genbuckets.yml", "levels.yml", "zones.yml", "capturepoints.yml", "combat.yml"],
+            LootboxRepository::getBundledResourceFiles()
+        );
+
+        foreach ($files as $file) {
+            $loader->saveResource($file);
+        }
+
+        RuneManager::loadFromConfig();
+
         $regions = [
-            new Region("Spawn", new Vector3(385, 0, 114), new Vector3(114, 204, 385), new RegionPermissions(false, false, true, false, false, false, false)),
-            new Region("Warzone", new Vector3(0, 0, 500), new Vector3(500, 204, 0), new RegionPermissions(true, false, true, false, false, false, false)),
+            new Region("Spawn", new Vector3(385, 0, 114), new Vector3(114, 204, 385), new RegionPermissions(false, false, true, false, false, false, false), "world"),
+            new Region("Warzone", new Vector3(0, 0, 500), new Vector3(500, 204, 0), new RegionPermissions(true, false, true, false, false, false, false), "world"),
         ];
 
         foreach ($regions as $region) {
@@ -300,6 +338,10 @@ final class GlaciaUtils
             new BanCommand($loader, "ban", "Ban a player from the server"),
             new GraceCommand($loader, "grace", "Grace commands"),
             new GiveItemCommand($loader, "giveitem", "Give yourself a Glacia item", ["gi"]),
+            new ItemCategoryCommand($loader, "pets", "View registered pet items", "pets"),
+            new ItemCategoryCommand($loader, "trinkets", "View registered trinket items", "trinkets", ["trinket"]),
+            new ItemCategoryCommand($loader, "disguiseitems", "View registered disguise unlock items", "disguises", ["disguiseitem", "disguiseunlocks"]),
+            new ItemCategoryCommand($loader, "runes", "View registered rune items", "runes", ["rune"]),
             new FlySpeedCommand($loader, "flyspeed", "Set your fly speed", ["fs"]),
             new SellCommand($loader, "sell", "Sell the item in your hand", ["sellhand"]),
             new SellAllCommand($loader, "sellall", "Sell all items in your inventory", ["sellinv"]),
@@ -321,7 +363,10 @@ final class GlaciaUtils
             new GamemodeCommand($loader, "gamemode", "Change your gamemode", ["gm", "gms", "gmc", "gma", "gmsp"]),
             new FeedCommand($loader, "feed", "Feed yourself or another player"),
             new PingCommand($loader, "ping", "View your ping or another player's ping"),
+            new ScoreboardCommand($loader, "scoreboard", "Toggle your scoreboard", ["sb"]),
             new HatCommand($loader, "hat", "Wear the item in your hand as a hat"),
+            new DisguiseCommand($loader, "disguise", "Disguise as an unlocked mob", ["disguises"]),
+            new UndisguiseCommand($loader, "undisguise", "Remove your active disguise", ["udisguise"]),
             new MoreCommand($loader, "more", "Set your held stack size"),
             new BroadcastCommand($loader, "broadcast", "Broadcast a message", ["bc"]),
             new ClearChatCommand($loader, "clearchat", "Clear the chat", ["cc"]),
@@ -335,6 +380,7 @@ final class GlaciaUtils
             new LootboxTestCommand($loader, "lootboxtest", "Test a configured lootbox animation", ["lbtest"]),
             new GlaciaReloadCommand($loader, "greload", "Reload Glacia configs"),
             new KitCommand($loader, "kit", "Open the kit screen"),
+            new GKitCommand($loader, "gkits", "Open the GKit screen", ["gkit"]),
         ]);
 
         $healingPotionSettings = new HealingPotionSettings();
@@ -344,15 +390,17 @@ final class GlaciaUtils
             new FactionListener(),
             new RegionListener($loader->getRegionManager()),
             new WorldBorderListener(),
+            new ZoneListener(),
             new ItemListener(),
             new LevelListener(),
             new QuestListener(),
             new EnchantmentListener(),
+            new VanillaEnchantmentSyncListener(),
             new EnvoyListener(),
             new CollectionChestListener(),
             new CustomTNTListener(),
             new CustomArmorListener(),
-            //new HealingPotionListener($healingPotionSettings),
+            new HealingPotionListener($healingPotionSettings),
         ];
 
         foreach ($listeners as $listener) {
@@ -375,6 +423,18 @@ final class GlaciaUtils
             EnvoySlime::class,
             EnvoyZombie::class,
             EnvoyGhast::class,
+            ForsakenChampion::class,
+            ZoneMob::class,
+            ZoneMobSkeleton::class,
+            ZoneMobSpider::class,
+            ZoneMobCreeper::class,
+            ZoneMobBlaze::class,
+            ZoneMobEnderman::class,
+            ZoneMobPigman::class,
+            ZoneMobSlime::class,
+            ZoneMobMagmaCube::class,
+            ZoneMobIronGolem::class,
+            ZoneMobSnowGolem::class
         ];
 
         foreach ($entitites as $entity) {
@@ -392,9 +452,11 @@ final class GlaciaUtils
                 Loader::getGlobalFundManager()->tick();
                 Loader::getEnvoyManager()->tick();
                 Loader::getCaptureManager()->tick();
+                Announcer::tick();
                 foreach (Server::getInstance()->getOnlinePlayers() as $player) {
                     RankProgressionManager::tickPlayer($player);
                     ScoreboardHelper::refreshScoreboard($player);
+                    RuneManager::tryBoostNearbyCrops($player);
                 }
             }
         }, 20);
@@ -544,15 +606,6 @@ final class GlaciaUtils
         Loader::getInstance()->getScheduler()->scheduleRepeatingTask($autoPlantTask, 5  );
         AutoPlanterEnchant::setTask($autoPlantTask);
 
-        $files = array_merge(
-            ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml", "kits.yml", "slotbot.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml", "messages.yml", "faction_upgrades.yml", "pets.yml", "fund.yml", "envoy.yml", "genbuckets.yml", "levels.yml", "zones.yml", "capturepoints.yml"],
-            LootboxRepository::getBundledResourceFiles()
-        );
-
-        foreach ($files as $file) {
-            $loader->saveResource($file);
-        }
-
         QuestInstance::loadFromConfig();
         LootboxRepository::reload();
 
@@ -562,6 +615,7 @@ final class GlaciaUtils
         WorldBorderManager::loadFromConfig();
         PlayerLevelManager::loadFromConfig();
         ZoneManager::loadFromConfig();
+        ZoneMobManager::loadFromConfig();
         Loader::getCaptureManager()->load();
 
         Loader::getInstance()->getScheduler()->scheduleDelayedTask(new class extends Task {
@@ -577,6 +631,7 @@ final class GlaciaUtils
     public static function bless(Player $player): array {
         $manager = $player->getEffects();
         $removed = [];
+        $armorDebuffs = EnchantEffectManager::getActiveArmorDebuffIds($player);
 
         foreach ($manager->all() as $effect) {
             if ($effect->getType()->isBad()) {
@@ -585,17 +640,8 @@ final class GlaciaUtils
             }
         }
 
-        if (empty($removed)) {
-            return [];
-        }
-
-        foreach ($removed as $effect) {
-            $name = $player->getServer()->getLanguage()->translate($effect->getType()->getName());
-            $amp = $effect->getAmplifier() + 1;
-
-            $player->sendMessage(
-                C::colorize("&r&l&c[-] &8{$name} {$amp}")
-            );
+        if ($armorDebuffs !== []) {
+            EnchantEffectManager::suppressArmorDebuffs($player, $armorDebuffs);
         }
 
         return $removed;
@@ -841,6 +887,12 @@ final class GlaciaUtils
 
     public static function updatePlayerNametag(Player $target, Player $viewer): void
     {
+        if (Loader::getDisguiseManager()->isDisguised($target) && $viewer->getId() !== $target->getId()) {
+            $target->setNameTag("");
+            $target->setNameTagAlwaysVisible(false);
+            return;
+        }
+
         $targetSession = Loader::getPlayerManager()->getSession($target);
         $viewerSession = Loader::getPlayerManager()->getSession($viewer);
         if ($targetSession === null || $viewerSession === null) return;
@@ -880,6 +932,7 @@ final class GlaciaUtils
         );
 
         $target->setNameTag(C::colorize($formatted));
+        $target->setNameTagAlwaysVisible();
     }
 
     public static function refreshNametagsForTarget(Player $target): void
@@ -909,7 +962,7 @@ final class GlaciaUtils
             $template = str_replace("{" . $normalizedKey . "}", (string) $v, $template);
         }
 
-        return C::colorize(($prefixes[$prefix] ?? "") . $template);
+        return C::colorize(EmojiManager::replaceTokens(($prefixes[$prefix] ?? "") . $template));
     }
 
     public static function timedTeleport(Player $player, Vector3 $target, ?int $seconds = 8, ?callable $onCancel = null): void
@@ -1222,27 +1275,58 @@ final class GlaciaUtils
 
     public static function toggleFlight(Player $player, bool $force = false): void
     {
+        $session = Loader::getPlayerManager()->getSession($player);
+
         if ($force) {
-            if (!$player->getAllowFlight()) {
-                $player->setAllowFlight(true);
-                $player->sendMessage(C::colorize(Loader::SERVER_PREFIX . "&fSet fly mode &aenabled &ffor " . $player->getNameTag()));
-            }
-        } else {
-            if (!$player->getAllowFlight()) {
-                $player->setAllowFlight(true);
-                $player->sendMessage(C::colorize(Loader::SERVER_PREFIX . "&fSet fly mode &aenabled &ffor " . $player->getNameTag()));
-            } else {
-                $player->setAllowFlight(false);
-                $player->setFlying(false);
-                $player->resetFallDistance();
-                $player->sendMessage(C::colorize(Loader::SERVER_PREFIX . "&fSet fly mode &cdisabled &ffor " . $player->getNameTag()));
-            }
+            self::disableFlightForCombat($player);
+            return;
         }
-    
-        if ($force || $player->getAllowFlight() && !$force) {
+
+        $enabled = !self::hasManualFlightEnabled($player);
+        $session?->setSetting("fly", $enabled);
+
+        if ($enabled) {
+            if (Loader::getCombatManager()->isInCombat($player) && $player->isSurvival()) {
+                $player->sendMessage(C::colorize(Loader::SERVER_PREFIX . "&fFly mode is &aenabled&f. It will return after combat ends."));
+                return;
+            }
+
+            $player->setAllowFlight(true);
             $player->setFlying(true);
             $player->resetFallDistance();
+            $player->sendMessage(C::colorize(Loader::SERVER_PREFIX . "&fSet fly mode &aenabled &ffor " . $player->getNameTag()));
+            return;
         }
+
+        $player->sendMessage(C::colorize(Loader::SERVER_PREFIX . "&fSet fly mode &cdisabled &ffor " . $player->getNameTag()));
+        \ecstsy\Glacia\listeners\FactionListener::syncClaimFlight($player);
+    }
+
+    public static function hasManualFlightEnabled(Player $player): bool
+    {
+        $session = Loader::getPlayerManager()->getSession($player);
+        return (bool) ($session?->getSetting("fly") ?? false);
+    }
+
+    public static function disableFlightForCombat(Player $player): void
+    {
+        if (!$player->isSurvival()) {
+            return;
+        }
+
+        if ($player->isFlying()) {
+            $player->setFlying(false);
+            $player->resetFallDistance();
+        }
+
+        if ($player->getAllowFlight()) {
+            $player->setAllowFlight(false);
+        }
+    }
+
+    public static function openDisguiseScreen(Player $player): void
+    {
+        DisguiseScreen::display($player);
     }
 
     public static function repairItemInHand(Player $player): bool {
@@ -1315,8 +1399,17 @@ final class GlaciaUtils
         $level = $glaciaTag->getInt("level", 1);
         $success = $glaciaTag->getInt("success", 0);
         $destroy = $glaciaTag->getInt("destroy", 0);
+        $bookType = strtolower($glaciaTag->getString("book_type", "custom"));
 
         if($enchantName === ""){
+            return $book;
+        }
+
+        if ($bookType === "vanilla" || $glaciaTag->getString("vanilla_enchant", "") !== "") {
+            $newBook = GlaciaItemFactory::vanillaEnchantmentBook($glaciaTag->getString("vanilla_enchant", $enchantName), $level, $success, $destroy);
+            if ($newBook !== null) {
+                return $newBook;
+            }
             return $book;
         }
 

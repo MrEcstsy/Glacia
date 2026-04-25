@@ -10,6 +10,7 @@ use ecstsy\Glacia\server\factions\claims\ClaimManager;
 use ecstsy\Glacia\server\factions\member\FactionMember;
 use ecstsy\Glacia\utils\QueryStmts;
 use pocketmine\Server;
+use pocketmine\utils\TextFormat as C;
 use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
 
@@ -158,23 +159,24 @@ final class Faction {
     }
 
     public function notifyOverclaimed(): void {
-        $message = "§cWarning: Your faction's power is too low to hold all your claims! Some land can be overclaimed!";
+        $message = C::colorize("&r&cYour faction power is too low to hold all of your claims. Some land can now be overclaimed.");
         foreach ($this->getOnlineMembers() as $member) {
             $member->sendMessage($message);
         }
     }
 
     public function transferLeadership(string $factionId, UuidInterface $newLeaderUuid): void {
-        $faction = FactionManager::getInstance()->getFaction($factionId);
-        if ($faction === null) return;
+        if ($factionId !== $this->factionId) {
+            return;
+        }
 
-        $oldLeaderUuid = $faction->getLeaderUuid();
-        $newLeader    = Loader::getPlayerManager()->getSessionByUuid($newLeaderUuid);
+        $oldLeaderUuid = $this->leaderUuid;
+        $newLeader = Loader::getPlayerManager()->getSessionByUuid($newLeaderUuid);
 
-        $faction->setLeader($newLeaderUuid, $newLeader?->getUsername() ?? "Unknown");
-
-        $this->setMemberRole($factionId, Uuid::fromString($oldLeaderUuid), "officer");
-        $this->setMemberRole($factionId, $newLeaderUuid, "leader");
+        $this->setLeader($newLeaderUuid, $newLeader?->getUsername() ?? "Unknown");
+        $this->setMemberRole($this->factionId, Uuid::fromString($oldLeaderUuid), "officer");
+        $this->setMemberRole($this->factionId, $newLeaderUuid, "leader");
+        $this->normalizeLeaderMembers($newLeaderUuid->toString());
     }
 
 
@@ -190,6 +192,7 @@ final class Faction {
                     (int)($row['joined_at'] ?? time())
                 );
             }
+            $this->normalizeLeaderMembers($this->leaderUuid);
         });
     }
 
@@ -206,11 +209,13 @@ final class Faction {
     }
 
     public function addMember(string $factionId, UuidInterface $memberUuid, string $roleKey = "recruit"): void {
+        $joinedAt = time();
+
         $idx = $this->findMemberIndexByUuid($memberUuid);
         if ($idx !== null) {
             if ($this->members[$idx]->getRole() !== $roleKey) {
                 Loader::getDatabase()->executeChange(QueryStmts::FACTION_MEMBERS_UPDATE, [
-                    "faction_id" => $factionId,
+                    "faction_id" => $this->factionId,
                     "member_uuid" => $memberUuid->toString(),
                     "role_key" => $roleKey,
                 ]);
@@ -220,24 +225,24 @@ final class Faction {
         }
 
         Loader::getDatabase()->executeChange(QueryStmts::FACTION_MEMBERS_CREATE, [
-            "faction_id" => $factionId,
+            "faction_id" => $this->factionId,
             "member_uuid" => $memberUuid->toString(),
             "role_key" => $roleKey,
-            "joined_at" => time(),
+            "joined_at" => $joinedAt,
         ]);
 
-        $this->members[] = new FactionMember($memberUuid, $roleKey, time());
+        $this->members[] = new FactionMember($memberUuid, $roleKey, $joinedAt);
 
         $session = Loader::getPlayerManager()->getSessionByUuid($memberUuid);
         if ($session !== null) {
-            $session->setFactionId($factionId);
+            $session->setFactionId($this->factionId);
             $session->setFactionRole($roleKey);
         }
     }
 
     public function kickMember(string $factionId, UuidInterface $memberUuid): void {
         Loader::getDatabase()->executeChange(QueryStmts::FACTION_MEMBERS_DELETE, [
-            "faction_id"   => $factionId,
+            "faction_id"   => $this->factionId,
             "member_uuid"  => $memberUuid->toString(),
         ]);
 
@@ -253,7 +258,7 @@ final class Faction {
 
     public function setMemberRole(string $factionId, UuidInterface $memberUuid, string $roleKey): void {
         Loader::getDatabase()->executeChange(QueryStmts::FACTION_MEMBERS_UPDATE, [
-            "faction_id" => $factionId,
+            "faction_id" => $this->factionId,
             "member_uuid" => $memberUuid->toString(),
             "role_key" => $roleKey,
         ]);
@@ -266,6 +271,14 @@ final class Faction {
         $session = Loader::getPlayerManager()->getSessionByUuid($memberUuid);
         if ($session !== null) {
             $session->setFactionRole($roleKey);
+        }
+
+        if ($roleKey === "leader") {
+            $leaderName = $session?->getUsername()
+                ?? Server::getInstance()->getPlayerByUUID($memberUuid)?->getName()
+                ?? $this->leaderName;
+            $this->setLeader($memberUuid, $leaderName);
+            $this->normalizeLeaderMembers($memberUuid->toString());
         }
     }
 
@@ -317,6 +330,28 @@ final class Faction {
     {
         foreach ($this->getOnlineMembers() as $member) {
             \ecstsy\Glacia\server\scoreboard\ScoreboardHelper::updateFactionLines($member);
+        }
+    }
+
+    private function normalizeLeaderMembers(string $leaderUuid): void
+    {
+        foreach ($this->members as $member) {
+            $memberUuid = $member->getUuid()->toString();
+            if ($memberUuid === $leaderUuid || $member->getRole() !== "leader") {
+                continue;
+            }
+
+            Loader::getDatabase()->executeChange(QueryStmts::FACTION_MEMBERS_UPDATE, [
+                "faction_id" => $this->factionId,
+                "member_uuid" => $memberUuid,
+                "role_key" => "officer",
+            ]);
+            $member->setRole("officer");
+
+            $session = Loader::getPlayerManager()->getSessionByUuid($member->getUuid());
+            if ($session !== null) {
+                $session->setFactionRole("officer");
+            }
         }
     }
 }

@@ -24,6 +24,10 @@ final class SettingsCommand extends BaseCommand {
         }
 
         $session = Loader::getPlayerManager()->getSession($sender);
+        if ($session === null) {
+            return;
+        }
+
         $form = new SimpleForm(function (Player $player, $data) use ($session): void {
             if ($data === null) {
                 return;
@@ -32,55 +36,42 @@ final class SettingsCommand extends BaseCommand {
             switch ($data) {
                 case 0:
                     $session->toggleSetting("chest_inventories");
-                    $settingValue = $session->getSetting("chest_inventories");
-                    $color = $settingValue ? '§a' : '§c'; 
-
-                    $player->sendToastNotification(
-                        C::colorize(Loader::SERVER_PREFIX),
-                        C::colorize("&r&7Chest GUI setting has been set to: " . $color . ($settingValue ? "Enabled" : "Disabled"))
-                    );
+                    $this->sendSettingToast($player, "Chest GUI", (bool) $session->getSetting("chest_inventories"));
                     break;
                 case 1:
                     $session->toggleSetting("broadcasts");
-                    $settingValue = $session->getSetting("broadcasts");
-                    $color = $settingValue ? '§a' : '§c';
-                    
-                    $player->sendToastNotification(
-                        C::colorize(Loader::SERVER_PREFIX),
-                        C::colorize("&r&7Announcer setting has been set to: " . $color . ($settingValue ? "Enabled" : "Disabled"))
-                    );
+                    $this->sendSettingToast($player, "Announcer", (bool) $session->getSetting("broadcasts"));
                     break;
                 case 2:
-                    $session->toggleSetting("loot_announcer");
-                    $settingValue = $session->getSetting("loot_announcer");
-                    $color = $settingValue ? '§a' : '§c';
-                    
-                    $player->sendToastNotification(
-                        C::colorize(Loader::SERVER_PREFIX),
-                        C::colorize("&r&7Lootbox notification setting has been set to: " . $color . ($settingValue ? "Enabled" : "Disabled"))
-                    );
+                    $session->toggleSetting("notifications");
+                    $enabled = (bool) $session->getSetting("notifications");
+                    $session->setSetting("loot_announcer", $enabled);
+                    $this->sendSettingToast($player, "Notifications", $enabled);
                     break;
                 case 3:
                     $session->toggleSetting("quick_claim");
-                    $setttingValue = $session->getSetting("quick_claim");
-                    $color = $setttingValue ? '§a' : '§c';
-                    
-                    $player->sendToastNotification(
-                        C::colorize(Loader::SERVER_PREFIX),
-                        C::colorize("&r&7Quick redeem setting has been set to: " . $color . ($setttingValue ? "Enabled" : "Disabled"))
-                    );
+                    $this->sendSettingToast($player, "Quick redeem", (bool) $session->getSetting("quick_claim"));
                     break;
-                }
+            }
         });
 
         $form->setTitle(C::colorize("&r&8Server Settings"));
-        $form->setContent(C::colorize("&r&fToggle the server's features to better modify the server to your liking"));
+        $form->setContent(C::colorize("&r&fToggle server features to better fit how you play."));
         $form->addButton("Chest Inventories");
         $form->addButton("Announcer");
-        $form->addButton("Lootbox Notifications");
+        $form->addButton("Notifications");
         $form->addButton("Quick Redeem");
 
         $sender->sendForm($form);
+    }
+
+    private function sendSettingToast(Player $player, string $label, bool $enabled): void
+    {
+        $color = $enabled ? C::GREEN : C::RED;
+        $player->sendToastNotification(
+            C::colorize(Loader::SERVER_PREFIX),
+            C::colorize("&r&7{$label} setting has been set to: " . $color . ($enabled ? "Enabled" : "Disabled"))
+        );
     }
 
     public function getPermission(): string

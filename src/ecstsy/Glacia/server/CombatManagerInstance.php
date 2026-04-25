@@ -6,6 +6,7 @@ namespace ecstsy\Glacia\server;
 
 use ecstsy\Glacia\entity\CombatLoggerEntity;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\listeners\FactionListener;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\utils\QueryStmts;
 use ecstsy\MartianUtilities\utils\ItemUtils;
@@ -25,7 +26,10 @@ final class CombatManagerInstance {
      *   inventory: array,
      *   armor: array,
      *   deadOnLogin: bool,
-     *   opponents: array<string,string>
+     *   opponents: array<string,string>,
+     *   xp?: int,
+     *   health?: float,
+     *   location?: array<string, mixed>
      * }>
      */
     private array $combatPlayers = [];
@@ -104,6 +108,11 @@ final class CombatManagerInstance {
         $expires = $now + $this->getCombatTimeFor($player);
         $expireSec = (int)ceil($expires);
 
+        if (Loader::getDisguiseManager()->isDisguised($player)) {
+            Loader::getDisguiseManager()->clear($player);
+            $player->sendMessage(C::colorize("&r&7Your disguise vanished as combat began."));
+        }
+
         $already = isset($this->combatPlayers[$lower]) && $this->combatPlayers[$lower]['expires'] > $now;
 
         if (!$already) {
@@ -122,7 +131,9 @@ final class CombatManagerInstance {
 
             $this->expiryBuckets[$expireSec][] = $lower;
 
-            $player->sendMessage(C::colorize("&r&c&l(!) &r&cYou have entered combat!"));
+            \ecstsy\Glacia\utils\GlaciaUtils::disableFlightForCombat($player);
+            FactionListener::syncClaimFlight($player);
+            $player->sendMessage(C::colorize("&r&cYou have entered combat."));
         } else {
             $prevSec = $this->combatPlayers[$lower]['expireSec'];
             $this->removeFromBucket($prevSec, $lower);
@@ -176,6 +187,28 @@ final class CombatManagerInstance {
         return isset($this->combatPlayers[$lower]) && $this->combatPlayers[$lower]['expires'] > $now;
     }
 
+    public function extendCombat(Player $player, float $seconds): void
+    {
+        $lower = strtolower($player->getName());
+        if (!isset($this->combatPlayers[$lower])) {
+            return;
+        }
+
+        $seconds = max(0.0, $seconds);
+        if ($seconds <= 0.0) {
+            return;
+        }
+
+        $prevSec = $this->combatPlayers[$lower]['expireSec'];
+        $this->removeFromBucket($prevSec, $lower);
+
+        $expires = max($this->combatPlayers[$lower]['expires'], microtime(true)) + $seconds;
+        $expireSec = (int) ceil($expires);
+        $this->combatPlayers[$lower]['expires'] = $expires;
+        $this->combatPlayers[$lower]['expireSec'] = $expireSec;
+        $this->expiryBuckets[$expireSec][] = $lower;
+    }
+
     public function handleLogout(Player $player): void {
         $lower = strtolower($player->getName());
 
@@ -203,6 +236,8 @@ final class CombatManagerInstance {
             'pitch' => $player->getLocation()->getPitch(),
         ];
 
+        $remaining = max(1, (int) ceil(($this->combatPlayers[$lower]['expires'] ?? microtime(true)) - microtime(true)));
+
         Loader::getDatabase()->executeInsert(QueryStmts::COMBAT_LOGGER_CREATE, [
             "uuid" => $player->getUniqueId()->toString(),
             "username" => $player->getName(),
@@ -216,7 +251,7 @@ final class CombatManagerInstance {
             "armor" => json_encode($this->serializeItems($player->getArmorInventory()->getContents())),
             "xp" => $player->getXpManager()->getCurrentTotalXp(),
             "health" => $player->getHealth(),
-            "expires" => time() + (int)$this->combatTime
+            "expires" => time() + $remaining
         ]);
 
         $npc = new CombatLoggerEntity($player->getLocation());
@@ -267,7 +302,7 @@ final class CombatManagerInstance {
         if (($data['deadOnLogin'] ?? false) === true) {
             $player->getInventory()->clearAll();
             $player->getArmorInventory()->clearAll();
-            $player->sendMessage(C::colorize("&r&cYou died while logged out in combat!"));
+            $player->sendMessage(C::colorize("&r&cYou died while combat logged."));
 
             $sec = $data['expireSec'];
             Loader::getDatabase()->executeChange(QueryStmts::COMBAT_LOGGER_DELETE, [
@@ -311,7 +346,7 @@ final class CombatManagerInstance {
             $player->getXpManager()->setCurrentTotalXp((int) $data['xp']);
         }
 
-        $player->sendMessage(C::colorize("&r&aYou survived combat logging!"));
+        $player->sendMessage(C::colorize("&r&aYou survived combat logging and your items were restored."));
 
         Loader::getDatabase()->executeChange(QueryStmts::COMBAT_LOGGER_DELETE, [
             "uuid" => $player->getUniqueId()->toString()
@@ -404,14 +439,8 @@ final class CombatManagerInstance {
 
         $player = $this->getOnlinePlayerByLowerName($lower);
         if ($player !== null) {
-            $player->sendMessage(C::colorize("&r&aYou are no longer in combat. You may now safely logout."));
-        }
-
-        foreach ($entry['opponents'] ?? [] as $oppLower => $storedName) {
-            $opp = $this->getOnlinePlayerByLowerName($oppLower);
-            if ($opp !== null) {
-                $opp->sendMessage(C::colorize("&r&aYou are no longer in combat. You may now safely logout."));
-            }
+            $player->sendMessage(C::colorize("&r&aYou are no longer in combat."));
+            FactionListener::syncClaimFlight($player);
         }
 
         $npc = $entry['npc'] ?? null;

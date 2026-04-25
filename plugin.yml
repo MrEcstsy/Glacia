@@ -94,3 +94,15 @@ permissions:
   glacia.kit.resetcooldown:
     description: Permission to use /kit resetcooldown command
     default: op
+  glacia.eco.set:
+    description: Permission to use /eco set command
+    default: op
+  glacia.eco.add:
+    description: Permission to use /eco add command
+    default: op
+  glacia.eco.take:
+    description: Permission to use /eco take command
+    default: op
+  glacia.eco.reset:
+    description: Permission to use /eco reset command
+    default: op

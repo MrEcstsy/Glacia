@@ -146,11 +146,11 @@ final class MessageTemplates {
             "   &r&f     Online players: &b{online}",
             " ",
             "   &r&f   {nametag}  &r{pingcolor}{ping}ms {networkbar}",
-            "   &r&b&l WEBSITE &r&3➤ &fetherealhub.net",
-            "  &r&b&l VOTE &r&3➤ &fvote.etherealhub.net",
-            " &r&b&l STORE &r&3➤ &fstore.etherealhub.net",
+            "   &r&b&l WEBSITE &r&3➤ &fetherealpe.com",
+            "  &r&b&l VOTE &r&3➤ &fvote.etherealpe.com",
+            " &r&b&l STORE &r&3➤ &fstore.etherealpe.com",
             " ",
-            "       &r&bglacia.etherealhub.net"
+            "       &r&bglacia.etherealpe.com"
         ];
     }
 }

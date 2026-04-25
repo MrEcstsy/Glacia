@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\server\enchantments\enchants\sword;
 
+use ecstsy\Glacia\entity\gkits\ForsakenChampion;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
 use pocketmine\entity\Living;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\player\Player;
@@ -22,29 +24,43 @@ final class ExecuteEnchant implements EntityDamageByEntityEnchantmentHandler {
         $damager = $event->getDamager();
         $victim  = $event->getEntity();
 
-        if (!$damager instanceof Player) return;
+        if (!$damager instanceof Living) return;
         if (!$victim instanceof Living) return;
 
-        $session = PlayerManager::getInstance()->getSession($damager);
-
-        $item = $damager->getInventory()->getItemInHand();
+        $session = $damager instanceof Player ? PlayerManager::getInstance()->getSession($damager) : null;
+        $item = $damager instanceof Player ? $damager->getInventory()->getItemInHand() : ($damager instanceof ForsakenChampion ? $damager->getCombatItem() : null);
+        if ($item === null) return;
         if (!CustomEnchantmentManager::hasEnchantment($item, "execute")) return;
 
-        $chance = $level * 4;
+        $chance = match($level) {
+            1 => 4,
+            2 => 5,
+            3 => 6,
+            4 => 7,
+            5 => 8,
+            default => 4
+        };
 
         $maxHealth = $victim->getMaxHealth();
-        if ($victim->getHealth() / $maxHealth > 0.45) return;
+        if ($maxHealth <= 0 || $victim->getHealth() / $maxHealth > 0.25) return;
 
-        if (mt_rand(1, 100) > $chance) return;
-        if ($session->isOnCooldown("execute")) return;
+        if (!ProcLuckManager::roll($damager, "execute", $chance, 2, 10)) return;
+        if ($session !== null && $session->isOnCooldown("execute")) return;
 
-        $damage = mt_rand(10, 50);
+        $damage = min(
+            max(1.5, 0.5 + ($level * 0.4)),
+            max(1.5, $maxHealth * 0.08)
+        );
 
         $newHealth = max(0, $victim->getHealth() - $damage);
         $victim->setHealth($newHealth);
 
-        $session->addCooldown("execute", 2); 
+        if ($session !== null) {
+            $session->addCooldown("execute", 1);
+        }
 
-        $damager->sendMessage(C::colorize("&r&b&l** &r&bExecute &l** &rYou dealt massive damage!"));
+        if ($damager instanceof Player) {
+            $damager->sendMessage(C::colorize("&r&b&l** &r&bExecute &l** &r&7You struck a finishing blow."));
+        }
     }
 }

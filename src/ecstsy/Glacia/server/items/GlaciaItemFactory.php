@@ -9,15 +9,20 @@ use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
 use ecstsy\Glacia\server\enchantments\Groups;
-use ecstsy\Glacia\server\items\armor\ArmorSetEnchants;
+use ecstsy\Glacia\server\disguises\DisguiseManager;
+use ecstsy\Glacia\server\enchantments\vanilla\ExtendedVanillaEnchantmentRegistry;
+use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\Glacia\server\lootboxes\LootboxRepository;
 use ecstsy\Glacia\server\quests\QuestInstance;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
+use pocketmine\item\enchantment\Enchantment;
 use pocketmine\item\enchantment\EnchantmentInstance;
+use pocketmine\item\enchantment\StringToEnchantmentParser;
 use pocketmine\item\enchantment\VanillaEnchantments;
 use pocketmine\item\Item;
 use pocketmine\item\StringToItemParser;
+use pocketmine\item\VanillaItems;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
@@ -28,7 +33,11 @@ final class GlaciaItemFactory {
 
     public static function create(string $key, array $args = []): Item {
         $definitionKey = self::resolveDefinitionKey($key);
-        $def = self::$definitions[$definitionKey] ?? throw new \InvalidArgumentException("Unknown item definition: $key");
+        if (!isset(self::$definitions[$definitionKey])) {
+            return self::unknownDefinitionItem($key);
+        }
+
+        $def = self::$definitions[$definitionKey];
 
         /** @var Item $item */
         $item = clone $def['material'];
@@ -57,7 +66,39 @@ final class GlaciaItemFactory {
         }
         $root->setTag("Glacia", $aTag);
 
+        return self::decorateRuneLore($item, $definitionKey);
+    }
+
+    public static function invalidConfigItem(string $key): Item
+    {
+        try {
+            Loader::getInstance()->getLogger()->warning("Unknown Glacia item definition in config: '{$key}'");
+        } catch (\Throwable) {
+            // Loader may not be available during very early bootstrap.
+        }
+
+        $item = StringToItemParser::getInstance()->parse("barrier") ?? VanillaItems::PAPER();
+        $item->setCustomName(C::colorize("&r&l&cInvalid Glacia Item"));
+        $item->setLore([
+            C::colorize("&r&7A config tried to create an unknown"),
+            C::colorize("&r&7Glacia item id: &f{$key}"),
+            "",
+            C::colorize("&r&cFix the id in the reward config."),
+        ]);
+
+        $root = $item->getNamedTag();
+        $tag = new CompoundTag();
+        $tag->setString("glaciaItem", "invalid_config_item");
+        $tag->setString("invalid_id", $key);
+        $root->setTag("Glacia", $tag);
+        $item->setNamedTag($root);
+
         return $item;
+    }
+
+    private static function unknownDefinitionItem(string $key): Item
+    {
+        return self::invalidConfigItem($key);
     }
 
     public static function bankNote(?Player $player, int $amount): Item {
@@ -106,6 +147,34 @@ final class GlaciaItemFactory {
             'description' => $enchantment->getDescription(),
             'group-color' => C::colorize(Groups::translateGroupToColor($enchantment->getRarity())),
             'applies-to' => implode(", ", $appliesTo),
+            'book-type' => 'custom',
+            'vanilla-enchant' => '',
+        ]);
+    }
+
+    public static function vanillaEnchantmentBook(string $enchantName, int $level = 1, ?int $forcedSuccessChance = null, ?int $forcedDestroyChance = null): ?Item
+    {
+        $normalized = strtolower(trim($enchantName));
+        $enchantment = self::resolveVanillaEnchantment($normalized);
+        if ($enchantment === null) {
+            return null;
+        }
+
+        $success = $forcedSuccessChance ?? 50;
+        $destroy = $forcedDestroyChance ?? 50;
+
+        return self::create('enchantment_book', [
+            'enchantment' => self::formatVanillaEnchantmentName($normalized),
+            'enchant-no-color' => $normalized,
+            'level' => $level,
+            'roman-level' => GeneralUtils::getRomanNumeral($level),
+            'success' => $success,
+            'destroy' => $destroy,
+            'description' => self::getVanillaEnchantmentDescription($normalized),
+            'group-color' => '&7',
+            'applies-to' => self::getVanillaAppliesToText($enchantment),
+            'book-type' => 'vanilla',
+            'vanilla-enchant' => $normalized,
         ]);
     }
 
@@ -230,6 +299,39 @@ final class GlaciaItemFactory {
         return $item;
     }
 
+    public static function disguiseUnlock(string $id): Item
+    {
+        $id = DisguiseManager::normalizeId($id);
+        if (isset(self::$definitions["disguise_" . $id])) {
+            return self::create("disguise_" . $id);
+        }
+
+        return self::create("disguise_unlock", [
+            "disguise" => $id,
+            "display" => DisguiseManager::getDisplayName($id),
+            "description" => DisguiseManager::getDescription($id),
+        ]);
+    }
+
+    public static function rune(string $runeId): Item
+    {
+        return self::create($runeId . "_rune");
+    }
+
+    public static function runeRemover(): Item
+    {
+        return self::create("rune_remover");
+    }
+
+    public static function petDurationRune(string $petKey): Item
+    {
+        $petKey = strtolower(trim($petKey));
+        return self::create("pet_duration_rune", [
+            "pet" => $petKey,
+            "pet-display" => RuneManager::getPetDisplay($petKey),
+        ]);
+    }
+
     private static function resolveDefinitionKey(string $key): string
     {
         if (isset(self::$definitions[$key])) {
@@ -251,6 +353,146 @@ final class GlaciaItemFactory {
         return strtolower(str_replace(["_", "-", " "], "", $key));
     }
 
+    private static function formatVanillaEnchantmentName(string $enchantName): string
+    {
+        return implode(' ', array_map(
+            static fn(string $part): string => ucfirst($part),
+            preg_split('/[_\-\s]+/', $enchantName) ?: [$enchantName]
+        ));
+    }
+
+    public static function getVanillaEnchantmentDescription(string $enchantName): string
+    {
+        return match ($enchantName) {
+            'aqua_affinity' => 'Mine underwater blocks at normal speed.',
+            'bane_of_arthropods' => 'Deals extra damage to spiders and arthropods.',
+            'blast_protection' => 'Reduces explosion damage taken.',
+            'channeling' => 'Calls lightning during storms with thrown tridents.',
+            'depth_strider' => 'Move faster while underwater.',
+            'efficiency' => 'Breaks blocks faster.',
+            'feather_falling' => 'Reduces fall damage taken.',
+            'fire_aspect' => 'Sets targets on fire.',
+            'fire_protection' => 'Reduces fire and lava damage taken.',
+            'flame' => 'Sets arrows on fire.',
+            'fortune' => 'Increases block drop yields.',
+            'frost_walker' => 'Freezes water beneath your feet.',
+            'impaling' => 'Deals extra trident damage to aquatic mobs.',
+            'infinity' => 'Fires arrows without consuming them.',
+            'knockback' => 'Knocks enemies farther away.',
+            'looting' => 'Increases mob drop amounts.',
+            'loyalty' => 'Returns a thrown trident to its owner.',
+            'luck_of_the_sea' => 'Improves fishing luck.',
+            'lure' => 'Makes fish bite faster.',
+            'mending' => 'Repairs gear using experience.',
+            'multishot' => 'Fires multiple projectiles at once.',
+            'piercing' => 'Crossbow bolts pierce through targets.',
+            'power' => 'Increases arrow damage.',
+            'projectile_protection' => 'Reduces damage from projectiles.',
+            'protection' => 'Reduces incoming damage.',
+            'punch' => 'Increases bow knockback.',
+            'quick_charge' => 'Loads a crossbow faster.',
+            'respiration' => 'Extends underwater breathing time.',
+            'riptide' => 'Launches you with a trident through water or rain.',
+            'sharpness' => 'Increases melee damage dealt.',
+            'silk_touch' => 'Mined blocks drop themselves.',
+            'smite' => 'Deals extra damage to undead mobs.',
+            'soul_speed' => 'Move faster on soul sand and soul soil.',
+            'swift_sneak' => 'Sneak faster while crouching.',
+            'thorns' => 'Damages attackers when hit.',
+            'unbreaking' => 'Reduces durability loss.',
+            default => 'Applies the ' . self::formatVanillaEnchantmentName($enchantName) . ' enchantment.',
+        };
+    }
+
+    public static function resolveVanillaEnchantment(string $enchantName): ?Enchantment
+    {
+        $normalized = strtolower(trim($enchantName));
+        $parsed = StringToEnchantmentParser::getInstance()->parse($normalized);
+        if ($parsed !== null) {
+            return $parsed;
+        }
+
+        $extended = ExtendedVanillaEnchantmentRegistry::resolve($normalized);
+        if ($extended !== null) {
+            return $extended;
+        }
+
+        $compact = str_replace(['_', '-', ' '], '', $normalized);
+
+        return match ($compact) {
+            'protection' => VanillaEnchantments::PROTECTION(),
+            'fireprotection' => VanillaEnchantments::FIRE_PROTECTION(),
+            'featherfalling' => VanillaEnchantments::FEATHER_FALLING(),
+            'blastprotection' => VanillaEnchantments::BLAST_PROTECTION(),
+            'projectileprotection' => VanillaEnchantments::PROJECTILE_PROTECTION(),
+            'thorns' => VanillaEnchantments::THORNS(),
+            'respiration' => VanillaEnchantments::RESPIRATION(),
+            'aquaaffinity' => VanillaEnchantments::AQUA_AFFINITY(),
+            'sharpness' => VanillaEnchantments::SHARPNESS(),
+            'smite' => VanillaEnchantments::SMITE(),
+            'baneofarthropods' => VanillaEnchantments::BANE_OF_ARTHROPODS(),
+            'knockback' => VanillaEnchantments::KNOCKBACK(),
+            'fireaspect' => VanillaEnchantments::FIRE_ASPECT(),
+            'efficiency' => VanillaEnchantments::EFFICIENCY(),
+            'silktouch' => VanillaEnchantments::SILK_TOUCH(),
+            'unbreaking' => VanillaEnchantments::UNBREAKING(),
+            'fortune' => VanillaEnchantments::FORTUNE(),
+            'power' => VanillaEnchantments::POWER(),
+            'punch' => VanillaEnchantments::PUNCH(),
+            'flame' => VanillaEnchantments::FLAME(),
+            'infinity' => VanillaEnchantments::INFINITY(),
+            'mending' => VanillaEnchantments::MENDING(),
+            'vanishing', 'curseofvanishing' => VanillaEnchantments::VANISHING(),
+            'swiftsneak' => VanillaEnchantments::SWIFT_SNEAK(),
+            'frostwalker' => VanillaEnchantments::FROST_WALKER(),
+            default => null,
+        };
+    }
+
+    private static function getVanillaAppliesToText(Enchantment $enchantment): string
+    {
+        $class = strtolower((new \ReflectionClass($enchantment))->getShortName());
+
+        return match (true) {
+            str_contains($class, 'helmet'),
+            str_contains($class, 'aquaaffinity'),
+            str_contains($class, 'respiration') => 'Helmet',
+            str_contains($class, 'boots'),
+            str_contains($class, 'depthstrider'),
+            str_contains($class, 'featherfalling'),
+            str_contains($class, 'frostwalker'),
+            str_contains($class, 'soulspeed'),
+            str_contains($class, 'swiftsneak') => 'Boots',
+            str_contains($class, 'sword'),
+            str_contains($class, 'sharpness'),
+            str_contains($class, 'smite'),
+            str_contains($class, 'baneofarthropods'),
+            str_contains($class, 'fireaspect'),
+            str_contains($class, 'knockback'),
+            str_contains($class, 'looting') => 'Sword',
+            str_contains($class, 'bow'),
+            str_contains($class, 'power'),
+            str_contains($class, 'punch'),
+            str_contains($class, 'flame'),
+            str_contains($class, 'infinity') => 'Bow',
+            str_contains($class, 'crossbow'),
+            str_contains($class, 'multishot'),
+            str_contains($class, 'piercing'),
+            str_contains($class, 'quickcharge') => 'Crossbow',
+            str_contains($class, 'trident'),
+            str_contains($class, 'channeling'),
+            str_contains($class, 'impaling'),
+            str_contains($class, 'loyalty'),
+            str_contains($class, 'riptide') => 'Trident',
+            str_contains($class, 'efficiency'),
+            str_contains($class, 'fortune'),
+            str_contains($class, 'silktouch') => 'Tools',
+            str_contains($class, 'protection'),
+            str_contains($class, 'thorns') => 'Armor',
+            default => 'Vanilla',
+        };
+    }
+
     public static function tnt(string $type): Item {
         return self::create($type, [
             'type' => $type
@@ -270,7 +512,7 @@ final class GlaciaItemFactory {
         return match ($piece) {
             "helmet", "chestplate", "leggings", "boots" => self::buildCustomArmorPiece($set, $piece, $enchanted),
             "full", "set" => self::customArmorSet($set, $enchanted),
-            default => throw new \InvalidArgumentException("Invalid armor piece '{$piece}'. Use helmet, chestplate, leggings, boots, or full.")
+            default => self::unknownDefinitionItem("{$set}_{$piece}")
         };
     }
 
@@ -289,7 +531,7 @@ final class GlaciaItemFactory {
         $identifier = "{$set}_{$piece}";
 
         if (!isset(self::$definitions[$identifier])) {
-            throw new \InvalidArgumentException("Unknown custom armor piece '{$identifier}'.");
+            return self::unknownDefinitionItem($identifier);
         }
 
         $item = self::create($identifier, [
@@ -298,27 +540,7 @@ final class GlaciaItemFactory {
 
         self::addArmorBaseEnchantments($item);
 
-        if ($enchanted) {
-            self::applyCustomArmorEnchantments($item, $set, $piece);
-        }
-
         return $item;
-    }
-
-    private static function applyCustomArmorEnchantments(Item $item, string $set, string $piece): void {
-        self::addArmorBaseEnchantments($item);
-
-        switch ($set) {
-            case "phantom":
-                ArmorSetEnchants::apply($item, "phantom", $piece);
-                break;
-            case "yeti":
-                ArmorSetEnchants::apply($item, "yeti", $piece);
-                break;
-            case "yijki":
-                ArmorSetEnchants::apply($item, "yijki", $piece);
-                break;
-        }
     }
 
     private static function addArmorBaseEnchantments(Item $item): void {
@@ -333,7 +555,7 @@ final class GlaciaItemFactory {
         $identifier = "{$set}_{$type}";
 
         if (!isset(self::$definitions[$identifier])) {
-            throw new \InvalidArgumentException("Unknown custom weapon '{$identifier}'.");
+            return self::unknownDefinitionItem($identifier);
         }
 
         $item = self::create($identifier, [
@@ -456,9 +678,76 @@ final class GlaciaItemFactory {
         ]);
     }
 
+    public static function gkitGem(string $kitId, string $display, string $overrideName = ""): Item
+    {
+        $cleanDisplay = trim($display) !== "" ? $display : ucfirst($kitId);
+        $name = $overrideName !== ""
+            ? $overrideName
+            : "&r&l&b" . $cleanDisplay . " Gem";
+
+        $item = StringToItemParser::getInstance()->parse("amethyst_shard") ?? StringToItemParser::getInstance()->parse("diamond");
+        $item->setCustomName(C::colorize($name));
+        $item->setLore([
+            C::colorize("&r&7Redeem this shard to unlock or"),
+            C::colorize("&r&7upgrade the &f" . $cleanDisplay . " &7GKit."),
+            "",
+            C::colorize("&r&bHigher levels improve your odds"),
+            C::colorize("&r&bof rolling stronger enchantments."),
+        ]);
+
+        $root = $item->getNamedTag();
+        $tag = $root->getCompoundTag("Glacia") ?? new CompoundTag();
+        $tag->setString("glaciaItem", "gkit_gem");
+        $tag->setString("kit", strtolower($kitId));
+        $root->setTag("Glacia", $tag);
+        $item->setNamedTag($root);
+
+        return $item;
+    }
+
+    public static function gkitSummoner(string $kitId, string $display, string $overrideName = "", array $overrideLore = []): Item
+    {
+        $cleanDisplay = trim($display) !== "" ? $display : ucfirst($kitId);
+        $name = $overrideName !== ""
+            ? $overrideName
+            : "&r&8&lWarlord&7: &r&f" . $cleanDisplay;
+
+        $item = StringToItemParser::getInstance()->parse("bone") ?? StringToItemParser::getInstance()->parse("stick");
+        $item->setCustomName(C::colorize($name));
+        $lore = $overrideLore !== [] ? $overrideLore : [
+            "&r&7Call forth the shattered champion of",
+            "&r&f" . $cleanDisplay . " &r&7and challenge it in Warzone.",
+            "",
+            "&r&cWarzone Only",
+            "&r&7Defeat it for a chance at a",
+            "&r&bGKit Gem &7or a piece of its gear.",
+        ];
+        $item->setLore(array_map(static fn(string $line): string => C::colorize($line), $lore));
+
+        $root = $item->getNamedTag();
+        $tag = $root->getCompoundTag("Glacia") ?? new CompoundTag();
+        $tag->setString("glaciaItem", "gkit_summoner");
+        $tag->setString("kit", strtolower($kitId));
+        $root->setTag("Glacia", $tag);
+        $item->setNamedTag($root);
+
+        return $item;
+    }
+
     public static function getGlaciaIdentifier(Item $item): string
     {
         return $item->getNamedTag()->getCompoundTag("Glacia")?->getString("glaciaItem", "") ?? "";
+    }
+
+    public static function applyTransmog(Item $item): Item
+    {
+        $root = $item->getNamedTag();
+        $tag = $root->getCompoundTag("Glacia") ?? new CompoundTag();
+        $tag->setByte("transmog", 1);
+        $root->setTag("Glacia", $tag);
+        $item->setNamedTag($root);
+
+        return $item;
     }
 
     public static function isGlaciaItem(Item $item, string $identifier): bool
@@ -473,5 +762,52 @@ final class GlaciaItemFactory {
         }
 
         return str_replace('\n', "\n", $template);
+    }
+
+    /**
+     * @param list<string> $lore
+     * @return list<string>
+     */
+    private static function trimTrailingBlankLoreLines(array $lore): array
+    {
+        while ($lore !== [] && C::clean((string) end($lore)) === "") {
+            array_pop($lore);
+        }
+
+        return array_values($lore);
+    }
+
+    private static function decorateRuneLore(Item $item, string $definitionKey): Item
+    {
+        if ($definitionKey === "rune_remover") {
+            return self::appendRuneDetailLore(
+                $item,
+                "&r&8- &7Success Rate: &a" . RuneManager::getRemovalChance() . "%"
+            );
+        }
+
+        if (str_ends_with($definitionKey, "_rune")) {
+            $runeId = strtolower(substr($definitionKey, 0, -5));
+            if (RuneManager::isApplied($runeId)) {
+                return self::appendRuneDetailLore(
+                    $item,
+                    "&r&8- &7Success Rate: &a" . RuneManager::getSuccessChance($runeId) . "%"
+                );
+            }
+        }
+
+        return $item;
+    }
+
+    private static function appendRuneDetailLore(Item $item, string $detailLine): Item
+    {
+        $lore = self::trimTrailingBlankLoreLines($item->getLore());
+        if ($lore !== []) {
+            $lore[] = "";
+        }
+
+        $lore[] = C::colorize($detailLine);
+        $item->setLore($lore);
+        return $item;
     }
 }

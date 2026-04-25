@@ -47,18 +47,19 @@ final class BountyManager
     {
         $uuid = $target->getUuid()->toString();
         $newAmount = $this->getBounty($uuid) + max(0, $amount);
+        $updatedAt = time();
 
         $this->bounties[$uuid] = [
             "name" => $target->getUsername(),
             "amount" => $newAmount,
-            "updated_at" => time(),
+            "updated_at" => $updatedAt,
         ];
 
         Loader::getDatabase()->executeInsert(QueryStmts::BOUNTIES_CREATE, [
             "target_uuid" => $uuid,
             "target_name" => $target->getUsername(),
             "amount" => $newAmount,
-            "updated_at" => time(),
+            "updated_at" => $updatedAt,
         ]);
 
         return $newAmount;
@@ -111,17 +112,19 @@ final class BountyManager
 
     public function broadcastPlacement(string $setterName, string $targetName, int $amount): void
     {
-        $message = C::colorize("&r&l&6Bounty &8| &r&f{$setterName} &7set a bounty on &c{$targetName} &7for &a$" . number_format($amount) . "&7.");
-        foreach (Loader::getInstance()->getServer()->getOnlinePlayers() as $online) {
-            $online->sendMessage($message);
-        }
+        $this->broadcast("&r&l&6Bounty &8| &r&f{$setterName} &7set a bounty on &c{$targetName} &7for &a$" . number_format($amount) . "&7.");
     }
 
     public function broadcastClaim(string $killerName, string $targetName, int $amount): void
     {
-        $message = C::colorize("&r&l&6Bounty &8| &r&f{$killerName} &7claimed the bounty on &c{$targetName} &7for &a$" . number_format($amount) . "&7.");
+        $this->broadcast("&r&l&6Bounty &8| &r&f{$killerName} &7claimed the bounty on &c{$targetName} &7for &a$" . number_format($amount) . "&7.");
+    }
+
+    private function broadcast(string $message): void
+    {
+        $formatted = C::colorize($message);
         foreach (Loader::getInstance()->getServer()->getOnlinePlayers() as $online) {
-            $online->sendMessage($message);
+            $online->sendMessage($formatted);
         }
     }
 }

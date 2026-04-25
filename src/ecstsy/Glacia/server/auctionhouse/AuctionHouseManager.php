@@ -71,7 +71,10 @@ final class AuctionHouseManager {
 
     public function getCollectionCount(string $ownerUuid): int
     {
-        return count($this->getCollectionEntries($ownerUuid));
+        return count(array_filter(
+            $this->collection,
+            static fn(array $entry): bool => $entry["owner_uuid"] === $ownerUuid
+        ));
     }
 
     public function getListing(string $listingId): ?array
@@ -154,6 +157,7 @@ final class AuctionHouseManager {
     {
         $listingId = Uuid::uuid4()->toString();
         $now = time();
+        $duration = $this->getListingDuration();
         $listing = [
             "listing_id" => $listingId,
             "seller_uuid" => $seller->getUniqueId()->toString(),
@@ -161,7 +165,7 @@ final class AuctionHouseManager {
             "item_data" => ItemUtils::encodeItem($item),
             "price" => $price,
             "created_at" => $now,
-            "expires_at" => $now + $this->getListingDuration()
+            "expires_at" => $now + $duration
         ];
 
         $this->listings[$listingId] = $listing;
@@ -191,7 +195,7 @@ final class AuctionHouseManager {
             return "You do not have enough money.";
         }
 
-        $item = ItemUtils::decodeItem((string) $listing["item_data"]);
+        $item = $this->decodeStoredItem((string) $listing["item_data"]);
         if (!$buyer->getInventory()->canAddItem($item)) {
             return "Clear some inventory space first.";
         }
@@ -226,7 +230,7 @@ final class AuctionHouseManager {
             return "That listing does not belong to you.";
         }
 
-        $item = ItemUtils::decodeItem((string) $listing["item_data"]);
+        $item = $this->decodeStoredItem((string) $listing["item_data"]);
         $this->addToCollection((string) $listing["seller_uuid"], $item, "cancelled");
         $this->deleteListing($listingId);
         return "";
@@ -243,7 +247,7 @@ final class AuctionHouseManager {
             return "That collection item does not belong to you.";
         }
 
-        $item = ItemUtils::decodeItem((string) $entry["item_data"]);
+        $item = $this->decodeStoredItem((string) $entry["item_data"]);
         if (!$player->getInventory()->canAddItem($item)) {
             return "Clear some inventory space first.";
         }
@@ -276,7 +280,7 @@ final class AuctionHouseManager {
             }
 
             if ($returnItems) {
-                $this->addToCollection((string) $listing["seller_uuid"], ItemUtils::decodeItem((string) $listing["item_data"]), "admin_return");
+                $this->addToCollection((string) $listing["seller_uuid"], $this->decodeStoredItem((string) $listing["item_data"]), "admin_return");
             }
 
             $this->deleteListing((string) $listing["listing_id"]);
@@ -294,7 +298,7 @@ final class AuctionHouseManager {
                 continue;
             }
 
-            $this->addToCollection((string) $listing["seller_uuid"], ItemUtils::decodeItem((string) $listing["item_data"]), "expired");
+            $this->addToCollection((string) $listing["seller_uuid"], $this->decodeStoredItem((string) $listing["item_data"]), "expired");
             $this->deleteListing($listingId);
         }
     }
@@ -313,12 +317,15 @@ final class AuctionHouseManager {
 
     private function getSessionByUuid(string $uuid): ?GlaciaPlayer
     {
-        foreach (Loader::getPlayerManager()->getSessions() as $session) {
-            if ($session->getUuid()->toString() === $uuid) {
-                return $session;
-            }
+        try {
+            return Loader::getPlayerManager()->getSessionByUuid(Uuid::fromString($uuid));
+        } catch (\Throwable) {
+            return null;
         }
+    }
 
-        return null;
+    private function decodeStoredItem(string $encoded): Item
+    {
+        return ItemUtils::decodeItem($encoded);
     }
 }

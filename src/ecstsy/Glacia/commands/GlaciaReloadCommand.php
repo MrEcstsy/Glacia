@@ -10,12 +10,14 @@ use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\blackmarket\BlackMarketAuctionManager;
 use ecstsy\Glacia\server\economy\SellHandler;
 use ecstsy\Glacia\server\items\genbuckets\GenBucketManager;
+use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\Glacia\server\levels\PlayerLevelManager;
 use ecstsy\Glacia\server\lootboxes\LootboxRepository;
 use ecstsy\Glacia\server\quests\QuestInstance;
 use ecstsy\Glacia\server\spawners\SpawnerWorthManager;
 use ecstsy\Glacia\server\worldborder\WorldBorderManager;
 use ecstsy\Glacia\server\zones\ZoneManager;
+use ecstsy\Glacia\server\zones\ZoneMobManager;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\utils\TextFormat as C;
@@ -35,7 +37,7 @@ final class GlaciaReloadCommand extends BaseCommand {
 
         $targets = $this->getTargets();
         if (!isset($targets[$target])) {
-            $sender->sendMessage(C::colorize("&r&cUnknown target. Use: all, items, shop, sell, kits, blackmarket, enchanter, auctionhouse, quests, spawners, misc, messages, factionupgrades, pets, levels, zones, capture, fund, envoy, genbuckets, lootboxes, dps, config"));
+            $sender->sendMessage(C::colorize("&r&cUnknown target. Use: all, items, shop, sell, kits, warlords, blackmarket, enchanter, auctionhouse, quests, spawners, misc, messages, announcer, zonemobs, factionupgrades, pets, runes, levels, zones, capture, fund, envoy, genbuckets, slotbot, combat, lootboxes, dps, config"));
             return;
         }
 
@@ -55,7 +57,7 @@ final class GlaciaReloadCommand extends BaseCommand {
                 return;
         }
 
-        $sender->sendMessage(C::colorize("&r&cUsage: /greload <reload|restore> [all|items|shop|sell|kits|blackmarket|enchanter|auctionhouse|quests|spawners|misc|messages|factionupgrades|pets|levels|zones|capture|fund|envoy|genbuckets|lootboxes|dps|config]"));
+        $sender->sendMessage(C::colorize("&r&cUsage: /greload <reload|restore> [all|items|shop|sell|kits|warlords|blackmarket|enchanter|auctionhouse|quests|spawners|misc|messages|announcer|zonemobs|factionupgrades|pets|runes|levels|zones|capture|fund|envoy|genbuckets|slotbot|combat|lootboxes|dps|config]"));
     }
 
     private function restoreFiles(array $files): int {
@@ -122,6 +124,10 @@ final class GlaciaReloadCommand extends BaseCommand {
             GenBucketManager::loadFromConfig();
         }
 
+        if (in_array("runes.yml", $files, true)) {
+            RuneManager::loadFromConfig();
+        }
+
         if (in_array("misc.yml", $files, true)) {
             WorldBorderManager::loadFromConfig();
         }
@@ -132,6 +138,10 @@ final class GlaciaReloadCommand extends BaseCommand {
 
         if (in_array("zones.yml", $files, true)) {
             ZoneManager::loadFromConfig();
+        }
+
+        if (in_array("zone_mobs.yml", $files, true)) {
+            ZoneMobManager::loadFromConfig();
         }
 
         if (in_array("capturepoints.yml", $files, true)) {
@@ -155,11 +165,12 @@ final class GlaciaReloadCommand extends BaseCommand {
         $lootboxes = LootboxRepository::getBundledResourceFiles();
 
         return [
-            "all" => array_merge(["items.yml", "shop.yml", "sell.yml", "kits.yml", "blackmarket.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml", "messages.yml", "faction_upgrades.yml", "pets.yml", "levels.yml", "zones.yml", "capturepoints.yml", "fund.yml", "envoy.yml", "genbuckets.yml"], $lootboxes, ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "config.yml"]),
+            "all" => array_merge(["items.yml", "shop.yml", "sell.yml", "kits.yml", "warlords.yml", "blackmarket.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml", "messages.yml", "announcer.yml", "zone_mobs.yml", "faction_upgrades.yml", "pets.yml", "runes.yml", "levels.yml", "zones.yml", "capturepoints.yml", "fund.yml", "envoy.yml", "genbuckets.yml", "slotbot.yml", "combat.yml"], $lootboxes, ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "config.yml"]),
             "items" => ["items.yml"],
             "shop" => ["shop.yml"],
             "sell" => ["sell.yml"],
             "kits" => ["kits.yml"],
+            "warlords" => ["warlords.yml"],
             "blackmarket" => ["blackmarket.yml"],
             "enchanter" => ["enchanter.yml"],
             "auctionhouse" => ["auctionhouse.yml"],
@@ -167,14 +178,19 @@ final class GlaciaReloadCommand extends BaseCommand {
             "spawners" => ["spawners.yml"],
             "misc" => ["misc.yml"],
             "messages" => ["messages.yml"],
+            "announcer" => ["announcer.yml"],
+            "zonemobs" => ["zone_mobs.yml"],
             "factionupgrades" => ["faction_upgrades.yml"],
             "pets" => ["pets.yml"],
+            "runes" => ["runes.yml"],
             "levels" => ["levels.yml"],
             "zones" => ["zones.yml"],
             "capture" => ["capturepoints.yml"],
             "fund" => ["fund.yml"],
             "envoy" => ["envoy.yml"],
             "genbuckets" => ["genbuckets.yml"],
+            "slotbot" => ["slotbot.yml"],
+            "combat" => ["combat.yml"],
             "lootboxes" => $lootboxes,
             "dps" => ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml"],
             "config" => ["config.yml"],
@@ -192,6 +208,7 @@ final class GlaciaReloadCommand extends BaseCommand {
                 "shop.yml",
                 "sell.yml",
                 "kits.yml",
+                "warlords.yml",
                 "blackmarket.yml",
                 "enchanter.yml",
                 "auctionhouse.yml",
@@ -199,20 +216,26 @@ final class GlaciaReloadCommand extends BaseCommand {
                 "spawners.yml",
                 "misc.yml",
                 "messages.yml",
+                "announcer.yml",
+                "zone_mobs.yml",
                 "faction_upgrades.yml",
                 "pets.yml",
+                "runes.yml",
                 "levels.yml",
                 "zones.yml",
                 "capturepoints.yml",
                 "fund.yml",
                 "envoy.yml",
                 "genbuckets.yml",
+                "slotbot.yml",
+                "combat.yml",
                 "dps/Simple.yml",
                 "dps/Unique.yml",
                 "dps/Elite.yml",
                 "dps/Exotic.yml",
                 "dps/Legendary.yml",
                 "dps/Godly.yml",
+                "config.yml",
             ],
             LootboxRepository::getBundledResourceFiles()
         );

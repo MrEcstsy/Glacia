@@ -21,7 +21,7 @@ final class ZonesScreen {
         }
 
         $zones = array_values(ZoneManager::getZones());
-        $form = new SimpleForm(function(Player $player, ?int $data) use ($zones, $session) : void {
+        $form = new SimpleForm(function(Player $player, ?int $data) use ($zones) : void {
             if ($data === null) {
                 return;
             }
@@ -31,23 +31,13 @@ final class ZonesScreen {
                 return;
             }
 
-            if (!ZoneManager::canAccess($session->getLevel(), $zone)) {
-                $player->sendMessage(C::colorize("&r&cThat zone unlocks at level &f" . number_format(ZoneManager::getUnlockRequirement($zone)) . "&c."));
-                return;
-            }
-
-            if (!ZoneManager::teleportPlayer($player, $zone)) {
-                $player->sendMessage(C::colorize("&r&cThat zone world is not loaded right now."));
-                return;
-            }
-
-            $player->sendMessage(C::colorize("&r&a✔ &r&7Teleported to &f" . (string) $zone["display"] . "&7."));
+            self::displayDetails($player, $zone);
         });
 
         $form->setTitle(C::colorize("&r&8Zones"));
         $form->setContent(C::colorize(
             "&r&7Your Level: &f" . number_format($session->getLevel()) . "&7/&f" . number_format(PlayerLevelManager::getMaxLevel()) . "\n" .
-            "&r&7Pick a zone to travel to."
+            "&r&7Pick a zone to inspect."
         ));
 
         foreach ($zones as $zone) {
@@ -59,6 +49,55 @@ final class ZonesScreen {
             ));
         }
 
+        $player->sendForm($form);
+    }
+
+    public static function displayDetails(Player $player, array $zone) : void
+    {
+        $session = Loader::getPlayerManager()->getSession($player);
+        if ($session === null) {
+            return;
+        }
+
+        $unlocked = ZoneManager::canAccess($session->getLevel(), $zone);
+        $unlockLevel = ZoneManager::getUnlockRequirement($zone);
+        $form = new SimpleForm(function(Player $player, ?int $data) use ($zone, $unlocked, $unlockLevel) : void {
+            if ($data === null) {
+                return;
+            }
+
+            if ($unlocked && $data === 0) {
+                if (!ZoneManager::canPlayerAccess($player, $zone)) {
+                    $player->sendMessage(C::colorize("&r&cThat zone unlocks at level &f" . number_format($unlockLevel) . "&c."));
+                    return;
+                }
+
+                if (!ZoneManager::teleportPlayer($player, $zone)) {
+                    $player->sendMessage(C::colorize("&r&cThat zone world is not loaded right now."));
+                    return;
+                }
+
+                $player->sendMessage(C::colorize("&r&aTeleported to &f" . (string) $zone["display"] . "&r&a."));
+                return;
+            }
+
+            self::display($player);
+        });
+
+        $status = $unlocked ? "&aUnlocked" : "&cLocked";
+        $form->setTitle(C::colorize("&r&8" . (string) $zone["display"]));
+        $form->setContent(C::colorize(
+            (string) ($zone["description"] ?? "&7No details configured.") . "\n\n" .
+            "&r&7Recommended Level: &f" . number_format((int) ($zone["recommended_level"] ?? 1)) . "\n" .
+            "&r&7Unlock Level: &f" . number_format($unlockLevel) . "\n" .
+            "&r&7Status: {$status}"
+        ));
+
+        if ($unlocked) {
+            $form->addButton(C::colorize("&r&aTeleport\n&r&8Travel to safe zone spawn"));
+        }
+
+        $form->addButton(C::colorize("&r&7Back\n&r&8Return to zone list"));
         $player->sendForm($form);
     }
 }

@@ -1,0 +1,59 @@
+name: "&r&l&vWeapon Crown Jewels"
+title: "&r&l&vWeapon Crown Jewels"
+aliases:
+  - "wcj"
+  - ""
+  - ""
+icon: "clock"
+glow: true
+item-name: "&r&l&vWeapon Crown Jewels"
+item-lore:
+  - "&r&7With unbreakable defense, overwhelming"
+  - "&r&7power bonuses and an aura of pure"
+  - "&r&7fear, no foe will stand against you."
+  - ""
+  - "&r&l&fCommon Loot (&r&76 items&l&f)"
+  - "&r&f&l * &r&7x2 &l&6Weapon Enchantment Orb &l&f(&r&714 lore, 100%&l&f)"
+  - "&r&f&l * &r&7x6 &l&fBlack Scrolls &l&f(&r&790%&l&f)"
+  - "&r&f&l * &r&7x2 &l&4Mastery Black Scrolls &l&f(&r&755%&l&f)"
+  - "&r&f&l * &r&7x2 &l&tHoly White Scroll"
+  - "&r&l&f * &l&aExperience Bottle &l&f(&r&710,000,000&l&f)"
+  - "&r&l&f * &l&3Nearly Max Weapon Set Generator"
+  - ""
+  - "&r&l&eBonus Loot &l&f(&r&71 item&l&f)"
+  - "&r&l&f * &r&l&6Easter &e2026 &6Weapon &eEnchantment &6Table"
+
+rolls:
+  - pool: "rewards"
+    count: 1
+    chance: 100
+    mode: "random"
+
+rewards:
+  - chance: 25
+    type: item
+    id: "weapon_orb"
+    max: 14
+    success: 100
+
+  - chance: 25
+    type: item
+    id: "blackscroll"
+    success: 90
+    count: 6
+
+  - chance: 25
+    type: item
+    id: "xpnote"
+    count: 10000000
+
+  - chance: 25
+    type: item
+    id: "ultimatebook"
+    count: 1
+    
+  - jackpot-rewards:
+    chance: 25
+    type: item
+    id: "legendarybook"
+    count: 1

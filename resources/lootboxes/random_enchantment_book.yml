@@ -1,0 +1,53 @@
+name: "&r&l&2Random Enchantment Book"
+title: "&r&l&2 Random Enchantment Book"
+aliases:
+  - "reb"
+  - ""
+  - ""
+icon: "book"
+glow: true
+item-name: "&r&l&2Random Enchantment Book"
+item-lore:
+  - "&r&7Right-click to receive a random enchantment book!"
+  - ""
+  - "&r&l&fRandom Loot (&r&71 item&l&f)"
+  - "&r&f&l * &r&fSimple Enchantment Book"
+  - "&r&f&l * &r&aUnique Enchantment Book"
+  - "&r&f&l * &r&bElite Enchantment Book"
+  - "&r&f&l * &r&eExotic Enchantment Book"
+  - ""
+  - "&r&l&5Jackpot Loot &l&f(&r&71 item&l&f)"
+  - "&r&l&f * &r&6Legendary Enchantment Book"
+  - "&r&l&f * &r&7x2 &6Legendary Enchantment Books"
+
+rolls:
+  - pool: "rewards"
+    count: 1
+    chance: 100
+    mode: "random"
+
+rewards:
+  - chance: 25
+    type: item
+    id: "simplebook"
+    count: 1
+
+  - chance: 25
+    type: item
+    id: "uniquebook"
+    count: 1
+
+  - chance: 25
+    type: item
+    id: "elitebook"
+    count: 1
+
+  - chance: 25
+    type: item
+    id: "ultimatebook"
+    count: 1
+  
+  - chance: 25
+    type: item
+    id: "legendarybook"
+    count: 1

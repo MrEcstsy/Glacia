@@ -8,6 +8,7 @@ use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\utils\GlaciaUtils;
+use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
@@ -85,24 +86,6 @@ final class BankSubCommand extends BaseSubCommand
 
     private function parseAmount(string $input): int
     {
-        $input = strtolower(trim(str_replace([",", "$"], "", $input)));
-        if ($input === "") {
-            return 0;
-        }
-
-        if (preg_match('/^(\d+(?:\.\d+)?)([kmb])?$/', $input, $matches) !== 1) {
-            return 0;
-        }
-
-        $value = (float) $matches[1];
-        $suffix = $matches[2] ?? "";
-        $multiplier = match ($suffix) {
-            "k" => 1_000,
-            "m" => 1_000_000,
-            "b" => 1_000_000_000,
-            default => 1,
-        };
-
-        return (int) round($value * $multiplier);
+        return GeneralUtils::parseShorthandNumber($input);
     }
 }

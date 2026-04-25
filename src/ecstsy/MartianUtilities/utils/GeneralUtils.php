@@ -225,14 +225,46 @@ final class GeneralUtils {
         if (is_int($input)) {
             return $input;
         }
-        
-        if (preg_match('/\{(\d+)-(\d+)\}/', $input, $matches)) {
+
+        $normalized = trim((string) $input);
+        if (preg_match('/\{(\d+)-(\d+)\}/', $normalized, $matches)) {
             $min = (int)$matches[1];
             $max = (int)$matches[2];
             return mt_rand($min, $max);
         }
-        
-        return (int)$input;
+
+        return self::parseShorthandNumber($normalized);
+    }
+
+    public static function parseShorthandNumber(int|float|string $input): int {
+        if (is_int($input)) {
+            return $input;
+        }
+
+        if (is_float($input)) {
+            return (int) round($input);
+        }
+
+        $normalized = strtolower(trim(str_replace([",", "$", "_", " "], "", $input)));
+        if ($normalized === "") {
+            return 0;
+        }
+
+        if (preg_match('/^(\d+(?:\.\d+)?)([kmbt])?$/', $normalized, $matches) !== 1) {
+            return is_numeric($normalized) ? (int) round((float) $normalized) : 0;
+        }
+
+        $value = (float) $matches[1];
+        $suffix = $matches[2] ?? "";
+        $multiplier = match ($suffix) {
+            "k" => 1_000,
+            "m" => 1_000_000,
+            "b" => 1_000_000_000,
+            "t" => 1_000_000_000_000,
+            default => 1,
+        };
+
+        return (int) round($value * $multiplier);
     }  
 
     public static function parseDynamicMessage(string $message): string {

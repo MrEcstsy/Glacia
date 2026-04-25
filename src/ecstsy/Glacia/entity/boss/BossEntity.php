@@ -300,6 +300,10 @@ abstract class BossEntity extends BaseHostileEntity {
         ));
     }
 
+    protected function updateHealthNameTag(): void {
+        $this->updateNameTag();
+    }
+
     public function getBossName(): string {
         return $this->getName();
     }

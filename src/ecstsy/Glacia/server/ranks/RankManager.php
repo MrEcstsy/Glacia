@@ -158,6 +158,10 @@ final class RankManager {
             $attachment->setPermission($permission, true);
         }
 
+        foreach ($session->getExtraPermissions() as $permission) {
+            $attachment->setPermission($permission, true);
+        }
+
         $player->recalculatePermissions();
     }
 

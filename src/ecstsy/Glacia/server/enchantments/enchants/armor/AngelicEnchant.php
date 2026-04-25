@@ -27,11 +27,11 @@ final class AngelicEnchant implements EntityDamageByEntityEnchantmentHandler {
         }
 
         $chance = match ($level) {
-            1 => 4,
-            2 => 6,
-            3 => 8,
-            4 => 10,
-            5 => 12,
+            1 => 0.1,
+            2 => 0.2,
+            3 => 0.3,
+            4 => 0.4,
+            5 => 0.5,
             default => 0
         };
 

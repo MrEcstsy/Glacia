@@ -36,14 +36,13 @@ final class GiveRCBookSubCommand extends BaseSubCommand {
 
         $groupData = $groupKey !== null ? Groups::getGroupData($groupKey) : null;
         if ($groupData === null) {
-            $available = implode(", ", Groups::getGroupData($groupKey));
-            $sender->sendMessage(C::colorize("&r&cUnknown group “{$groupKey}”. Available: &f{$available}"));
+            $sender->sendMessage(C::colorize("&r&cUnknown group. Try one of: &fsimple&7, &funique&7, &felite&7, &fexotic&7, &flegendary&7, &fmastery"));
             return;
         }
 
         $player = PlayerUtils::getPlayerByPrefix($targetName);
         if (!$player instanceof Player) {
-            $sender->sendMessage(C::colorize("&r&cPlayer “{$targetName}” is not online!"));
+            $sender->sendMessage(C::colorize("&r&cThat player is not online."));
             return;
         }
 

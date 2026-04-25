@@ -61,6 +61,17 @@ final class PlayerVaultCommand extends BaseCommand {
             return;
         }
 
+        if ($first === "list") {
+            $targetName = trim(implode(" ", $parts));
+            if ($targetName === "") {
+                $this->listVaults($sender);
+                return;
+            }
+
+            $this->listOtherVaults($sender, $targetName);
+            return;
+        }
+
         $this->sendInstructions($sender);
     }
 
@@ -126,18 +137,55 @@ final class PlayerVaultCommand extends BaseCommand {
         }
 
         $target = PlayerUtils::getPlayerByPrefix($targetName);
-        if ($target === null) {
+        $session = $target !== null ? Loader::getPlayerManager()->getSession($target) : Loader::getPlayerVaultManager()->resolvePlayerSession($targetName);
+        if ($session === null) {
             $viewer->sendMessage(C::colorize("&r&cThat player could not be found."));
             return;
         }
 
         (new PlayerVaultScreen(
             $viewer,
-            $target->getUniqueId()->toString(),
-            $target->getName(),
+            $session->getUuid()->toString(),
+            $session->getUsername(),
             $vaultNumber,
             true
         ))->display($viewer);
+    }
+
+    private function listVaults(Player $player) : void
+    {
+        $manager = Loader::getPlayerVaultManager();
+        $nonEmpty = $manager->getNonEmptyVaultNumbers($player->getUniqueId()->toString(), $player);
+
+        if ($nonEmpty === []) {
+            $player->sendMessage(C::colorize("&r&7None of your accessible vaults currently have stored items."));
+            return;
+        }
+
+        $player->sendMessage(C::colorize("&r&bVaults with stored items: &f#" . implode("&7, &f#", $nonEmpty)));
+    }
+
+    private function listOtherVaults(Player $viewer, string $targetName) : void
+    {
+        if (!$viewer->hasPermission("glacia.admin")) {
+            $viewer->sendMessage(C::colorize("&r&cYou do not have permission to view other players' vaults."));
+            return;
+        }
+
+        $target = PlayerUtils::getPlayerByPrefix($targetName);
+        $session = $target !== null ? Loader::getPlayerManager()->getSession($target) : Loader::getPlayerVaultManager()->resolvePlayerSession($targetName);
+        if ($session === null) {
+            $viewer->sendMessage(C::colorize("&r&cThat player could not be found."));
+            return;
+        }
+
+        $nonEmpty = Loader::getPlayerVaultManager()->getNonEmptyVaultNumbers($session->getUuid()->toString());
+        if ($nonEmpty === []) {
+            $viewer->sendMessage(C::colorize("&r&7" . $session->getUsername() . " has no vaults with stored items."));
+            return;
+        }
+
+        $viewer->sendMessage(C::colorize("&r&b" . $session->getUsername() . "'s vaults with stored items: &f#" . implode("&7, &f#", $nonEmpty)));
     }
 
     private function sendInstructions(Player $player) : void
@@ -158,8 +206,10 @@ final class PlayerVaultCommand extends BaseCommand {
 
         $player->sendMessage(C::colorize("&r&eUse &f/pv <number> &r&eto open one of your vaults."));
         $player->sendMessage(C::colorize("&r&eUse &f/pv search <query> &r&eto search your accessible vaults."));
+        $player->sendMessage(C::colorize("&r&eUse &f/pv list &r&eto see which vaults currently have items."));
         if ($player->hasPermission("glacia.admin")) {
             $player->sendMessage(C::colorize("&r&eUse &f/pv <number> <player> &r&eto inspect another player's vault."));
+            $player->sendMessage(C::colorize("&r&eUse &f/pv list <player> &r&eto see which of their vaults have items."));
         }
         $player->sendMessage(C::colorize($vaultText));
     }

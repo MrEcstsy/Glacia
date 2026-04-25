@@ -8,27 +8,32 @@ use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\utils\RewardResolver;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\item\Item;
+use pocketmine\player\Player;
 
 final class SlotbotRewardRepository {
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private static function getEntries(string $pool = "rewards") : array
+    {
+        $config = GeneralUtils::getConfiguration(Loader::getInstance(), "slotbot.yml");
+        $entries = $config?->get($pool, []);
+
+        if(!is_array($entries)){
+            return [];
+        }
+
+        return array_values(array_filter($entries, static fn(mixed $entry) : bool => is_array($entry)));
+    }
 
     /**
      * @return Item[]
      */
     public static function getRewards(string $pool = "rewards"): array
     {
-        $config = GeneralUtils::getConfiguration(Loader::getInstance(), "slotbot.yml");
-        $entries = $config?->get($pool, []);
-
-        if (!is_array($entries)) {
-            return [];
-        }
-
         $rewards = [];
-        foreach ($entries as $entry) {
-            if (!is_array($entry)) {
-                continue;
-            }
-
+        foreach (self::getEntries($pool) as $entry) {
             $item = self::resolveReward($entry);
             if ($item !== null) {
                 $rewards[] = $item;
@@ -38,74 +43,71 @@ final class SlotbotRewardRepository {
         return $rewards;
     }
 
-    public static function getRandomReward(string $pool = "rewards"): ?Item
+    public static function getRandomReward(string $pool = "rewards", ?Player $player = null): ?Item
     {
-        $rewards = self::getRewards($pool);
-        if ($rewards === []) {
+        $entry = RewardResolver::rollEntry(self::getEntries($pool));
+        if ($entry === null) {
             return null;
         }
 
-        return clone $rewards[array_rand($rewards)];
+        $item = self::resolveReward($entry, $player);
+        return $item !== null ? clone $item : null;
     }
 
-    public static function getSpinReward(): ?Item
+    public static function getSpinReward(?Player $player = null): ?Item
     {
-        $normalRewards = self::getRewards();
-        $jackpotRewards = self::getRewards("jackpot-rewards");
+        $normalEntries = self::getEntries();
+        $jackpotEntries = self::getEntries("jackpot-rewards");
 
-        if ($normalRewards === [] && $jackpotRewards === []) {
+        if ($normalEntries === [] && $jackpotEntries === []) {
             return null;
         }
 
-        if ($normalRewards === []) {
-            return clone $jackpotRewards[array_rand($jackpotRewards)];
+        if ($normalEntries === []) {
+            return self::getJackpotReward($player);
         }
 
-        if ($jackpotRewards !== [] && mt_rand(1, 10000) <= (int) round(self::getJackpotChance() * 100)) {
-            return clone $jackpotRewards[array_rand($jackpotRewards)];
+        if ($jackpotEntries !== [] && mt_rand(1, 10000) <= (int) round(self::getJackpotChance() * 100)) {
+            return self::getJackpotReward($player);
         }
 
-        return clone $normalRewards[array_rand($normalRewards)];
+        return self::getRandomReward("rewards", $player);
     }
 
-    public static function getJackpotReward(): ?Item
+    public static function getJackpotReward(?Player $player = null): ?Item
     {
-        $jackpotRewards = self::getRewards("jackpot-rewards");
-        if ($jackpotRewards === []) {
+        $entry = RewardResolver::rollEntry(self::getEntries("jackpot-rewards"));
+        if ($entry === null) {
             return null;
         }
 
-        return clone $jackpotRewards[array_rand($jackpotRewards)];
+        $item = self::resolveReward($entry, $player);
+        return $item !== null ? clone $item : null;
     }
 
     public static function getDisplayReward(): ?Item
     {
-        $normalRewards = self::getRewards();
-        $jackpotRewards = self::getRewards("jackpot-rewards");
+        $normalEntries = self::getEntries();
+        $jackpotEntries = self::getEntries("jackpot-rewards");
 
-        if ($normalRewards === [] && $jackpotRewards === []) {
+        if ($normalEntries === [] && $jackpotEntries === []) {
             return null;
         }
 
-        if ($normalRewards === []) {
-            return clone $jackpotRewards[array_rand($jackpotRewards)];
+        if ($normalEntries === []) {
+            return self::getJackpotDisplayReward();
         }
 
-        if ($jackpotRewards !== [] && mt_rand(1, 100) <= 20) {
-            return clone $jackpotRewards[array_rand($jackpotRewards)];
+        if ($jackpotEntries !== [] && mt_rand(1, 100) <= 20) {
+            return self::getJackpotDisplayReward();
         }
 
-        return clone $normalRewards[array_rand($normalRewards)];
+        return self::getRandomReward();
     }
 
     public static function getJackpotDisplayReward(): ?Item
     {
-        $jackpotRewards = self::getRewards("jackpot-rewards");
-        if ($jackpotRewards === []) {
-            return null;
-        }
-
-        return clone $jackpotRewards[array_rand($jackpotRewards)];
+        return self::getJackpotReward();
     }
 
     public static function getJackpotChance(): float
@@ -118,22 +120,9 @@ final class SlotbotRewardRepository {
     /**
      * @param array<string, mixed> $entry
      */
-    private static function resolveReward(array $entry): ?Item
+    private static function resolveReward(array $entry, ?Player $player = null): ?Item
     {
-        $normalized = $entry;
-
-        if (isset($entry["item"]) && !isset($entry["material"]) && !isset($entry["id"])) {
-            $normalized["material"] = $entry["item"];
-        }
-
-        if (isset($entry["amount"]) && !isset($entry["count"])) {
-            $material = strtolower((string) ($normalized["material"] ?? $normalized["id"] ?? ""));
-            if (!in_array($material, ["xpnote", "xp_note", "money_note", "moneynote"], true)) {
-                $normalized["count"] = $entry["amount"];
-            }
-        }
-
-        $item = RewardResolver::resolveItem($normalized);
+        $item = RewardResolver::resolveItem($entry, $player);
         if ($item === null) {
             return null;
         }

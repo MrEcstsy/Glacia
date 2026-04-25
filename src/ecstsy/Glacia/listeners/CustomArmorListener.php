@@ -80,7 +80,7 @@ final class CustomArmorListener implements Listener {
                     $baseDamage = $event->getBaseDamage();
                     $bonusMultiplier = 0.15;
 
-                    if ($this->isUsingGlaciaItem($damager, "phantom_sword")) {
+                    if ($this->isUsingGlaciaItem($damager, "phantom_weapon")) {
                         $bonusMultiplier += 0.05;
                     }
 
@@ -139,7 +139,7 @@ final class CustomArmorListener implements Listener {
                                 3.0
                             );
 
-                            $victim->sendMessage(C::colorize("&r&eRevenge of Yijki &7has been unleashed!"));
+                            $victim->sendMessage(C::colorize("&r&eRevenge of Stormcaller &7has been unleashed!"));
                         }
                     }
                     break;
@@ -160,13 +160,13 @@ final class CustomArmorListener implements Listener {
         if ($previous !== null) {
             switch ($previous) {
                 case 'phantom':
-                    $player->sendMessage(C::colorize("&r&cPhantom Set Bonus deactivated."));
+                    $player->sendMessage(C::colorize("&r&5Dreadveil Set Bonus deactivated."));
                     break;
                 case 'yeti':
-                    $player->sendMessage(C::colorize("&r&l&cYeti Set Bonus deactivated."));
+                    $player->sendMessage(C::colorize("&r&l&bFrostbound Set Bonus deactivated."));
                     break;
                 case 'yijki':
-                    $player->sendMessage(C::colorize("&r&l&fYijki Set Bonus deactivated."));
+                    $player->sendMessage(C::colorize("&r&l&fStormcaller Set Bonus deactivated."));
                     break;
             }
         }
@@ -174,13 +174,13 @@ final class CustomArmorListener implements Listener {
         if ($current !== null) {
             switch ($current) {
                 case 'phantom':
-                    $player->sendMessage(C::colorize("&r&l&cPhantom Set Bonus activated!"));
+                    $player->sendMessage(C::colorize("&r&l&5Dreadveil Set Bonus activated!"));
                     break;
                 case 'yeti':
-                    $player->sendMessage(C::colorize("&r&l&bYeti Set Bonus activated!"));
+                    $player->sendMessage(C::colorize("&r&l&bFrostbound Set Bonus activated!"));
                     break;
                 case 'yijki':
-                    $player->sendMessage(C::colorize("&r&l&fYijki Set Bonus activated!"));
+                    $player->sendMessage(C::colorize("&r&l&fStormcaller Set Bonus activated!"));
                     break;
             }
         }
