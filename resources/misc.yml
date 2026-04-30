@@ -1,3 +1,7 @@
+# PocketMine's default adapter replaces Bedrock Character Creator ("persona") skins with random noise.
+# When true, Glacia installs a tolerant skin adapter: valid baked bitmaps are kept; otherwise a neutral fallback.
+persona-friendly-skins: true
+
 near-radius: 100
 wild-min-radius: 6000
 wild-max-radius: 7000
@@ -13,3 +17,118 @@ relic-cooldowns:
   stormflare_torch: "5m"
   glacial_blessing: "10m"
   tempest_gateway: "10m"
+
+# Staff mode (/adminmode, /staffmode, /staff): stealth patrol + locked hotbar tools. Uses adventure + no-clip (not spectator) so item tools work.
+staff-mode:
+  # When true, staff fly through blocks like spectator while in staff mode.
+  no-clip: true
+  # Ban presets for the punish book (duration uses the same format as relic-cooldowns, e.g. 1h, 2d, 1w). Empty duration = permanent ban.
+  punishment-presets:
+    - label: "1 hour"
+      duration: "1h"
+    - label: "6 hours"
+      duration: "6h"
+    - label: "1 day"
+      duration: "1d"
+    - label: "7 days"
+      duration: "7d"
+    - label: "30 days"
+      duration: "30d"
+    - label: "Permanent"
+      duration: ""
+
+# Typed ban presets for /ban <player> <preset> [reason]
+ban-presets:
+  entries:
+    - id: "killaura"
+      duration: "7d"
+      reason: "KillAura"
+    - id: "autoclicker"
+      duration: "3d"
+      reason: "AutoClicker"
+    - id: "xray"
+      duration: "14d"
+      reason: "X-Ray"
+    - id: "chargeback"
+      duration: ""
+      reason: "Chargeback"
+
+moderation:
+  # Warn count escalation -> tempban duration spec.
+  warn-escalation:
+    3: "1d"
+    5: "7d"
+  report:
+    notify-permission: "glacia.staff.reports"
+    discord-enabled: true
+    cooldown-seconds: 60
+    duplicate-window-seconds: 120
+
+faction-contribution:
+  enabled: true
+  feedback-actionbar: true
+  sources:
+    mob-kill:
+      default: 2
+      zone-mob: 4
+      boss: 30
+    fishing:
+      common: 1
+      uncommon: 2
+      rare: 4
+      epic: 8
+    sell:
+      points-per-dollar: 0.02
+      max-per-transaction: 250
+    lootbag-open: 8
+    special-deposits:
+      items:
+        mysterymobspawner: 120
+        heroic_mysterymobspawner: 250
+        nautilus_shell: 10
+  milestones:
+    - points: 10000
+      buffs:
+        mob-drop-multiplier: 1.03
+        xp-gain-multiplier: 1.03
+        fishing-luck-multiplier: 1.02
+        sell-multiplier: 1.01
+      tasks:
+        elite_mobs_killed: 50
+        rare_fish_caught: 15
+    - points: 25000
+      buffs:
+        mob-drop-multiplier: 1.04
+        xp-gain-multiplier: 1.04
+        fishing-luck-multiplier: 1.03
+        sell-multiplier: 1.01
+      tasks:
+        bosses_killed: 3
+        spawners_placed: 5
+    - points: 50000
+      buffs:
+        mob-drop-multiplier: 1.05
+        xp-gain-multiplier: 1.05
+        fishing-luck-multiplier: 1.04
+        sell-multiplier: 1.02
+      tasks:
+        bosses_killed: 8
+        elite_mobs_killed: 200
+    - points: 75000
+      buffs:
+        mob-drop-multiplier: 1.06
+        xp-gain-multiplier: 1.06
+        fishing-luck-multiplier: 1.05
+        sell-multiplier: 1.02
+      tasks:
+        rare_fish_caught: 60
+        spawners_placed: 15
+    - points: 100000
+      buffs:
+        mob-drop-multiplier: 1.08
+        xp-gain-multiplier: 1.08
+        fishing-luck-multiplier: 1.06
+        sell-multiplier: 1.03
+      tasks:
+        bosses_killed: 15
+        elite_mobs_killed: 500

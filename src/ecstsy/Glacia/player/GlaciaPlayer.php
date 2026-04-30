@@ -19,8 +19,11 @@ use pocketmine\utils\TextFormat as C;
 use pocketmine\player\Player;
 use pocketmine\Server;
 use Ramsey\Uuid\UuidInterface;
+use JsonException;
 
 final class GlaciaPlayer {
+
+    public const MAX_BALANCE = 9_000_000_000.0;
 
     private bool $isConnected = false;
     private bool $adminMode = false;
@@ -43,7 +46,9 @@ final class GlaciaPlayer {
         private string $collection,
         private int $kills,
         private int $deaths,
-        private int $slotCredits = 0
+        private int $slotCredits,
+        private int $itemFlipCredits,
+        private ?string $title,
     )
     {
         
@@ -98,11 +103,25 @@ final class GlaciaPlayer {
         return $this->balance;
     }
 
-    public function addBalance(float $amount): void {
-        $maxAmount = 9000000000;
-        $player = $this->getPlayer();
+    public function getRemainingBalanceCapacity(): float
+    {
+        return max(0.0, self::MAX_BALANCE - $this->balance);
+    }
 
-        $remainingAmount = $maxAmount - $this->balance;
+    public function canReceiveBalance(float $amount): bool
+    {
+        return $amount > 0 && $this->getRemainingBalanceCapacity() >= $amount;
+    }
+
+    public function addBalance(float $amount): void {
+        if ($amount <= 0) {
+            return;
+        }
+
+        $player = $this->getPlayer();
+        $amount = round($amount, 2);
+
+        $remainingAmount = self::MAX_BALANCE - $this->balance;
         $amountToAdd = min($amount, $remainingAmount);
 
         if ($amountToAdd <= 0) {
@@ -112,7 +131,7 @@ final class GlaciaPlayer {
             return;
         }
 
-        $this->balance += $amountToAdd;
+        $this->balance = min(self::MAX_BALANCE, round($this->balance + $amountToAdd, 2));
         $this->updateDb();
         if ($player !== null) {
             ScoreboardHelper::updateBalanceLine($player);
@@ -120,7 +139,12 @@ final class GlaciaPlayer {
     }
 
     public function removeBalance(float $amount): void {
-        $this->balance -= $amount;
+        if ($amount <= 0) {
+            return;
+        }
+
+        $amount = round($amount, 2);
+        $this->balance = max(0.0, round($this->balance - $amount, 2));
         $this->updateDb();
         $player = $this->getPlayer();
         if ($player !== null) {
@@ -129,7 +153,7 @@ final class GlaciaPlayer {
     }
 
     public function setBalance(float $amount): void {
-        $this->balance = $amount;
+        $this->balance = min(self::MAX_BALANCE, max(0.0, round($amount, 2)));
         $this->updateDb();
         $player = $this->getPlayer();
         if ($player !== null) {
@@ -217,6 +241,8 @@ final class GlaciaPlayer {
             ScoreboardHelper::updatePowerLine($player);
             ScoreboardHelper::updateFactionLines($player);
         }
+
+        $this->getFaction()?->refreshScoreboards();
     }
 
     /**
@@ -226,7 +252,7 @@ final class GlaciaPlayer {
      */
     public function getAllSettings(): array
     {
-        return json_decode($this->settings, true) ?? [];
+        return $this->decodeJsonMap($this->settings, "settings");
     }
 
     /**
@@ -237,13 +263,17 @@ final class GlaciaPlayer {
      */
     public function getSetting(string $key): mixed
     {
-        $decodedSettings = json_decode($this->settings, true) ?? [];
+        $decodedSettings = $this->decodeJsonMap($this->settings, "settings");
         if ($key === "notifications" && !array_key_exists("notifications", $decodedSettings)) {
             return $decodedSettings["loot_announcer"] ?? true;
         }
 
         if ($key === "loot_announcer" && !array_key_exists("loot_announcer", $decodedSettings)) {
             return $decodedSettings["notifications"] ?? true;
+        }
+
+        if ($key === "show_coordinates" && !array_key_exists("show_coordinates", $decodedSettings)) {
+            return true;
         }
 
         return $decodedSettings[$key] ?? null;
@@ -258,9 +288,9 @@ final class GlaciaPlayer {
      */
     public function setSetting(string $key, mixed $value): void
     {
-        $decodedSettings = json_decode($this->settings, true) ?? [];
+        $decodedSettings = $this->decodeJsonMap($this->settings, "settings");
         $decodedSettings[$key] = $value;
-        $this->settings = json_encode($decodedSettings);
+        $this->settings = $this->encodeJsonMap($decodedSettings, "settings", $this->settings);
         $this->updateDb();
     }
 
@@ -272,9 +302,9 @@ final class GlaciaPlayer {
      */
     public function toggleSetting(string $key): void
     {
-        $settings = json_decode($this->settings, true) ?? [];
+        $settings = $this->decodeJsonMap($this->settings, "settings");
         $settings[$key] = !((bool) $this->getSetting($key));
-        $this->settings = json_encode($settings);
+        $this->settings = $this->encodeJsonMap($settings, "settings", $this->settings);
         $this->updateDb();
     }
 
@@ -328,6 +358,41 @@ final class GlaciaPlayer {
         $this->setSetting("extra_permissions", []);
     }
 
+    /**
+     * @return string[]
+     */
+    public function getUnlockedTitles(): array
+    {
+        $titles = $this->getSetting("unlocked_titles");
+        if (!is_array($titles)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(array_map(
+            static fn(mixed $value): string => strtolower(trim((string) $value)),
+            $titles
+        ))));
+    }
+
+    public function hasUnlockedTitle(string $titleId): bool
+    {
+        return in_array(strtolower(trim($titleId)), $this->getUnlockedTitles(), true);
+    }
+
+    public function unlockTitle(string $titleId): void
+    {
+        $titleId = strtolower(trim($titleId));
+        if ($titleId === "") {
+            return;
+        }
+
+        $titles = $this->getUnlockedTitles();
+        if (!in_array($titleId, $titles, true)) {
+            $titles[] = $titleId;
+            $this->setSetting("unlocked_titles", $titles);
+        }
+    }
+
     public function getSellMultiplier(): float {
         return $this->sellMultiplier;
     }
@@ -349,10 +414,10 @@ final class GlaciaPlayer {
 
     public function setLevelData(int $level, int $xp): void
     {
-        $settings = json_decode($this->settings, true) ?? [];
+        $settings = $this->decodeJsonMap($this->settings, "settings");
         $settings["player_level"] = max(1, $level);
         $settings["player_level_xp"] = max(0, $xp);
-        $this->settings = json_encode($settings);
+        $this->settings = $this->encodeJsonMap($settings, "settings", $this->settings);
         $this->updateDb();
     }
 
@@ -365,7 +430,7 @@ final class GlaciaPlayer {
     {
         $cooldowns = $this->decodeCooldowns();
         $cooldowns[$cooldownName] = time() + max(0, $duration);
-        $this->cooldowns = json_encode($cooldowns);
+        $this->cooldowns = $this->encodeJsonMap($cooldowns, "cooldowns", $this->cooldowns);
         $this->updateDb();
     }
 
@@ -393,7 +458,7 @@ final class GlaciaPlayer {
     {
         $cooldowns = $this->decodeCooldowns();
         unset($cooldowns[$cooldownName]);
-        $this->cooldowns = json_encode($cooldowns);
+        $this->cooldowns = $this->encodeJsonMap($cooldowns, "cooldowns", $this->cooldowns);
         $this->updateDb();
     }
 
@@ -443,7 +508,7 @@ final class GlaciaPlayer {
         }
 
         $collection[] = $itemData;
-        $this->collection = json_encode($collection);
+        $this->collection = $this->encodeJsonMap($collection, "collection", $this->collection);
         $this->updateDb();
 
         $this->getPlayer()?->sendMessage(C::colorize("&r&aItem added to your collection."));
@@ -456,7 +521,7 @@ final class GlaciaPlayer {
         
         if (($key = array_search($itemData, $collection, true)) !== false) {
             unset($collection[$key]);
-            $this->collection = json_encode(array_values($collection));
+            $this->collection = $this->encodeJsonMap(array_values($collection), "collection", $this->collection);
             $this->updateDb();
 
             $this->getPlayer()?->sendMessage(C::colorize("&r&aItem removed from your collection."));
@@ -467,7 +532,7 @@ final class GlaciaPlayer {
 
     public function getItemsFromCollection(): array
     {
-        $collection = json_decode($this->collection, true);
+        $collection = $this->decodeJsonMap($this->collection, "collection");
         return is_array($collection) ? $collection : [];
     }
 
@@ -568,6 +633,90 @@ final class GlaciaPlayer {
         $this->updateDb();
     }
 
+    public function getItemFlipCredits(): int
+    {
+        return $this->itemFlipCredits;
+    }
+
+    public function getAdminCoins(): int
+    {
+        return max(0, (int) ($this->getSetting("admin_coins") ?? 0));
+    }
+
+    public function addAdminCoins(int $amount): void
+    {
+        if ($amount <= 0) {
+            return;
+        }
+
+        $this->setAdminCoins($this->getAdminCoins() + $amount);
+    }
+
+    public function removeAdminCoins(int $amount): bool
+    {
+        if ($amount <= 0) {
+            return true;
+        }
+
+        $current = $this->getAdminCoins();
+        if ($current < $amount) {
+            return false;
+        }
+
+        $this->setAdminCoins($current - $amount);
+        return true;
+    }
+
+    public function setAdminCoins(int $amount): void
+    {
+        $this->setSetting("admin_coins", max(0, $amount));
+    }
+
+    public function addItemFlipCredits(int $amount): void
+    {
+        if ($amount <= 0) {
+            return;
+        }
+
+        $this->itemFlipCredits += $amount;
+        $this->updateDb();
+    }
+
+    public function removeItemFlipCredits(int $amount): bool
+    {
+        if ($amount <= 0) {
+            return true;
+        }
+
+        if ($this->itemFlipCredits < $amount) {
+            return false;
+        }
+
+        $this->itemFlipCredits -= $amount;
+        $this->updateDb();
+        return true;
+    }
+
+    public function setItemFlipCredits(int $amount): void
+    {
+        $this->itemFlipCredits = max(0, $amount);
+        $this->updateDb();
+    }
+
+    public function getTitle(): ?string {
+        return $this->title;
+    }
+
+    public function setTitle(?string $title): void {
+        $this->title = $title;
+        $this->updateDb();
+    }
+
+    public function removeTitle(): void {
+        $this->title = null;
+        $this->updateDb();
+    }
+
     public function updateDb(): void {
         Loader::getDatabase()->executeChange(QueryStmts::PLAYERS_UPDATE, [
             'uuid' => $this->uuid->toString(),
@@ -584,7 +733,9 @@ final class GlaciaPlayer {
             'collection' => $this->collection,
             'kills' => $this->kills,
             'deaths' => $this->deaths,
-            'slot_credits' => $this->slotCredits
+            'slot_credits' => $this->slotCredits,
+            'item_flip_credits' => $this->itemFlipCredits,
+            'title' => $this->title
         ]);
     }
 
@@ -593,10 +744,7 @@ final class GlaciaPlayer {
      */
     private function decodeCooldowns(): array
     {
-        $decoded = json_decode($this->cooldowns, true);
-        if (!is_array($decoded)) {
-            return [];
-        }
+        $decoded = $this->decodeJsonMap($this->cooldowns, "cooldowns");
 
         $uuid = $this->getUuid()->toString();
         if (isset($decoded[$uuid]) && is_array($decoded[$uuid])) {
@@ -611,5 +759,37 @@ final class GlaciaPlayer {
         }
 
         return $cooldowns;
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    private function decodeJsonMap(string $json, string $context): array
+    {
+        if (trim($json) === "") {
+            return [];
+        }
+
+        try {
+            $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            Loader::getInstance()->getLogger()->warning("[PlayerData] Failed to decode {$context} for {$this->username}: " . $e->getMessage());
+            return [];
+        }
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * @param array<mixed> $payload
+     */
+    private function encodeJsonMap(array $payload, string $context, string $fallback): string
+    {
+        try {
+            return json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            Loader::getInstance()->getLogger()->warning("[PlayerData] Failed to encode {$context} for {$this->username}: " . $e->getMessage());
+            return $fallback;
+        }
     }
 }

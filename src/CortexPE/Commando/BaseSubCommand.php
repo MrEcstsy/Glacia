@@ -66,7 +66,7 @@ abstract class BaseSubCommand extends BaseCommand{
 			}
 
 			if($parent instanceof BaseCommand){
-				$parentNames = $parent->getName() . " BaseSubCommand.php" . $parentNames;
+				$parentNames = $parent->getName() . " " . $parentNames;
 			}
 
 			$this->usageMessage = $this->generateUsageMessage(trim($parentNames));

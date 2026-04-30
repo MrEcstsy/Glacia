@@ -9,9 +9,9 @@ use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\server\items\GlaciaItems;
+use ecstsy\Glacia\server\etherealcrates\EtherealCrateRepository;
 use ecstsy\Glacia\server\lootboxes\LootboxRepository;
 use pocketmine\command\CommandSender;
-use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
 
 final class ListGlaciaItemsSubCommand extends BaseSubCommand {
@@ -25,29 +25,31 @@ final class ListGlaciaItemsSubCommand extends BaseSubCommand {
     }
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void {
-        if (!$sender instanceof Player) {
-            $sender->sendMessage(C::RED . "This command can only be used in-game.");
-            return;
-        }
-
         $defs = GlaciaItemFactory::$definitions;
         $lootboxes = LootboxRepository::getLookupMap();
+        $etherealCrates = EtherealCrateRepository::getLookupMap();
         $rawCategory = trim((string) ($args["category"] ?? ""));
         $legacyPage = $rawCategory !== "" && ctype_digit($rawCategory) ? (int) $rawCategory : null;
         $category = $legacyPage === null ? strtolower($rawCategory) : "";
         $categories = GlaciaItems::getCategoryDisplays();
+        $lootboxListMode = self::isLootboxListCategory($category);
 
-        if (empty($defs) && empty($lootboxes)) {
+        if (empty($defs) && empty($lootboxes) && empty($etherealCrates)) {
             $sender->sendMessage(C::YELLOW . "No Glacia custom items are registered.");
             return;
         }
 
-        if ($category !== "" && !isset($categories[$category])) {
-            $sender->sendMessage(C::RED . "Unknown category. Available: " . implode(", ", array_keys($categories)));
+        if ($category !== "" && !isset($categories[$category]) && !$lootboxListMode) {
+            $sender->sendMessage(C::RED . "Unknown category. Available: " . implode(", ", array_keys($categories)) . ", lootboxes");
             return;
         }
 
-        if ($category !== "") {
+        if ($lootboxListMode) {
+            $itemKeys = [];
+            foreach (array_keys($lootboxes) as $lootboxId) {
+                $itemKeys[] = "lootbox:" . $lootboxId;
+            }
+        } elseif ($category !== "") {
             $itemKeys = array_values(array_filter(
                 GlaciaItems::getCategoryItems($category),
                 static fn(string $id): bool => isset($defs[$id])
@@ -56,6 +58,9 @@ final class ListGlaciaItemsSubCommand extends BaseSubCommand {
             $itemKeys = array_keys($defs);
             foreach (array_keys($lootboxes) as $lootboxId) {
                 $itemKeys[] = "lootbox:" . $lootboxId;
+            }
+            foreach (array_keys($etherealCrates) as $crateId) {
+                $itemKeys[] = "ethereal_crate:" . $crateId;
             }
         }
 
@@ -83,7 +88,9 @@ final class ListGlaciaItemsSubCommand extends BaseSubCommand {
         $offset = (int) (($page - 1) * self::ITEMS_PER_PAGE);
         $pageItems = array_slice($itemKeys, $offset, self::ITEMS_PER_PAGE);
 
-        $title = $category !== "" ? ($categories[$category] . " Items") : "Glacia Custom Items";
+        $title = $lootboxListMode
+            ? "Lootboxes"
+            : ($category !== "" ? ($categories[$category] . " Items") : "Glacia Custom Items");
         $sender->sendMessage(C::GOLD . "=== {$title} (Page {$page}/{$totalPages}) ===");
 
         foreach ($pageItems as $id) {
@@ -91,6 +98,12 @@ final class ListGlaciaItemsSubCommand extends BaseSubCommand {
                 $lootboxId = substr($id, 8);
                 $aliases = $lootboxes[$lootboxId] ?? [];
                 $sender->sendMessage(C::LIGHT_PURPLE . $lootboxId . C::GRAY . " - " . C::AQUA . "/gi lootbox 1 {$lootboxId}" . (count($aliases) > 1 ? C::GRAY . " [" . implode(", ", array_slice($aliases, 1)) . "]" : ""));
+                continue;
+            }
+            if (str_starts_with($id, "ethereal_crate:")) {
+                $crateId = substr($id, 15);
+                $aliases = $etherealCrates[$crateId] ?? [];
+                $sender->sendMessage(C::LIGHT_PURPLE . $crateId . C::GRAY . " - " . C::AQUA . "/gi ethereal_crate 1 {$crateId}" . (count($aliases) > 1 ? C::GRAY . " [" . implode(", ", array_slice($aliases, 1)) . "]" : ""));
                 continue;
             }
 
@@ -102,5 +115,10 @@ final class ListGlaciaItemsSubCommand extends BaseSubCommand {
 
     public function getPermission(): string {
         return "glacia.give-item";
+    }
+
+    /** @internal */
+    private static function isLootboxListCategory(string $category): bool {
+        return in_array(strtolower(trim($category)), ["lootboxes", "lootbox", "lb"], true);
     }
 }

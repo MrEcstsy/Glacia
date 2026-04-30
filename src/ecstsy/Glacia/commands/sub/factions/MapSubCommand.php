@@ -10,7 +10,9 @@ use ecstsy\Glacia\server\factions\relations\RelationManager;
 use ecstsy\Glacia\server\regions\RegionManager;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use pocketmine\command\CommandSender;
+use pocketmine\math\Vector3;
 use pocketmine\player\Player;
+use pocketmine\utils\TextFormat;
 
 final class MapSubCommand extends BaseSubCommand {
 
@@ -27,6 +29,9 @@ final class MapSubCommand extends BaseSubCommand {
         $radius = 5;
         $centerX = $sender->getPosition()->getFloorX() >> 4;
         $centerZ = $sender->getPosition()->getFloorZ() >> 4;
+
+        $worldFolder = $sender->getWorld()->getFolderName();
+        $spawnRegion = RegionManager::getInstance()->getRegionByName("Spawn");
 
         $yaw = $sender->getLocation()->getYaw();
         $directions = [
@@ -48,18 +53,28 @@ final class MapSubCommand extends BaseSubCommand {
 
         $map = "§l§8[ " . trim($dirString) . "]§r\n";
 
-        $legend = "§a■ Your Claim §2■ Safezone §4■ Warzone §c■ Enemy §d■ Ally §7■ Wilderness §f■ Neutral\n";
+        $legend = "§a█ Your §2█ Safe §4█ War §c█ Enemy §d█ Ally §7█ Wild §f█ Neutral\n";
 
         for ($dz = -$radius; $dz <= $radius; $dz++) {
             for ($dx = -$radius; $dx <= $radius; $dx++) {
                 $chunkX = $centerX + $dx;
                 $chunkZ = $centerZ + $dz;
 
-                $claim = ClaimManager::getInstance()->getClaim($sender->getWorld()->getFolderName(), $chunkX, $chunkZ);
-                $region = RegionManager::getInstance()->getRegionAtChunk($chunkX, $chunkZ, $sender->getWorld()->getFolderName());
+                $chunkCenter = new Vector3(($chunkX << 4) + 8, 64, ($chunkZ << 4) + 8);
+
+                $claim = ClaimManager::getInstance()->getClaim($worldFolder, $chunkX, $chunkZ);
+                $region = RegionManager::getInstance()->getRegionAtChunk($chunkX, $chunkZ, $worldFolder);
+                // Overlapping Spawn + Warzone: show Spawn (safe) for map visuals.
+                if ($spawnRegion !== null && $spawnRegion->getWorld() === $worldFolder && $spawnRegion->isWithinBounds($chunkCenter)) {
+                    $region = $spawnRegion;
+                }
 
                 if ($region !== null) {
-                    $color = "§4"; 
+                    $color = match (strtolower($region->getName())) {
+                        "spawn" => "§2",
+                        "warzone", "war" => "§4",
+                        default => "§4",
+                    };
                 } elseif ($claim !== null) {
                     $claimFacId = $claim->getFactionId();
                     $playerSession = \ecstsy\Glacia\player\PlayerManager::getInstance()->getSession($sender);
@@ -81,16 +96,18 @@ final class MapSubCommand extends BaseSubCommand {
                     $color = "§7"; 
                 }
 
+                // Slightly wider separation so Bedrock chat map is easier to scan.
+                $block = $color . "\u{2588}" . "§r  ";
                 if ($dx === 0 && $dz === 0) {
-                    $map .= "§l§6■§r"; 
+                    $map .= "§l§6★§r  ";
                 } else {
-                    $map .= $color . "■";
+                    $map .= $block;
                 }
             }
             $map .= "\n";
         }
 
-        $sender->sendMessage($map . $legend);
+        $sender->sendMessage(TextFormat::colorize($map . $legend));
     }
 
     public function getPermission(): string {

@@ -37,6 +37,11 @@ final class PayCommand extends BaseCommand {
             return;
         }
 
+        if ($target->getUniqueId()->equals($sender->getUniqueId())) {
+            $sender->sendMessage(C::colorize("&r&cYou cannot pay yourself."));
+            return;
+        }
+
         $senderSession = Loader::getPlayerManager()->getSession($sender);
         $targetSession = Loader::getPlayerManager()->getSession($target);
 
@@ -47,6 +52,11 @@ final class PayCommand extends BaseCommand {
 
         if ($senderSession->getBalance() < $amount) {
             $sender->sendMessage(C::colorize("&r&cYou don't have enough balance to pay &f$" . number_format($amount) . "&c."));
+            return;
+        }
+
+        if (!$targetSession->canReceiveBalance($amount)) {
+            $sender->sendMessage(C::colorize("&r&cThat player cannot receive this much money right now."));
             return;
         }
 

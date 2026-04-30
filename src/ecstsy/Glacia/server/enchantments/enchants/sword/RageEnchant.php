@@ -7,7 +7,9 @@ namespace ecstsy\Glacia\server\enchantments\enchants\sword;
 use ecstsy\Glacia\entity\FloatingTextEntity;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
+use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
 use pocketmine\entity\Location;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
@@ -20,7 +22,6 @@ final class RageEnchant implements EntityDamageByEntityEnchantmentHandler {
     private static array $hits = [];
     private static array $active = [];
     private static array $lastHit = [];
-    private const COOLDOWN_SECONDS = 4;
 
     public static function handle(EntityDamageByEntityEvent $event, CustomEnchantment $enchant, int $level): void {
         $damager = $event->getDamager();
@@ -29,9 +30,10 @@ final class RageEnchant implements EntityDamageByEntityEnchantmentHandler {
         if(!$damager instanceof Player) return;
 
         $name = strtolower($damager->getName());
+        $comboResetSeconds = max(0, EnchantTuningManager::getInt("rage", "combo-reset-seconds", 4));
 
         if (isset(self::$lastHit[$name])) {
-            if (time() - self::$lastHit[$name] >= self::COOLDOWN_SECONDS) {
+            if (time() - self::$lastHit[$name] >= $comboResetSeconds) {
                 self::reset($name);
             }
         }
@@ -46,23 +48,20 @@ final class RageEnchant implements EntityDamageByEntityEnchantmentHandler {
             5 => 14,
             default => 6
         };
-
-        $procced = ProcLuckManager::roll($damager, "rage", $chance, 1, 6);
+        $chance = EnchantTuningManager::getLevelInt("rage", "chance-by-level", $level, $chance);
 
         if(!(self::$active[$name] ?? false)) {
+            $procced = ProcLuckManager::roll($damager, "rage", $chance, 1, 6);
             if(!$procced) return;
 
             self::$active[$name] = true;
             self::$hits[$name] = 1;
         } else {
-            if ($procced) {
-                self::$hits[$name]++;
-            } else {
-                self::$hits[$name] = max(1, self::$hits[$name] - 1);
-            }
+            self::$hits[$name]++;
         }
 
-        self::$hits[$name] = min(self::$hits[$name], 4);
+        $cap = CustomEnchantmentManager::getLevel($damager->getInventory()->getItemInHand(), "steadfastfury") > 0 ? 10 : 4;
+        self::$hits[$name] = min(self::$hits[$name], $cap);
 
         $stack = self::$hits[$name];
 
@@ -92,5 +91,10 @@ final class RageEnchant implements EntityDamageByEntityEnchantmentHandler {
     public static function reset(string $playerName): void {
         $name = strtolower($playerName);
         unset(self::$hits[$name], self::$active[$name], self::$lastHit[$name]);
+    }
+
+    public static function clearPlayer(Player $player): void
+    {
+        self::reset($player->getName());
     }
 }

@@ -7,6 +7,7 @@ namespace ecstsy\Glacia\server;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\utils\QueryStmts;
 use ecstsy\Glacia\utils\RewardResolver;
+use ecstsy\Glacia\utils\StorageUtils;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\console\ConsoleCommandSender;
 use pocketmine\player\Player;
@@ -534,7 +535,7 @@ final class GlobalFundManager
                     continue;
                 }
 
-                $decoded = json_decode((string) ($row["value"] ?? ""), true);
+                $decoded = StorageUtils::decodeJsonString((string) ($row["value"] ?? ""), "global fund state");
                 if (!is_array($decoded)) {
                     break;
                 }
@@ -555,12 +556,11 @@ final class GlobalFundManager
 
     private function saveState(): void
     {
-        $payload = json_encode([
+        $payload = StorageUtils::encodeJsonString([
             "active" => $this->activeFund,
             "next_start_at" => $this->nextStartAt,
-        ], JSON_UNESCAPED_SLASHES);
-
-        if ($payload === false) {
+        ], "global fund state");
+        if ($payload === null) {
             return;
         }
 

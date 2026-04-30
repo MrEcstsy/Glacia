@@ -6,6 +6,7 @@ namespace ecstsy\Glacia\entity\boss\ability;
 
 use ecstsy\Glacia\entity\boss\BossAbility;
 use ecstsy\Glacia\entity\boss\BossEntity;
+use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\utils\TextFormat as C;
 
@@ -33,10 +34,14 @@ final class AstralFracture extends BossAbility {
                 3 => 9.0,
             };
 
-            $player->attack(new EntityDamageEvent(
+            $player->attack(new EntityDamageByEntityEvent(
                 $boss,
+                $player,
                 EntityDamageEvent::CAUSE_MAGIC,
-                $damage
+                $damage,
+                [],
+                0.0,
+                0.0
             ));
         }
     }

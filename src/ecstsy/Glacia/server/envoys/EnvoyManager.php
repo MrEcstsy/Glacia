@@ -16,6 +16,7 @@ use ecstsy\Glacia\entity\SpawnerEntity;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\utils\QueryStmts;
 use ecstsy\Glacia\utils\RewardResolver;
+use ecstsy\Glacia\utils\StorageUtils;
 use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\MartianUtilities\entity\BaseHostileEntity;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
@@ -193,6 +194,11 @@ final class EnvoyManager
 
         $crateType = (string) ($data["crate_type"] ?? "simple");
         $typeConfig = $this->getTypeConfig($crateType);
+        $spawnOnClaim = (bool) (($typeConfig["mob-wave"]["spawn-on-claim"] ?? false) === true);
+        if ($spawnOnClaim) {
+            $this->spawnGuardsFor($world, $position, $crateType);
+        }
+
         $rewardCount = max(1, (int) ($typeConfig["reward-count"] ?? 1));
         $pool = is_array($typeConfig["rewards"] ?? null) ? $typeConfig["rewards"] : [];
         $rewards = [];
@@ -206,6 +212,16 @@ final class EnvoyManager
             $item = RewardResolver::resolveItem($entry, $player);
             if ($item !== null) {
                 $rewards[] = $item;
+            }
+        }
+
+        if (RuneManager::shouldDropExtraEnvoyReward($player)) {
+            $entry = RewardResolver::rollEntry($pool);
+            if ($entry !== null) {
+                $item = RewardResolver::resolveItem($entry, $player);
+                if ($item !== null) {
+                    $rewards[] = $item;
+                }
             }
         }
 
@@ -231,6 +247,7 @@ final class EnvoyManager
         PlayerUtils::playSound($player, "random.levelup");
         $world->addSound($position, new XpCollectSound());
         $this->spawnFirework($position->x + 0.5, $position->y + 1, $position->z + 0.5, $world, $crateType);
+        Loader::getChallengeManager()->incrementProgress($player, "envoys_broken", 1);
         $remaining = $this->getRemainingCrates();
         $message = "&r&bEnvoy &8| &r&aYou looted a " . $this->formatTypeName($crateType) . " &r&acrate&7. "
             . "&f{$remaining} &7remaining.";
@@ -290,7 +307,27 @@ final class EnvoyManager
      */
     private function getTypeConfig(string $type): array
     {
-        return (array) ($this->getEnabledTypes()[$type] ?? []);
+        $config = (array) ($this->getEnabledTypes()[$type] ?? []);
+        $id = strtolower($type);
+
+        if ($id === "heroic") {
+            $mobWave = is_array($config["mob-wave"] ?? null) ? $config["mob-wave"] : [];
+            $mobWave = array_replace([
+                "enabled" => true,
+                "spawn-on-claim" => true,
+                "count" => 3,
+                "spawn-radius" => 5,
+                "name" => "&r&4&lHeroic Envoy Beast",
+                "mobs" => [
+                    ["id" => "envoy_zombie", "chance" => 35],
+                    ["id" => "envoy_skeleton", "chance" => 35],
+                    ["id" => "envoy_blaze", "chance" => 30],
+                ],
+            ], $mobWave);
+            $config["mob-wave"] = $mobWave;
+        }
+
+        return $config;
     }
 
     private function rollType(): string
@@ -347,7 +384,9 @@ final class EnvoyManager
                 "y" => $spawn->getFloorY(),
                 "z" => $spawn->getFloorZ(),
                 "type" => $type,
-                "beasts" => $this->spawnGuardsFor($world, $spawn, $type),
+                "beasts" => ((bool) (($this->getTypeConfig($type)["mob-wave"]["spawn-on-claim"] ?? false) === true))
+                    ? []
+                    : $this->spawnGuardsFor($world, $spawn, $type),
             ];
         }
 
@@ -548,7 +587,7 @@ final class EnvoyManager
                     continue;
                 }
 
-                $decoded = json_decode((string) ($row["value"] ?? ""), true);
+                $decoded = StorageUtils::decodeJsonString((string) ($row["value"] ?? ""), "envoy state");
                 if (!is_array($decoded)) {
                     break;
                 }
@@ -577,12 +616,11 @@ final class EnvoyManager
 
     private function saveState(): void
     {
-        $payload = json_encode([
+        $payload = StorageUtils::encodeJsonString([
             "active" => $this->active,
             "next_start_at" => $this->nextStartAt,
-        ], JSON_UNESCAPED_SLASHES);
-
-        if ($payload === false) {
+        ], "envoy state");
+        if ($payload === null) {
             return;
         }
 
@@ -713,13 +751,13 @@ final class EnvoyManager
     private function createGuardEntity(World $world, Vector3 $origin, string $mobType, int $radius): ?BaseHostileEntity
     {
         $entityClass = match ($mobType) {
-            "blaze" => EnvoyBlaze::class,
-            "ghast" => EnvoyGhast::class,
-            "skeleton" => EnvoySkeleton::class,
-            "slime" => EnvoySlime::class,
+            "blaze", "envoy_blaze" => EnvoyBlaze::class,
+            "ghast", "envoy_ghast" => EnvoyGhast::class,
+            "skeleton", "envoy_skeleton" => EnvoySkeleton::class,
+            "slime", "envoy_slime" => EnvoySlime::class,
             "baby_zombie", "envoy_baby_zombie" => EnvoyBabyZombie::class,
             "zombie", "envoy_zombie" => EnvoyZombie::class,
-            "pigman", "zombie_pigman", "pig_zombie" => EnvoyZombiePigman::class,
+            "pigman", "zombie_pigman", "pig_zombie", "envoy_zombie_pigman" => EnvoyZombiePigman::class,
             default => null,
         };
 

@@ -53,3 +53,14 @@ upgrades:
     base-cost: 2750000
     cost-multiplier: 1.0
     extra-reward-chance-per-level: 5
+
+  challenge_roster:
+    enabled: true
+    display-name: "&r&dChallenge Roster"
+    description:
+      - "&r&7Increase how many faction members"
+      - "&r&7can contribute to each active challenge."
+    max-level: 2
+    base-cost: 2000000
+    cost-multiplier: 1.8
+    extra-participants-per-level: 1

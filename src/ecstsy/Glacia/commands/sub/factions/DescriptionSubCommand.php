@@ -8,6 +8,7 @@ use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use pocketmine\command\CommandSender;
+use pocketmine\utils\TextFormat as C;
 
 final class DescriptionSubCommand extends BaseSubCommand {
     public function prepare(): void {
@@ -24,6 +25,12 @@ final class DescriptionSubCommand extends BaseSubCommand {
         }
 
         $newDesc = $args["description"];
+        $descError = GlaciaUtils::validateFactionDescription($newDesc);
+        if ($descError !== null) {
+            $sender->sendMessage(C::colorize("&r&c" . $descError));
+            return;
+        }
+
         $fac->setDescription($newDesc);
         $sender->sendMessage(GlaciaUtils::format("faction.status.description_set", ["description" => $newDesc], "success"));
     }

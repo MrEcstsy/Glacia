@@ -10,7 +10,6 @@ use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
-use pocketmine\entity\Living;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\player\Player;
 
@@ -22,7 +21,7 @@ final class EndershiftEnchant implements EntityDamageByEntityEnchantmentHandler 
 
         $victim = $event->getEntity();
 
-        if (!$victim instanceof Living) return;
+        if (!$victim instanceof Player) return;
 
         $hasEndershift = false;
         foreach ($victim->getArmorInventory()->getContents() as $armor) {
@@ -35,16 +34,17 @@ final class EndershiftEnchant implements EntityDamageByEntityEnchantmentHandler 
         if (!$hasEndershift) return;
 
         $session = PlayerManager::getInstance()->getSession($victim);
+        if ($session === null) return;
 
         $data = [
-            1 => ["chance" => 16, "cd" => 6,  "speed" => 120, "speedLvl" => 1, "absorption" => 80,  "absorptionLvl" => 0],
-            2 => ["chance" => 17, "cd" => 8,  "speed" => 120, "speedLvl" => 1, "absorption" => 80,  "absorptionLvl" => 1],
-            3 => ["chance" => 18, "cd" => 12, "speed" => 120, "speedLvl" => 1, "absorption" => 80,  "absorptionLvl" => 2],
+            1 => ["chance" => 16, "cd" => 45, "speed" => 60, "speedLvl" => 0, "absorption" => 30, "absorptionLvl" => 0],
+            2 => ["chance" => 17, "cd" => 60, "speed" => 60, "speedLvl" => 0, "absorption" => 30, "absorptionLvl" => 0],
+            3 => ["chance" => 18, "cd" => 90, "speed" => 60, "speedLvl" => 1, "absorption" => 30, "absorptionLvl" => 1],
         ];
 
         $cfg = $data[$level] ?? $data[1];
 
-        if ($victim->getHealth() >= 6) return;
+        if ($victim->getHealth() >= 5) return;
 
         if ($session->isOnCooldown("endershift")) return;
 
@@ -55,8 +55,6 @@ final class EndershiftEnchant implements EntityDamageByEntityEnchantmentHandler 
         $victim->getEffects()->add(new EffectInstance(VanillaEffects::SPEED(), $cfg["speed"] * 20, $cfg["speedLvl"]));
         $victim->getEffects()->add(new EffectInstance(VanillaEffects::ABSORPTION(), $cfg["absorption"] * 20, $cfg["absorptionLvl"]));
 
-        if ($victim instanceof Player) {
-            $victim->sendMessage("§dYou were about to die, so you have entered the Ender Dimension!");
-        }
+        $victim->sendMessage("§dYou were about to die, so you have entered the Ender Dimension!");
     }
 }

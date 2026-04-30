@@ -26,4 +26,9 @@ final class ImplantsEnchant {
             $food->setFood(min(20, $food->getFood() + 1));
         }
     }
+
+    public static function clearPlayer(Player $player): void
+    {
+        unset(self::$cooldowns[strtolower($player->getName())]);
+    }
 }

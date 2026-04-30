@@ -29,6 +29,16 @@ defaults:
   gem-drop-chance: 35
   gear-drop-chance: 65
 
+spawn-guards:
+  boss:
+    max-active-global: 1
+    player-cooldown: "10m"
+    global-cooldown: "5m"
+  warlord:
+    max-active-per-world: 3
+    player-cooldown: "3m"
+    max-lifetime: "15m"
+
 warlords:
   soulrender:
     id: "soulrender"

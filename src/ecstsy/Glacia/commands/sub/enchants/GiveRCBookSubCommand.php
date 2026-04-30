@@ -25,11 +25,6 @@ final class GiveRCBookSubCommand extends BaseSubCommand {
     }
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void {
-        if (!$sender instanceof Player) {
-            $sender->sendMessage(C::colorize("&r&7In-game only."));
-            return;
-        }
-
         $groupKey = isset($args["group"]) ? strtoupper($args["group"]) : null;
         $targetName = $args["player"] ?? null;
         $amount = $args["amount"] ?? 1;
@@ -63,7 +58,9 @@ final class GiveRCBookSubCommand extends BaseSubCommand {
             [$player->getName(), $amount, $groupData['group_name']],
             "&aGave &2{player} &f{amount}x &e{group}&a random enchantment books!"
         )));
-        PlayerUtils::playSound($sender, "random.orb");
+        if ($sender instanceof Player) {
+            PlayerUtils::playSound($sender, "random.orb");
+        }
     }
 
     public function getUsage(): string {

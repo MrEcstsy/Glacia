@@ -324,6 +324,12 @@ final class EnchantEffectManager {
             return;
         }
 
+        // Durability updates while getting hit should not clear bless suppression.
+        // Only clear if relevant armor-effect enchant composition actually changed.
+        if (self::getArmorEffectEnchantSignature($oldItem) === self::getArmorEffectEnchantSignature($newItem)) {
+            return;
+        }
+
         $changedEffectIds = self::getArmorDebuffIdsForItem($newItem);
 
         if ($changedEffectIds === []) {
@@ -523,5 +529,16 @@ final class EnchantEffectManager {
                 self::refreshArmorEffects($player);
             }
         ), max(1, $delayTicks));
+    }
+
+    public static function clearPlayerState(Player $player): void
+    {
+        $key = $player->getUniqueId()->toString();
+        unset(
+            self::$suppressedArmorDebuffs[$key],
+            self::$refreshingArmorEffects[$key],
+            self::$pendingArmorRefreshes[$key],
+            self::$armorEffectSignatures[$key]
+        );
     }
 }

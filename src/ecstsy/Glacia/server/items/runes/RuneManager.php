@@ -18,6 +18,7 @@ use pocketmine\item\Bow;
 use pocketmine\item\Hoe;
 use pocketmine\item\Item;
 use pocketmine\item\Pickaxe;
+use pocketmine\item\FishingRod;
 use pocketmine\item\Shovel;
 use pocketmine\item\Sword;
 use pocketmine\nbt\tag\CompoundTag;
@@ -163,7 +164,202 @@ final class RuneManager
 
     public static function getLifestealMitigationPercent(Player $player): float
     {
+        if (self::hasRuneOnArmor($player, "hemoguard")) {
+            return 100.0;
+        }
+
         return self::hasRuneOnArmor($player, "bloodfang") ? 10.0 : 0.0;
+    }
+
+    public static function hasRuneOnHeldItem(Player $player, string $runeId): bool
+    {
+        return self::getAppliedRuneId($player->getInventory()->getItemInHand()) === strtolower($runeId);
+    }
+
+    public static function getChance(string $runeId, int $fallback = 0): int
+    {
+        return self::getPassiveChance($runeId, $fallback);
+    }
+
+    public static function getValueFloat(string $runeId, string $key, float $fallback): float
+    {
+        return (float) (self::getDefinition($runeId)[$key] ?? $fallback);
+    }
+
+    public static function getValueInt(string $runeId, string $key, int $fallback): int
+    {
+        return (int) (self::getDefinition($runeId)[$key] ?? $fallback);
+    }
+
+    public static function shouldPreserveConsumable(Player $player, string $itemTag): bool
+    {
+        if (!self::hasPassiveRune($player, "echo_cache")) {
+            return false;
+        }
+
+        $chance = self::getChance("echo_cache", 1);
+        if ($chance <= 0 || mt_rand(1, 100) > $chance) {
+            return false;
+        }
+
+        $allowed = array_map(
+            static fn(string $v): string => strtolower(trim($v)),
+            (array) (self::getDefinition("echo_cache")["items"] ?? ["lootbox"])
+        );
+
+        return in_array(strtolower($itemTag), $allowed, true);
+    }
+
+    public static function getSellMultiplier(Player $player): float
+    {
+        if (!self::hasPassiveRune($player, "merchant_sigil")) {
+            return 1.0;
+        }
+
+        return max(1.0, self::getValueFloat("merchant_sigil", "multiplier", 2.0));
+    }
+
+    public static function getAuctionFeeMultiplier(Player $player): float
+    {
+        if (!self::hasPassiveRune($player, "bottomless_gullet")) {
+            return 1.0;
+        }
+
+        return max(0.0, min(1.0, self::getValueFloat("bottomless_gullet", "auction-fee-multiplier", 0.8)));
+    }
+
+    public static function getFactionBoosterDurationMultiplier(Player $player): float
+    {
+        if (!self::hasPassiveRune($player, "chronoshift")) {
+            return 1.0;
+        }
+
+        return max(1.0, self::getValueFloat("chronoshift", "booster-duration-multiplier", 1.2));
+    }
+
+    public static function getPetCooldownMultiplier(Player $player): float
+    {
+        if (!self::hasPassiveRune($player, "beastclock")) {
+            return 1.0;
+        }
+
+        return max(0.1, min(1.0, self::getValueFloat("beastclock", "pet-cooldown-multiplier", 0.9)));
+    }
+
+    public static function hasNoHungerPassive(Player $player): bool
+    {
+        return self::hasPassiveRune($player, "bottomless_gullet");
+    }
+
+    public static function shouldDoubleZoneDrops(Player $player): bool
+    {
+        return self::hasRuneOnHeldItem($player, "raider_edge")
+            && mt_rand(1, 100) <= self::getChance("raider_edge", 5);
+    }
+
+    public static function shouldInstantKillBoss(Player $player): bool
+    {
+        return self::hasRuneOnHeldItem($player, "reaper_oath")
+            && mt_rand(1, 100) <= self::getChance("reaper_oath", 2);
+    }
+
+    public static function getMobRewardMultiplier(Player $player): float
+    {
+        if (!self::hasRuneOnHeldItem($player, "harvester_mark")) {
+            return 1.0;
+        }
+
+        return max(1.0, self::getValueFloat("harvester_mark", "mob-reward-multiplier", 2.5));
+    }
+
+    public static function shouldTriggerPotionPurge(Player $player): bool
+    {
+        return self::hasRuneOnArmor($player, "null_field")
+            && mt_rand(1, 100) <= self::getChance("null_field", 1);
+    }
+
+    public static function getPotionPurgeRadius(): float
+    {
+        return max(1.0, self::getValueFloat("null_field", "radius", 2.0));
+    }
+
+    public static function getNullFieldDamageMultiplier(Player $player): float
+    {
+        if (!self::hasRuneOnArmor($player, "null_field")) {
+            return 1.0;
+        }
+
+        return max(1.0, self::getValueFloat("null_field", "damage-multiplier", 2.0));
+    }
+
+    public static function hasStormcallerWard(Player $player): bool
+    {
+        return self::hasRuneOnArmor($player, "stormward");
+    }
+
+    public static function getLegendaryDamageReduction(Player $player): float
+    {
+        if (!self::hasStormcallerWard($player)) {
+            return 0.0;
+        }
+
+        return max(0.0, min(100.0, self::getValueFloat("stormward", "legendary-damage-reduction-percent", 10.0)));
+    }
+
+    public static function hasSlownessImmunity(Player $player): bool
+    {
+        return self::hasRuneOnArmor($player, "swiftbane");
+    }
+
+    public static function getGlobalProcChanceBonus(Player $player): int
+    {
+        $bonus = 0;
+        if (self::hasRuneOnArmor($player, "swiftbane")) {
+            $bonus += self::getValueInt("swiftbane", "proc-bonus-percent", 3);
+        }
+        if (self::hasRuneOnArmor($player, "sigil_of_surge")) {
+            $bonus += self::getValueInt("sigil_of_surge", "proc-bonus-percent", 1);
+        }
+
+        return max(0, $bonus);
+    }
+
+    public static function getRodSpawnRateMultiplier(Player $player): float
+    {
+        if (!self::hasRuneOnHeldItem($player, "tidehook")) {
+            return 1.0;
+        }
+
+        return max(1.0, self::getValueFloat("tidehook", "fishing-speed-multiplier", 1.5));
+    }
+
+    public static function shouldDropExtraEnvoyReward(Player $player): bool
+    {
+        return self::hasPassiveRune($player, "envoy_echo")
+            && mt_rand(1, 100) <= self::getChance("envoy_echo", 2);
+    }
+
+    public static function canOverclockZoneSpawns(Player $player): bool
+    {
+        return self::hasRuneOnArmor($player, "solitary_hunt");
+    }
+
+    public static function getZoneSpawnSpeedMultiplier(Player $player): float
+    {
+        if (!self::canOverclockZoneSpawns($player)) {
+            return 1.0;
+        }
+
+        return max(1.0, self::getValueFloat("solitary_hunt", "spawn-speed-multiplier", 2.0));
+    }
+
+    public static function getZoneXpMultiplier(Player $player): float
+    {
+        if (!self::canOverclockZoneSpawns($player)) {
+            return 1.0;
+        }
+
+        return max(1.0, self::getValueFloat("solitary_hunt", "zone-xp-multiplier", 1.5));
     }
 
     /**
@@ -222,6 +418,7 @@ final class RuneManager
                 ], true)
             ),
             "weapon" => $item instanceof Sword || $item instanceof Axe || $item instanceof Bow,
+            "rod" => $item instanceof FishingRod,
             "tool" => $item instanceof Pickaxe || $item instanceof Shovel || $item instanceof Hoe || $item instanceof Axe,
             default => false,
         };
@@ -356,5 +553,23 @@ final class RuneManager
                 }
             }
         }
+    }
+
+    public static function shouldPreventFarmlandTrample(Player $player): bool
+    {
+        if (!self::hasPassiveRune($player, "verdant")) {
+            return false;
+        }
+
+        if (!(bool) (self::getDefinition("verdant")["anti-trample-farmland"] ?? true)) {
+            return false;
+        }
+
+        $chance = max(0, min(100, (int) (self::getDefinition("verdant")["farmland-trample-chance"] ?? 100)));
+        if ($chance <= 0) {
+            return false;
+        }
+
+        return mt_rand(1, 100) <= $chance;
     }
 }

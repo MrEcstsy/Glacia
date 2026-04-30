@@ -51,6 +51,7 @@ final class FactionRole
             "manage_warps" => (int)($this->perms[FactionPermissions::MANAGE_WARPS] ?? 0),
             "change_description" => (int)($this->perms[FactionPermissions::EDIT_SIGNS] ?? 0),
             "invite_players" => (int)($this->perms[FactionPermissions::INVITE_USERS] ?? 0),
+            "view_audit_log" => (int)($this->perms[FactionPermissions::VIEW_AUDIT_LOG] ?? 0),
         ]);
     }
 

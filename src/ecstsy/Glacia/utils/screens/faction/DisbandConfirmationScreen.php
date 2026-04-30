@@ -6,6 +6,7 @@ namespace ecstsy\Glacia\utils\screens\faction;
 
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\factions\FactionManager;
+use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\MartianUtilities\utils\screens\BaseScreen;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
@@ -35,18 +36,26 @@ final class DisbandConfirmationScreen extends BaseScreen {
                         return;
                     }
 
+                    $factionName = $faction->getName();
+
                     foreach (Loader::getPlayerManager()->getSessions() as $session) {
                         if ($session->getFactionId() === $factionId) {
                             $member = $session->getPlayer();
                             if ($member instanceof Player) {
-                                $member->sendMessage(C::colorize("&r&cYour faction &4{$faction->getName()} &chas been disbanded."));
+                                $member->sendMessage(C::colorize("&r&cYour faction &4{$factionName} &chas been disbanded."));
                             }
                         }
                     }
 
                     FactionManager::getInstance()->disbandFaction($factionId);
 
-                    $player->sendMessage(C::colorize("&r&cYou disbanded the faction &4{$faction->getName()}"));
+                    GlaciaUtils::logFactionAudit("Disband", [
+                        "leader" => $player->getName(),
+                        "faction" => $factionName,
+                        "faction_id" => $factionId,
+                    ]);
+
+                    $player->sendMessage(C::colorize("&r&cYou disbanded the faction &4{$factionName}"));
                     $player->getWorld()->addSound($player->getPosition(), new ExplodeSound());
                     $player->getWorld()->addParticle($player->getEyePos(), new HugeExplodeParticle());
                     break;

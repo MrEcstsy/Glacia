@@ -11,6 +11,7 @@ use pocketmine\item\Item;
 use pocketmine\item\VanillaItems;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
+use pocketmine\utils\TextFormat as C;
 
 final class ForsakenChampion extends AdvancedHostileEntity
 {
@@ -21,6 +22,7 @@ final class ForsakenChampion extends AdvancedHostileEntity
     private float $configuredJumpHeight = 0.42;
     private int $configuredAttackCooldown = 9;
     private string $warlordId = "warlord";
+    private string $displayName = "Forsaken Champion";
     /** @var Item[] */
     private array $customDrops = [];
     private Item $weapon;
@@ -44,7 +46,8 @@ final class ForsakenChampion extends AdvancedHostileEntity
         $this->setHealth($health);
         $this->setNameTagAlwaysVisible();
         $this->warlordId = strtolower($nbt->getString("gkit_warlord", "warlord"));
-        $this->setNameTag($nbt->getString("gkit_name", "Forsaken Champion"));
+        $this->displayName = $nbt->getString("gkit_name", "Forsaken Champion");
+        $this->updateHealthNameTag();
 
         $rewardData = $nbt->getString("gkit_reward", "");
         if ($rewardData !== "") {
@@ -91,7 +94,7 @@ final class ForsakenChampion extends AdvancedHostileEntity
         $nbt->setInt("gkit_attack_cooldown", $this->configuredAttackCooldown);
         $nbt->setString("gkit_warlord", $this->warlordId);
         $nbt->setInt("gkit_health", (int) $this->getMaxHealth());
-        $nbt->setString("gkit_name", $this->getNameTag());
+        $nbt->setString("gkit_name", $this->displayName);
 
         if ($this->customDrops !== []) {
             $nbt->setString("gkit_reward", ItemUtils::encodeItem($this->customDrops[0]));
@@ -114,7 +117,7 @@ final class ForsakenChampion extends AdvancedHostileEntity
 
     protected function getInitialSizeInfo(): EntitySizeInfo
     {
-        return new EntitySizeInfo(2.4, 0.7);
+        return new EntitySizeInfo(2.0, 0.7);
     }
 
     public static function getNetworkTypeId(): string
@@ -124,7 +127,7 @@ final class ForsakenChampion extends AdvancedHostileEntity
 
     public function getName(): string
     {
-        return "Forsaken Champion";
+        return C::clean($this->displayName);
     }
 
     public function getDrops(): array
@@ -184,5 +187,29 @@ final class ForsakenChampion extends AdvancedHostileEntity
         }
 
         $this->motion->y = $this->configuredJumpHeight;
+    }
+
+    protected function entityBaseTick(int $tickDiff = 1): bool
+    {
+        if (($this->ticksLived % 10) === 0) {
+            $this->updateHealthNameTag();
+        }
+
+        return parent::entityBaseTick($tickDiff);
+    }
+
+    protected function updateHealthNameTag(): void
+    {
+        $health = max(0, (int) floor($this->getHealth()));
+        $max = max(1, (int) ceil($this->getMaxHealth()));
+        $segments = 10;
+        $filled = (int) floor(($health / $max) * $segments);
+        $bar = str_repeat("❤", $filled) . C::GRAY . str_repeat("❤", max(0, $segments - $filled));
+
+        $this->setNameTag(
+            C::colorize($this->displayName . "\n&r&c{$bar}")
+        );
+        $this->setNameTagVisible(true);
+        $this->setNameTagAlwaysVisible(true);
     }
 }

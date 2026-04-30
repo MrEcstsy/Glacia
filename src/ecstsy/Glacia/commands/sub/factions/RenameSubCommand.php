@@ -27,7 +27,7 @@ final class RenameSubCommand extends BaseSubCommand {
         }
 
         $new = $args["name"];
-        $result = GlaciaUtils::validateName($new);
+        $result = GlaciaUtils::validateName($new, true, $fac->getFactionId());
         if ($result !== null) {
             [$filteredName, $error] = $result;
             $sender->sendMessage(C::RED . $error);

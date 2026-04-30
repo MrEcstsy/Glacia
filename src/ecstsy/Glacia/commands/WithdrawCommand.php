@@ -8,7 +8,7 @@ use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
-use ecstsy\MartianUtilities\utils\GeneralUtils;
+use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -67,6 +67,6 @@ final class WithdrawCommand extends BaseCommand {
 
     private function parseAmount(string $input): int
     {
-        return GeneralUtils::parseShorthandNumber($input);
+        return GlaciaUtils::parseShorthandNumber($input);
     }
 }

@@ -6,25 +6,15 @@ namespace ecstsy\Glacia\server\scoreboard;
 
 use ecstsy\Glacia\player\PlayerManager;
 use pocketmine\player\Player;
-use pocketmine\utils\TextFormat as C;
 use Yanoox\ScoreBoardAPI;
 
 final class ScoreboardHelper {
 
     private const SETTING_KEY = "scoreboard";
+    private const MAX_LINES = 15;
 
-    private const LINE_DATE = 1;
-    private const LINE_PLAYER_HEADER = 3;
-    private const LINE_RANK = 4;
-    private const LINE_BALANCE = 5;
-    private const LINE_KDR = 6;
-    private const LINE_POWER = 7;
-    private const LINE_BREAK = 8;
-    private const LINE_FACTION_HEADER = 9;
-    private const LINE_FACTION_MEMBERS = 10;
-    private const LINE_FACTION_CLAIMS = 11;
-    private const LINE_FACTION_POWER = 12;
-    private const LINE_STORE = 14;
+    /** @var array<string, string> */
+    private static array $titles = [];
 
     public static function initScoreboard(Player $player): void
     {
@@ -33,8 +23,14 @@ final class ScoreboardHelper {
             return;
         }
 
-        ScoreBoardAPI::sendScore($player, C::colorize("&r&l&bGLACIA &r&fFACTIONS"));
-        self::refreshScoreboard($player);
+        $rendered = ScoreboardProfileManager::renderForPlayer($player);
+        if (ScoreBoardAPI::hasScore($player)) {
+            ScoreBoardAPI::removeScore($player);
+        }
+
+        ScoreBoardAPI::sendScore($player, $rendered["title"]);
+        self::$titles[strtolower($player->getName())] = $rendered["title"];
+        self::applyLines($player, $rendered["lines"]);
     }
 
     public static function refreshScoreboard(Player $player): void
@@ -53,104 +49,48 @@ final class ScoreboardHelper {
             return;
         }
 
-        $session = PlayerManager::getInstance()->getSession($player);
-        if ($session === null) {
+        $rendered = ScoreboardProfileManager::renderForPlayer($player);
+        $key = strtolower($player->getName());
+        if ((self::$titles[$key] ?? null) !== $rendered["title"]) {
+            self::initScoreboard($player);
             return;
         }
 
-        self::setLine($player, self::LINE_DATE, self::pad("&r&7     " . date("M d, Y")));
-        self::setLine($player, 2, "  ");
-        self::setLine($player, 13, " ");
-        self::setLine($player, self::LINE_STORE, self::pad("&r&f    store.etherealpe.com"));
-
-        self::updatePlayerLines($player);
-        self::updateFactionLines($player);
+        self::applyLines($player, $rendered["lines"]);
     }
 
     public static function updatePlayerLines(Player $player): void
     {
-        if (!ScoreBoardAPI::hasScore($player)) {
-            return;
-        }
-
-        $session = PlayerManager::getInstance()->getSession($player);
-        if ($session === null) {
-            return;
-        }
-
-        $rank = $session->getRankObject()?->getDisplayName() ?? ucfirst($session->getRank());
-
-        self::setLine($player, self::LINE_PLAYER_HEADER, self::pad("&r&l&b" . strtoupper($player->getName())));
-        self::setLine($player, self::LINE_RANK, self::pad("&r&b&l> &r&fRank&7: &b" . $rank));
-        self::setLine($player, self::LINE_BALANCE, self::pad("&r&b&l> &r&fBalance&7: &a$" . self::formatScoreboardMoney($session->getBalance())));
-        self::setLine($player, self::LINE_KDR, self::pad("&r&b&l> &r&fKDR&7: &b" . self::formatKdr($session->getKills(), $session->getDeaths(), $session->getKDRRatio())));
-        self::setLine($player, self::LINE_POWER, self::pad("&r&b&l> &r&fPower&7: &b" . number_format($session->getPower())));
-        self::setLine($player, self::LINE_BREAK, "    ");
+        self::refreshScoreboard($player);
     }
 
     public static function updateBalanceLine(Player $player): void
     {
-        if (!ScoreBoardAPI::hasScore($player)) {
-            return;
-        }
-
-        $session = PlayerManager::getInstance()->getSession($player);
-        if ($session === null) {
-            return;
-        }
-
-        self::setLine($player, self::LINE_BALANCE, self::pad("&r&b&l> &r&fBalance&7: &a$" . self::formatScoreboardMoney($session->getBalance())));
+        self::refreshScoreboard($player);
     }
 
     public static function updateRankLine(Player $player): void
     {
-        if (!ScoreBoardAPI::hasScore($player)) {
-            return;
-        }
-
-        $session = PlayerManager::getInstance()->getSession($player);
-        if ($session === null) {
-            return;
-        }
-
-        $rank = $session->getRankObject()?->getDisplayName() ?? ucfirst($session->getRank());
-        self::setLine($player, self::LINE_RANK, self::pad("&r&b&l> &r&fRank&7: &b" . $rank));
+        self::refreshScoreboard($player);
     }
 
     public static function updateKDRLine(Player $player): void
     {
-        if (!ScoreBoardAPI::hasScore($player)) {
-            return;
-        }
-
-        $session = PlayerManager::getInstance()->getSession($player);
-        if ($session === null) {
-            return;
-        }
-
-        self::setLine($player, self::LINE_KDR, self::pad("&r&b&l> &r&fKDR&7: &b" . self::formatKdr($session->getKills(), $session->getDeaths(), $session->getKDRRatio())));
+        self::refreshScoreboard($player);
     }
 
     public static function updatePowerLine(Player $player): void
     {
-        if (!ScoreBoardAPI::hasScore($player)) {
-            return;
-        }
-
-        $session = PlayerManager::getInstance()->getSession($player);
-        if ($session === null) {
-            return;
-        }
-
-        self::setLine($player, self::LINE_POWER, self::pad("&r&b&l> &r&fPower&7: &b" . number_format($session->getPower())));
+        self::refreshScoreboard($player);
     }
 
     public static function updateChatLine(Player $player): void
     {
-        if (!ScoreBoardAPI::hasScore($player)) {
-            return;
-        }
+        self::refreshScoreboard($player);
+    }
 
+    public static function updateFactionLines(Player $player): void
+    {
         self::refreshScoreboard($player);
     }
 
@@ -169,38 +109,7 @@ final class ScoreboardHelper {
         if (ScoreBoardAPI::hasScore($player)) {
             ScoreBoardAPI::removeScore($player);
         }
-    }
-
-    public static function updateFactionLines(Player $player): void
-    {
-        if (!ScoreBoardAPI::hasScore($player)) {
-            return;
-        }
-
-        $session = PlayerManager::getInstance()->getSession($player);
-        if ($session === null) {
-            return;
-        }
-
-        $faction = $session->getFaction();
-        if ($faction === null) {
-            self::setLine($player, self::LINE_FACTION_HEADER, self::pad("&r&l&bNO FACTION"));
-            self::setLine($player, self::LINE_FACTION_MEMBERS, self::pad("&r&b&l> &r&fMembers&7: &b0/0"));
-            self::setLine($player, self::LINE_FACTION_CLAIMS, self::pad("&r&b&l> &r&fClaims&7: &b0/0"));
-            self::setLine($player, self::LINE_FACTION_POWER, self::pad("&r&b&l> &r&fPower&7: &b0/0"));
-            return;
-        }
-
-        $role = strtoupper($session->getFactionRole() ?? "recruit");
-        self::setLine($player, self::LINE_FACTION_HEADER, self::pad("&r&l&b" . strtoupper($faction->getName())));
-        self::setLine($player, self::LINE_FACTION_MEMBERS, self::pad("&r&b&l> &r&fMembers&7: &b" . count($faction->getOnlineMembers()) . "/" . count($faction->getMembers())));
-        self::setLine($player, self::LINE_FACTION_CLAIMS, self::pad("&r&b&l> &r&fClaims&7: &b" . $faction->getClaimCount() . "/" . $faction->getMaxClaims()));
-        self::setLine($player, self::LINE_FACTION_POWER, self::pad("&r&b&l> &r&fPower&7: &b" . $faction->getFactionPower() . "/" . $faction->getMaxPower()));
-    }
-
-    private static function formatKdr(int $kills, int $deaths, float $ratio): string
-    {
-        return $kills . "&7/&b" . $deaths . " &7(" . number_format($ratio, 2) . ")";
+        unset(self::$titles[strtolower($player->getName())]);
     }
 
     private static function isEnabled(Player $player): bool
@@ -214,32 +123,32 @@ final class ScoreboardHelper {
         return $setting === null ? true : (bool) $setting;
     }
 
-    private static function formatScoreboardMoney(float $amount): string
+    /**
+     * @param string[] $lines
+     */
+    private static function applyLines(Player $player, array $lines): void
     {
-        if ($amount < 10_000_000) {
-            return number_format($amount, 2);
-        }
+        $lines = array_slice(array_values($lines), 0, self::MAX_LINES);
 
-        $units = [
-            1_000_000_000 => "B",
-            1_000_000 => "M",
-        ];
-
-        foreach ($units as $value => $suffix) {
-            if ($amount >= $value) {
-                $formatted = round($amount / $value, 1);
-                $text = number_format($formatted, 1, ".", "");
-                $text = str_ends_with($text, ".0") ? substr($text, 0, -2) : $text;
-                return $text . $suffix;
+        for ($line = 1; $line <= self::MAX_LINES; $line++) {
+            $text = $lines[$line - 1] ?? null;
+            if ($text === null) {
+                self::removeLineIfPresent($player, $line);
+                continue;
             }
-        }
 
-        return number_format($amount, 2);
+            self::setLine($player, $line, $text);
+        }
     }
 
-    private static function pad(string $text): string
+    private static function removeLineIfPresent(Player $player, int $line): void
     {
-        return C::colorize("  " . $text . "  ");
+        try {
+            if (ScoreBoardAPI::getLineScore($player, $line) !== "") {
+                ScoreBoardAPI::removeLine($player, $line);
+            }
+        } catch (\Throwable) {
+        }
     }
 
     private static function setLine(Player $player, int $line, string $text): void

@@ -1,0 +1,14 @@
+recipes:
+  april2026cc:
+    enabled: true
+    material: "amethyst_shard"
+    item-name: "&r&dApril 2026 CC Fragment"
+    lore:
+      - "&r&7Collect these fragments and"
+      - "&r&7right-click one to combine them."
+      - ""
+      - "&r&7Needed: &f{needed}"
+    amount-to-combine: 6
+    reward:
+      type: lootbox
+      id: "lootbox_aurora"

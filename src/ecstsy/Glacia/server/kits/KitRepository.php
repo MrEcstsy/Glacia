@@ -122,7 +122,7 @@ final class KitRepository {
                 continue;
             }
 
-            $item = RewardResolver::resolveItem($entry);
+            $item = RewardResolver::resolveItem(self::applyKitItemDefaults($entry, $kit));
             if ($item !== null) {
                 $resolved[] = $item;
             }
@@ -138,7 +138,7 @@ final class KitRepository {
                     continue;
                 }
 
-                $item = RewardResolver::resolveItem($entry);
+                $item = RewardResolver::resolveItem(self::applyKitItemDefaults($entry, $kit));
                 if ($item !== null) {
                     $resolved[] = $item;
                 }
@@ -306,6 +306,33 @@ final class KitRepository {
     private static function getDisplayItemCount(array $kit): int
     {
         return count($kit["items"] ?? []) + max(0, (int) ($kit["random-rolls"] ?? 0));
+    }
+
+    /**
+     * Allow root-level kit flags like "heroic: true" to apply to entries
+     * unless the entry explicitly overrides it.
+     *
+     * @param array<string, mixed> $entry
+     * @param array<string, mixed> $kit
+     * @return array<string, mixed>
+     */
+    private static function applyKitItemDefaults(array $entry, array $kit): array
+    {
+        foreach (["heroic", "is_heroic", "heroic_armor"] as $heroicKey) {
+            if (array_key_exists($heroicKey, $entry)) {
+                return $entry;
+            }
+        }
+
+        if (array_key_exists("heroic", $kit)) {
+            $entry["heroic"] = $kit["heroic"];
+        } elseif (array_key_exists("is_heroic", $kit)) {
+            $entry["heroic"] = $kit["is_heroic"];
+        } elseif (array_key_exists("heroic_armor", $kit)) {
+            $entry["heroic"] = $kit["heroic_armor"];
+        }
+
+        return $entry;
     }
 
     /**

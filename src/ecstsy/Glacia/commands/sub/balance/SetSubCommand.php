@@ -7,6 +7,7 @@ namespace ecstsy\Glacia\commands\sub\balance;
 use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\player\GlaciaPlayer;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\command\CommandSender;
@@ -45,7 +46,7 @@ final class SetSubCommand extends BaseSubCommand {
             return;
         }
 
-        $session->setBalance(min(9000000000, $amount));
+        $session->setBalance(min(GlaciaPlayer::MAX_BALANCE, $amount));
         $sender->sendMessage(C::colorize("&r&aSet &f" . $session->getUsername() . "&a's balance to &f$" . number_format($session->getBalance(), 2) . "&a."));
 
         $player = $session->getPlayer();

@@ -25,6 +25,7 @@ use pocketmine\item\FireCharge;
 use pocketmine\item\FlintSteel;
 use pocketmine\item\Item;
 use pocketmine\item\ItemTypeIds;
+use pocketmine\math\Vector3;
 use pocketmine\player\GameMode;
 use pocketmine\utils\TextFormat as C;
 
@@ -240,6 +241,42 @@ final class CustomTNTListener implements Listener {
             }
 
             $updated[] = $block;
+        }
+
+        // Obsidian usually isn't part of vanilla explodeA block lists due blast resistance.
+        // Scan around the blast center so TNT can still chip obsidian durability.
+        $center = $event->getPosition();
+        $radius = $entity instanceof GlaciaPrimedTNT ? 4.0 : 3.0;
+        $radiusInt = (int) ceil($radius);
+        $world = $center->getWorld();
+        $visited = [];
+
+        for ($x = -$radiusInt; $x <= $radiusInt; $x++) {
+            for ($y = -$radiusInt; $y <= $radiusInt; $y++) {
+                for ($z = -$radiusInt; $z <= $radiusInt; $z++) {
+                    $pos = $center->add($x, $y, $z);
+                    $vector = new Vector3((int) floor($pos->x), (int) floor($pos->y), (int) floor($pos->z));
+                    $key = $vector->x . ":" . $vector->y . ":" . $vector->z;
+                    if (isset($visited[$key])) {
+                        continue;
+                    }
+                    $visited[$key] = true;
+
+                    if ($center->distanceSquared($vector->add(0.5, 0.5, 0.5)) > ($radius * $radius)) {
+                        continue;
+                    }
+
+                    $block = $world->getBlock($vector);
+                    if (!ObsidianDurabilityManager::isTrackedObsidian($block)) {
+                        continue;
+                    }
+
+                    $remaining = ObsidianDurabilityManager::damage($block);
+                    if ($remaining <= 0) {
+                        $updated[] = $block;
+                    }
+                }
+            }
         }
 
         $event->setBlockList($updated);

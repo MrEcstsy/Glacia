@@ -31,3 +31,18 @@ mob-xp:
     mooshroom: 12
     snowgolem: 10
     snow_golem: 10
+
+# Only listed levels will give rewards.
+# Supports RewardResolver item entries + console commands.
+level-rewards:
+  10:
+    items:
+      - id: money_note
+        amount: 50000
+    commands: []
+  25:
+    items:
+      - id: money_note
+        amount: 150000
+    commands:
+      - "say {player} reached level {level}!"

@@ -52,8 +52,19 @@ final class UnClaimSubCommand extends BaseSubCommand
             return;
         }
 
+        $faction = $session->getFaction();
+        $cx = $claim->getChunkX();
+        $cz = $claim->getChunkZ();
         $claimManager->deleteClaim($claim);
-        $sender->sendMessage(C::colorize("&r&l&a(✓) &r&2You have unclaimed the chunk &a" . $claim->getChunkX() . ", " . $claim->getChunkZ()));
+        GlaciaUtils::logFactionAudit("Unclaim", [
+            "player" => $sender->getName(),
+            "faction" => $faction !== null ? $faction->getName() : "",
+            "faction_id" => $factionId,
+            "world" => $sender->getWorld()->getFolderName(),
+            "chunk_x" => $cx,
+            "chunk_z" => $cz,
+        ]);
+        $sender->sendMessage(C::colorize("&r&l&a(✓) &r&2You have unclaimed the chunk &a" . $cx . ", " . $cz));
     }
 
     public function getPermission(): string {

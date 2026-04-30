@@ -25,11 +25,6 @@ final class GamemodeCommand extends BaseCommand {
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void
     {
-        if (!$sender instanceof Player) {
-            $sender->sendMessage(C::colorize("&r&f/gm &e<survival&c|&wcreative&c|&eadventure&c|&espectator> &7[player]"));
-            return;
-        }
-
         $modeName = strtolower($aliasUsed);
 
         $shortcuts = [
@@ -70,19 +65,31 @@ final class GamemodeCommand extends BaseCommand {
         /** @var Player|null $target */
         $target = $args["player"] ?? null;
 
-        if ($target !== null && $target !== $sender) {
-            if ($sender->hasPermission($this->getPermission())) {
-                $sender->sendMessage(C::RED . "You don't have permission to change others' gamemode.");
+        if ($target === null && isset($shortcuts[$modeName])) {
+            $lookup = trim((string) ($args["mode"] ?? ""));
+            if ($lookup !== "") {
+                $target = PlayerUtils::getPlayerByPrefix($lookup);
+                if ($target === null) {
+                    $sender->sendMessage(C::colorize("&r&cThat player is not online."));
+                    return;
+                }
+            }
+        }
+
+        if ($target === null) {
+            if (!$sender instanceof Player) {
+                $sender->sendMessage(C::colorize("&r&cConsole usage: /{$aliasUsed} <player>"));
                 return;
             }
-        } else {
             $target = $sender;
         }
 
         $target->setGamemode($gamemode);
         $msg = C::colorize(Loader::SERVER_PREFIX . "&fSet game mode &d" . $gamemode->getEnglishName() . " &ffor &d" . $target->getNameTag());
         $sender->sendMessage($msg);
-        PlayerUtils::playSound($sender, "random.levelup");
+        if ($sender instanceof Player) {
+            PlayerUtils::playSound($sender, "random.levelup");
+        }
     }
 
     public function getPermission(): string {

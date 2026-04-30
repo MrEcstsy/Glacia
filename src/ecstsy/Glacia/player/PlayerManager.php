@@ -6,6 +6,7 @@ namespace ecstsy\Glacia\player;
 
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\utils\QueryStmts;
+use ecstsy\Glacia\utils\StorageUtils;
 use pocketmine\player\Player;
 use pocketmine\utils\SingletonTrait;
 use Ramsey\Uuid\Uuid;
@@ -44,13 +45,27 @@ final class PlayerManager {
                     $row['collection'],
                     $row['kills'],
                     $row['deaths'],
-                    (int)($row['slot_credits'] ?? 0)
+                    (int)($row['slot_credits'] ?? 0),
+                    (int)($row['item_flip_credits'] ?? 0),
+                    $row['title'] ?? null
                 );
             }
         });
     }
 
     public function createSession(Player $player): GlaciaPlayer {
+        $defaultSettings = StorageUtils::encodeJsonString([
+            'chest_inventories' => true,
+            'broadcasts' => true,
+            'notifications' => true,
+            'loot_announcer' => true,
+            'quick_claim' => true,
+            'max_homes' => 3,
+            'show_coordinates' => true,
+        ], "default player settings") ?? "{}";
+        $defaultBuffs = StorageUtils::encodeJsonString([], "default player buffs") ?? "[]";
+        $defaultCollection = StorageUtils::encodeJsonString([], "default player collection") ?? "[]";
+
         $args = [
             "uuid" => $player->getUniqueId()->toString(),
             "username" => $player->getName(),
@@ -60,15 +75,15 @@ final class PlayerManager {
             'faction_role' => null,
             "power" => 100,
             "rank" => "frostborn",
-            "settings" => json_encode([
-                'chest_inventories' => true, 'broadcasts' => true, 'notifications' => true, 'loot_announcer' => true, 'quick_claim' => true, 'max_homes' => 3
-            ]),
-            "buffs" => json_encode([]),
+            "settings" => $defaultSettings,
+            "buffs" => $defaultBuffs,
             "sell_multiplier" => 1,
-            "collection" => "[]",
+            "collection" => $defaultCollection,
             "kills" => 0,
             "deaths" => 0,
-            "slot_credits" => 0
+            "slot_credits" => 0,
+            "item_flip_credits" => 0,
+            "title" => null
         ];
 
         Loader::getDatabase()->executeInsert(QueryStmts::PLAYERS_CREATE, $args);
@@ -88,7 +103,9 @@ final class PlayerManager {
             $args["collection"],
             $args["kills"],
             $args["deaths"],
-            $args["slot_credits"]
+            $args["slot_credits"],
+            $args["item_flip_credits"],
+            $args["title"]
         );
 
         return $this->sessions[$player->getUniqueId()->toString()];

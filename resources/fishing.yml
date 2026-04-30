@@ -1,0 +1,62 @@
+settings:
+  enabled: true
+  # If true, uses a real fishing hook entity (vanilla-style) instead of particles + server bite timer.
+  use-vanilla-hook-entity: false
+  # If true, players must be in Warzone region to fish.
+  warzone-only: false
+  # Optional world whitelist. Leave empty to allow all worlds.
+  allowed-worlds: []
+  require-water: true
+  # First water along your look ray must be at least this many blocks away horizontally from your eyes.
+  # Stops "stare at the ground" casts that only hit water under your feet without aiming outward.
+  min-horizontal-cast-to-water: 1.25
+  cast-range: 14
+  # Particles + sounds along cast / bite / catch (Bedrock sound IDs).
+  show-cast-fx: true
+  # While waiting for a bite, subtle bubbles at the computed bob spot (not a real rod line).
+  show-bob-pulse: true
+  bob-pulse-interval-ticks: 12
+  cast-cooldown-ticks: 8
+  min-bite-seconds: 3
+  max-bite-seconds: 9
+  bite-window-seconds: 3
+  messages:
+    cast: "&r&bYou cast your line..."
+    bite: "&r&eA fish is biting! Use your rod again."
+    missed: "&r&7The fish got away."
+    invalid-location: "&r&cYou need nearby water to fish."
+    reel-empty: "&r&7You reel in the line."
+    caught: "&r&aYou caught &f{item} &7x&f{count}&a."
+
+# Uses the same reward style as lootboxes/envoys/zones through RewardResolver.
+# Supported identifiers and aliases are exactly the same as other reward pools.
+loot-table:
+  - chance: 40
+    type: vanilla
+    id: cod
+    count: "1-3"
+  - chance: 25
+    type: vanilla
+    id: salmon
+    count: "1-2"
+  - chance: 12
+    type: vanilla
+    id: pufferfish
+    count: 1
+  - chance: 8
+    type: vanilla
+    id: tropical_fish
+    count: 1
+  - chance: 6
+    type: vanilla
+    id: nautilus_shell
+    count: 1
+  - chance: 5
+    type: money_note
+    amount: "250-750"
+  - chance: 3
+    type: xp_note
+    amount: "1000-3000"
+  - chance: 1
+    type: item
+    id: simplebook

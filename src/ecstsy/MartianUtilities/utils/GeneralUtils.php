@@ -11,6 +11,14 @@ use pocketmine\network\mcpe\protocol\SpawnParticleEffectPacket;
 use pocketmine\plugin\Plugin;
 use pocketmine\utils\Config;
 use pocketmine\world\Position;
+use Throwable;
+use function dirname;
+use function file_exists;
+use function fclose;
+use function is_array;
+use function is_dir;
+use function mkdir;
+use function pathinfo;
 
 final class GeneralUtils {
 
@@ -33,23 +41,31 @@ final class GeneralUtils {
 
 
         if (!file_exists($filePath)) {
-            $plugin->getLogger()->warning("Configuration file '$filePath' not found.");
-            return null;
+            self::syncResourceFile($plugin, $fileName);
+            if (!file_exists($filePath)) {
+                $plugin->getLogger()->warning("Configuration file '$filePath' not found.");
+                return null;
+            }
         }
 
         $extension = pathinfo($fileName, PATHINFO_EXTENSION);
 
-        switch ($extension) {
-            case 'yml':
-            case 'yaml':
-                $config = new Config($filePath, Config::YAML);
-                break;
-            case 'json':
-                $config = new Config($filePath, Config::JSON);
-                break;
-            default:
-                $plugin->getLogger()->warning("Unsupported configuration file format for '$filePath'.");
-                return null;
+        try {
+            switch ($extension) {
+                case 'yml':
+                case 'yaml':
+                    $config = new Config($filePath, Config::YAML);
+                    break;
+                case 'json':
+                    $config = new Config($filePath, Config::JSON);
+                    break;
+                default:
+                    $plugin->getLogger()->warning("Unsupported configuration file format for '$filePath'.");
+                    return null;
+            }
+        } catch (Throwable $e) {
+            $plugin->getLogger()->error("Failed to load configuration '$filePath': " . $e->getMessage());
+            return null;
         }
 
         self::$configCache[$filePath] = $config;
@@ -73,6 +89,53 @@ final class GeneralUtils {
     public static function forgetConfiguration(Plugin $plugin, string $fileName): void {
         $filePath = $plugin->getDataFolder() . $fileName;
         unset(self::$configCache[$filePath]);
+    }
+
+    public static function syncResourceFile(Plugin $plugin, string $fileName, bool $overwrite = false): bool {
+        $resource = $plugin->getResource($fileName);
+        if ($resource === null) {
+            return false;
+        }
+        fclose($resource);
+
+        $filePath = $plugin->getDataFolder() . $fileName;
+        $directory = dirname($filePath);
+        if (!is_dir($directory) && !mkdir($directory, 0777, true) && !is_dir($directory)) {
+            $plugin->getLogger()->warning("Failed to create configuration directory '$directory'.");
+            return false;
+        }
+
+        if (!$overwrite && file_exists($filePath)) {
+            return false;
+        }
+
+        $plugin->saveResource($fileName, $overwrite);
+        self::forgetConfiguration($plugin, $fileName);
+        return true;
+    }
+
+    public static function getNestedString(?Config $config, string $path, string $default = ""): string {
+        return $config instanceof Config ? (string) ($config->getNested($path, $default) ?? $default) : $default;
+    }
+
+    public static function getNestedInt(?Config $config, string $path, int $default = 0): int {
+        return $config instanceof Config ? (int) ($config->getNested($path, $default) ?? $default) : $default;
+    }
+
+    public static function getNestedFloat(?Config $config, string $path, float $default = 0.0): float {
+        return $config instanceof Config ? (float) ($config->getNested($path, $default) ?? $default) : $default;
+    }
+
+    public static function getNestedBool(?Config $config, string $path, bool $default = false): bool {
+        return $config instanceof Config ? (bool) ($config->getNested($path, $default) ?? $default) : $default;
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    public static function getNestedArray(?Config $config, string $path, array $default = []): array {
+        $value = $config instanceof Config ? $config->getNested($path, $default) : $default;
+        return is_array($value) ? $value : $default;
     }
 
     public static function addParticleToPosition(Position $position, string $particleName): void {

@@ -1,0 +1,28 @@
+settings:
+  enabled: true
+  eligible-lootboxes:
+    - "*"
+  eligible-ethereal-crates:
+    - "*"
+point-reward:
+  enabled: true
+  points-per-open: 1
+  threshold: 100
+  current-id: "lootbox_aurora"
+  current-label: "April 2026 CC"
+enhancer:
+  enabled: true
+  material: "amethyst_shard"
+  name: "&r&l&dCC Enhancer"
+  lore:
+    - "&r&7Apply this to an eligible CC"
+    - "&r&7for a chance to upgrade it"
+    - "&r&7to the next CC in the chain."
+    - ""
+    - "&r&7Failure keeps the crate intact."
+    - "&r&7Success Rate: &f{success}%"
+  success-rate: 35
+order:
+  - "lootbox_vote"
+  - "lootbox_sotw"
+  - "lootbox_aurora"

@@ -24,6 +24,8 @@ pets:
   aegis_ram:
     cooldown: "20m"
     duration: "10s"
+    boss-horizontal-multiplier: 0.0
+    boss-vertical-multiplier: 0.0
 
   rift_viper:
     cooldown: "20m"

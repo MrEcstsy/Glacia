@@ -6,6 +6,7 @@ zones:
     description: "&7Open, bright plains with simple terrain and a safer early-game feel."
     recommended-level: 1
     unlock-level: 1
+    pvp-enabled: false
     world: "flat"
     x: 650
     y: 100
@@ -17,17 +18,23 @@ zones:
     description: "&7Darker, enclosed caves and cliffs built for stronger mid-game grinding."
     recommended-level: 20
     unlock-level: 15
-    world: "flat"
+    pvp-enabled: false
+    world: "crystal_cave"
     x: 1450
     y: 100
     z: 0
-    radius: 325
+    radius: 0
+    ore-regeneration:
+      enabled: true
+      respawn-seconds: 30
+      replace-with-bedrock: true
 
   frostreach:
     display: "&fFrostreach"
     description: "&7Snow and ice with harsher terrain and less room to breathe."
     recommended-level: 40
     unlock-level: 35
+    pvp-enabled: false
     world: "flat"
     x: 2350
     y: 100
@@ -46,12 +53,38 @@ zones:
     full-world: true
 
   endfall:
-    display: "&dThe Endfall"
-    description: "&7The final endgame zone, unstable and built for your strongest push."
+    display: "&dAstral Veil"
+    description: "&7A fractured celestial endgame zone where voidlight, relic energy, and unstable islands collide."
     recommended-level: 90
     unlock-level: 85
-    world: "world_the_end"
+    pvp-enabled: true
+    world: "end"
     x: 0
-    y: 80
+    y: 64
     z: 0
     full-world: true
+    allow-flight: false
+    exit:
+      mode: "portal_only"
+      bypass-permission: "glacia.staff"
+      portal:
+        enabled: true
+        world: "end"
+        pos1:
+          x: -96
+          y: 64
+          z: -14
+        pos2:
+          x: -97
+          y: 64
+          z: -13
+        teleport-seconds: 8
+        hologram:
+          enabled: true
+          offset-y: 3.2
+          lines:
+            - "&r&d&lASTRAL GATE"
+            - "&7Stand inside to leave Astral Veil"
+            - "&fXP lowers the teleport time"
+      destination:
+        use-default-world-spawn: true

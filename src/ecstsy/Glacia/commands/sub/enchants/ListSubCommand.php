@@ -9,7 +9,6 @@ use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
 use ecstsy\Glacia\server\enchantments\Groups;
 use pocketmine\command\CommandSender;
-use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
 
 final class ListSubCommand extends BaseSubCommand {
@@ -22,11 +21,6 @@ final class ListSubCommand extends BaseSubCommand {
     }
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void {
-        if (!$sender instanceof Player) {
-            $sender->sendMessage(C::colorize("&r&7In-game only!"));
-            return;
-        }
-
         $page = isset($args["page"]) ? max(1, (int)$args["page"]) : 1;
 
         $allEnchantments = CustomEnchantments::getAll(); 
@@ -62,7 +56,8 @@ final class ListSubCommand extends BaseSubCommand {
         for ($i = $start; $i < $end; $i++) {
             $enchant = $sortedList[$i];
             $groupColor = Groups::translateGroupToColor($enchant->getRarity());
-            $sender->sendMessage(C::colorize("&r&7" . ($i + 1) . ". " . $groupColor . $enchant->getName()));
+            $displayName = CustomEnchantments::getEnchantmentDisplayName($enchant->getName(), $groupColor);
+            $sender->sendMessage(C::colorize("&r&7" . ($i + 1) . ". " . $displayName));
         }
 
         $sender->sendMessage($headerFooter);

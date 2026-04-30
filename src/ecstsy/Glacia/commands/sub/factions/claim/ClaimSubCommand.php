@@ -70,6 +70,14 @@ final class ClaimSubCommand extends BaseSubCommand
         }
 
         $claimManager->createClaim($factionId, $sender->getWorld(), $chunkX, $chunkZ);
+        GlaciaUtils::logFactionAudit("Claim", [
+            "player" => $sender->getName(),
+            "faction" => $faction !== null ? $faction->getName() : "",
+            "faction_id" => $factionId,
+            "world" => $sender->getWorld()->getFolderName(),
+            "chunk_x" => $chunkX,
+            "chunk_z" => $chunkZ,
+        ]);
         $sender->sendMessage(C::colorize("&r&l&a(✓) &r&2You have claimed the chunk &a{$chunkX}, {$chunkZ}&2."));
     }
 

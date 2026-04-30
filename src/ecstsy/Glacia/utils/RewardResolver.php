@@ -6,13 +6,16 @@ namespace ecstsy\Glacia\utils;
 
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
+use ecstsy\Glacia\server\etherealcrates\EtherealCrateRepository;
 use ecstsy\Glacia\server\gkits\GKitRepository;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
+use ecstsy\Glacia\server\items\armor\HeroicArmorDurabilityManager;
 use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\Glacia\server\lootboxes\LootboxRepository;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\color\Color;
 use pocketmine\item\Armor;
+use pocketmine\item\Durable;
 use pocketmine\item\Item;
 use pocketmine\item\StringToItemParser;
 use pocketmine\item\enchantment\EnchantmentInstance;
@@ -33,6 +36,8 @@ final class RewardResolver {
         "xpnote",
         "xpbottle",
         "lootbox",
+        "ethereal_crate",
+        "etherealcrate",
         "enchant_book",
         "enchantment_book",
         "enchanted_book",
@@ -80,6 +85,79 @@ final class RewardResolver {
     }
 
     /**
+     * Picks a weighted entry and removes it from the pool so the same line cannot be rolled
+     * again in the same opening (etereal crates, etc.).
+     *
+     * @param array<int, array<string, mixed>> $pool
+     * @return array<string, mixed>|null
+     */
+    public static function rollEntryRemove(array &$pool): ?array
+    {
+        if ($pool === []) {
+            return null;
+        }
+        $idx = self::rollWeightedPoolIndex($pool);
+        if ($idx === null) {
+            return null;
+        }
+        $entry = $pool[$idx];
+        unset($pool[$idx]);
+        $pool = array_values($pool);
+        if (!is_array($entry)) {
+            return null;
+        }
+        return $entry;
+    }
+
+    /**
+     * Stable id for a loot line (after normalizing) to dedupe across main/bonus.
+     *
+     * @param array<string, mixed> $entry
+     */
+    public static function fingerprintLootEntry(array $entry): string
+    {
+        $n = self::normalizeEntry($entry);
+        ksort($n);
+        $json = json_encode($n, JSON_UNESCAPED_SLASHES);
+        if ($json === false) {
+            $json = serialize($n);
+        }
+        return hash("md5", (string) $json);
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $pool
+     */
+    private static function rollWeightedPoolIndex(array $pool): ?int
+    {
+        $totalWeight = 0;
+        $candidates = [];
+        foreach ($pool as $idx => $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $chance = (int) ($entry["chance"] ?? 0);
+            if ($chance <= 0) {
+                continue;
+            }
+            $candidates[] = ["index" => (int) $idx, "weight" => $chance];
+            $totalWeight += $chance;
+        }
+        if ($totalWeight <= 0 || $candidates === []) {
+            return null;
+        }
+        $roll = mt_rand(1, $totalWeight);
+        $current = 0;
+        foreach ($candidates as $data) {
+            $current += $data["weight"];
+            if ($roll <= $current) {
+                return $data["index"];
+            }
+        }
+        return $candidates[array_key_last($candidates)]["index"] ?? null;
+    }
+
+    /**
      * Resolves a config reward entry into an Item.
      *
      * @param array<string, mixed> $entry
@@ -93,7 +171,8 @@ final class RewardResolver {
             "enchant_book", "enchantment_book", "enchanted_book", "cebook" => self::resolveFactoryItem("enchant_book", $entry, $player),
             "money_note", "bank_note", "econote" => self::resolveFactoryItem("bank_note", $entry, $player),
             "xp_note", "xpnote", "xpbottle" => self::resolveFactoryItem("xp_note", $entry, $player),
-            "lootbox" => self::resolveLootboxItem($entry),
+            "lootbox" => self::resolveLootboxItem($entry, $player),
+            "ethereal_crate", "etherealcrate" => self::resolveEtherealCrateItem($entry),
             default => self::resolveGenericItem($entry, $player)
         };
 
@@ -192,6 +271,7 @@ final class RewardResolver {
         }
 
         $item = self::applyConfiguredRune($item, $entry);
+        $item = self::applyConfiguredHeroic($item, $entry);
 
         return $item;
     }
@@ -229,9 +309,16 @@ final class RewardResolver {
 
         $lootbox = self::resolveLootboxItem([
             "id" => $id
-        ] + $entry);
+        ] + $entry, $player);
         if($lootbox !== null){
             return $lootbox;
+        }
+
+        $etherealCrate = self::resolveEtherealCrateItem([
+            "id" => $id
+        ] + $entry, $player);
+        if ($etherealCrate !== null) {
+            return $etherealCrate;
         }
 
         $customArmor = self::resolveCustomArmorItem($id, $entry);
@@ -248,9 +335,19 @@ final class RewardResolver {
             return self::resolveDirectEnchantmentBook($entry);
         }
 
+        if ($id === "title_voucher" || $id === "titlevoucher") {
+            $titleId = strtolower(trim((string) ($entry["title"] ?? $entry["title_id"] ?? $entry["id"] ?? "")));
+            if ($titleId === "" || $titleId === "title_voucher" || $titleId === "titlevoucher") {
+                return null;
+            }
+
+            return GlaciaItemFactory::create("title_voucher_" . $titleId);
+        }
+
         return match($id) {
             "money_note", "bank_note", "moneynote", "econote" => GlaciaItemFactory::bankNote($player, GeneralUtils::parseRandomNumber($entry["amount"] ?? 1)),
             "xpbottle", "xp_note", "xpnote" => GlaciaItemFactory::xpNote($player, GeneralUtils::parseRandomNumber($entry["amount"] ?? 1)),
+            "admin_coin_note", "admin_coins", "admincoins", "admin_coin" => GlaciaItemFactory::adminCoinNote($player, GeneralUtils::parseRandomNumber($entry["amount"] ?? 1)),
 
             "simplebook", "simple_book" => GlaciaItemFactory::randomEnchantBook("simple"),
             "uniquebook", "unique_book" => GlaciaItemFactory::randomEnchantBook("unique"),
@@ -260,9 +357,21 @@ final class RewardResolver {
             "masterybook", "mastery_book" => GlaciaItemFactory::randomEnchantBook("mastery"),
 
             "whitescroll", "white_scroll" => GlaciaItemFactory::whitescroll(),
+            "holy_whitescroll", "holywhite_scroll", "holy_white_scroll", "holywhitescroll" => GlaciaItemFactory::create("holy_whitescroll"),
+            "holy_water", "holywater" => GlaciaItemFactory::create("holy_water"),
             "blackscroll", "black_scroll" => GlaciaItemFactory::blackscroll(self::parsePercentValue($entry["success"] ?? "{90-100}")),
             "renametag", "itemnametag", "rename_tag", "item_name_tag" => GlaciaItemFactory::renametag(),
             "transmog", "transmog_scroll", "transmogscroll" => GlaciaItemFactory::create("transmog"),
+            "heroic_upgrade", "heroicupgrade", "heroic_crystal", "heroic_crystal_upgrade" => GlaciaItemFactory::heroicUpgrade(
+                isset($entry["success"]) ? self::parsePercentValue($entry["success"]) : null
+            ),
+            "charm_shard", "charmshard" => GlaciaItemFactory::charmShard(
+                isset($entry["success"]) ? self::parsePercentValue($entry["success"]) : null,
+                max(0, GeneralUtils::parseRandomNumber($entry["bonus_success"] ?? $entry["bonus"] ?? 0))
+            ),
+            "charm_dust", "charmdust" => GlaciaItemFactory::charmDust(
+                isset($entry["bonus"]) ? max(1, GeneralUtils::parseRandomNumber($entry["bonus"])) : null
+            ),
             "chunkbuster", "chunk_buster" => GlaciaItemFactory::create("chunk_buster"),
             "collectionchest", "collection_chest" => GlaciaItemFactory::collectionChest(),
             "soul_compass", "soulcompass" => GlaciaItemFactory::soulCompass(isset($entry["uses"]) ? GeneralUtils::parseRandomNumber($entry["uses"]) : null),
@@ -294,6 +403,9 @@ final class RewardResolver {
             "slotticket" => GlaciaItemFactory::slotTicket(),
             "heroic_slot_ticket" => GlaciaItemFactory::heroicSlotTicket(),
             "heroicslotticket" => GlaciaItemFactory::heroicSlotTicket(),
+            "item_flip_credit_voucher", "itemflipcreditvoucher", "if_credit_voucher", "icf_voucher" => GlaciaItemFactory::itemFlipCreditVoucher(
+                isset($entry["credits"]) ? max(1, GeneralUtils::parseRandomNumber((string) $entry["credits"])) : 10
+            ),
             "envoy_beacon", "envoybeacon", "force_envoy", "envoy_starter" => GlaciaItemFactory::create("envoy_beacon"),
             "disguise_unlock", "disguiseunlock", "disguise" => GlaciaItemFactory::disguiseUnlock((string) ($entry["disguise"] ?? $entry["mob"] ?? $entry["type_id"] ?? "")),
             "faction_xp_booster", "factionxpbooster" => GlaciaItemFactory::factionXpBooster(
@@ -307,6 +419,22 @@ final class RewardResolver {
             "verdant_rune", "crop_rune", "farm_rune" => GlaciaItemFactory::rune("verdant"),
             "scholar_rune", "booksave_rune", "book_save_rune" => GlaciaItemFactory::rune("scholar"),
             "envoy_vacuum_rune", "envoy_rune", "envoy_autocollect_rune" => GlaciaItemFactory::rune("envoy_vacuum"),
+            "raider_edge_rune", "zone_double_drop_rune" => GlaciaItemFactory::rune("raider_edge"),
+            "null_field_rune", "potion_break_rune" => GlaciaItemFactory::rune("null_field"),
+            "echo_cache_rune", "lootbox_save_rune" => GlaciaItemFactory::rune("echo_cache"),
+            "hemoguard_rune", "lifesteal_immune_rune" => GlaciaItemFactory::rune("hemoguard"),
+            "chronoshift_rune", "booster_time_rune" => GlaciaItemFactory::rune("chronoshift"),
+            "merchant_sigil_rune", "sell_x2_rune" => GlaciaItemFactory::rune("merchant_sigil"),
+            "tidehook_rune", "fishing_speed_rune" => GlaciaItemFactory::rune("tidehook"),
+            "solitary_hunt_rune", "solo_zone_rune" => GlaciaItemFactory::rune("solitary_hunt"),
+            "envoy_echo_rune", "envoy_extra_rune" => GlaciaItemFactory::rune("envoy_echo"),
+            "swiftbane_rune", "slowness_immune_rune" => GlaciaItemFactory::rune("swiftbane"),
+            "sigil_of_surge_rune", "ce_plus_rune" => GlaciaItemFactory::rune("sigil_of_surge"),
+            "reaper_oath_rune", "boss_execute_rune" => GlaciaItemFactory::rune("reaper_oath"),
+            "bottomless_gullet_rune", "hunger_tax_rune" => GlaciaItemFactory::rune("bottomless_gullet"),
+            "stormward_rune", "stormcaller_immune_rune" => GlaciaItemFactory::rune("stormward"),
+            "beastclock_rune", "pet_cooldown_rune" => GlaciaItemFactory::rune("beastclock"),
+            "harvester_mark_rune", "inquisitive_style_rune" => GlaciaItemFactory::rune("harvester_mark"),
             "pet_duration_rune", "pet_rune", "attunement_rune" => GlaciaItemFactory::petDurationRune((string) ($entry["pet"] ?? $entry["pet_id"] ?? "gale_fox")),
             "rune_remover", "rune_scrubber", "rune_extractor" => GlaciaItemFactory::runeRemover(),
             "gkit_gem", "gkitgem" => self::resolveGKitGem($entry),
@@ -337,6 +465,7 @@ final class RewardResolver {
             'eternal_sigil' => GlaciaItemFactory::questSigil('eternal'),
 
             'astral_devourer' => GlaciaItemFactory::boss("astral_devourer"),
+            'titan_knight' => GlaciaItemFactory::boss("titan_knight"),
 
             default => self::resolveRegisteredGlaciaItem($id)
         };
@@ -382,7 +511,7 @@ final class RewardResolver {
     /**
      * @param array<string, mixed> $entry
      */
-    private static function resolveLootboxItem(array $entry): ?Item{
+    private static function resolveLootboxItem(array $entry, ?Player $player = null): ?Item{
         $lookup = (string) ($entry["id"] ?? $entry["box"] ?? $entry["lootbox"] ?? "");
         if($lookup === ""){
             return null;
@@ -392,7 +521,24 @@ final class RewardResolver {
             return null;
         }
 
-        return GlaciaItemFactory::lootbox($lookup);
+        return GlaciaItemFactory::lootbox($lookup, $player);
+    }
+
+    /**
+     * @param array<string, mixed> $entry
+     */
+    private static function resolveEtherealCrateItem(array $entry, ?Player $player = null): ?Item
+    {
+        $lookup = (string) ($entry["id"] ?? $entry["crate"] ?? $entry["ethereal_crate"] ?? "");
+        if ($lookup === "") {
+            return null;
+        }
+
+        if (EtherealCrateRepository::getCrateByLookup($lookup) === null) {
+            return null;
+        }
+
+        return GlaciaItemFactory::etherealCrate($lookup, $player);
     }
 
     private static function resolveDirectEnchantmentBook(array $entry): ?Item {
@@ -685,5 +831,38 @@ final class RewardResolver {
         }
 
         return null;
+    }
+
+    /**
+     * @param array<string, mixed> $entry
+     */
+    private static function applyConfiguredHeroic(Item $item, array $entry): Item
+    {
+        if (!$item instanceof Durable || !self::isHeroicEnabled($entry)) {
+            return $item;
+        }
+
+        return HeroicArmorDurabilityManager::upgradeItemToHeroic($item);
+    }
+
+    /**
+     * @param array<string, mixed> $entry
+     */
+    private static function isHeroicEnabled(array $entry): bool
+    {
+        foreach (["heroic", "is_heroic", "heroic_armor"] as $key) {
+            if (!array_key_exists($key, $entry)) {
+                continue;
+            }
+
+            $value = $entry[$key];
+            if (is_bool($value)) {
+                return $value;
+            }
+
+            return in_array(strtolower(trim((string) $value)), ["1", "true", "yes", "on"], true);
+        }
+
+        return false;
     }
 }

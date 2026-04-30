@@ -11,7 +11,7 @@ use pocketmine\block\VanillaBlocks;
 final class ObsidianDurabilityManager
 {
     private const KEY_HP = "obsidian_hp";
-    private const DEFAULT_HP = 5;
+    private const DEFAULT_HP = 3;
 
     public static function isTrackedObsidian(Block $block): bool
     {

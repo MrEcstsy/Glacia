@@ -1,84 +1,80 @@
-<?php 
+<?php
 
 declare(strict_types=1);
 
 namespace ecstsy\Glacia\commands\sub\enchants;
 
-use CortexPE\Commando\args\RawStringArgument;
+use CortexPE\Commando\args\TextArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
 use ecstsy\Glacia\server\enchantments\Groups;
-use pocketmine\item\enchantment\ItemFlags;
 use pocketmine\command\CommandSender;
-use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
 
 final class InfoSubCommand extends BaseSubCommand {
 
     public function prepare(): void {
         $this->setPermission($this->getPermission());
-        $this->registerArgument(0, new RawStringArgument("enchantment", true));
+        $this->registerArgument(0, new TextArgument("enchantment", true));
     }
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void {
-        if (!$sender instanceof Player) {
-            $sender->sendMessage(C::colorize("&r&7In-game only."));
-            return;
-        }
-
         $input = $args["enchantment"] ?? null;
-        if ($input === null) {
-            $sender->sendMessage(C::colorize("&cYou must specify an enchantment name."));
+        if ($input === null || trim((string) $input) === "") {
+            $sender->sendMessage(C::colorize("&cUsage: /ge info <enchantment>"));
             return;
         }
 
-        $enchantment = CustomEnchantments::getEnchantmentByName($input);
+        $enchantment = CustomEnchantments::getEnchantmentByName((string) $input);
         if (!$enchantment instanceof CustomEnchantment) {
-            $sender->sendMessage(C::colorize(str_replace("{enchant}", $input, "&c{enchant} is not a valid enchant!")));
+            $sender->sendMessage(C::colorize(str_replace("{enchant}", (string) $input, "&c{enchant} is not a valid enchant!")));
             return;
         }
-        $name = ucfirst($enchantment->getName());
-        $description = $enchantment->getDescription();
-        $maxLevel = $enchantment->getMaxLevel();
+
+        $internalId = $enchantment->getName();
         $groupId = $enchantment->getRarity();
         $groupName = Groups::getGroupName($groupId);
         $groupColor = Groups::translateGroupToColor($groupId);
+        $displayName = CustomEnchantments::getEnchantmentDisplayName($internalId, $groupColor);
 
-        $sender->sendMessage(C::YELLOW . "» " . C::GOLD . $groupColor . $name . " &7(" . $groupName . ")");
-        $sender->sendMessage(C::GRAY . "Description: " . C::WHITE . $description);
-        $sender->sendMessage(C::GRAY . "Max Level: " . C::WHITE . $maxLevel);
-        $sender->sendMessage(C::GRAY . "Applies To: " . C::WHITE . implode(", ", $enchantment->getApplicableItems()));
+        $sender->sendMessage(C::colorize("&8&m                                              "));
+        $sender->sendMessage(C::colorize("&r&e» &r" . $displayName . " &7(" . $groupColor . $groupName . "&7)"));
+        $sender->sendMessage(C::colorize("&r&7Internal ID: &f" . $internalId));
+        $sender->sendMessage(C::colorize("&r&7Max Level: &f" . $enchantment->getMaxLevel()));
+
+        $applies = self::formatApplicableItems($enchantment->getApplicableItems());
+        $sender->sendMessage(C::colorize("&r&7Applies To: &f" . $applies));
+
+        $sender->sendMessage(C::colorize("&r&7Description:"));
+        $description = $enchantment->getDescription();
+        $lines = preg_split('/\r\n|\r|\n/', $description) ?: [$description];
+        foreach ($lines as $line) {
+            $sender->sendMessage(C::colorize("&r&f  " . $line));
+        }
+        $sender->sendMessage(C::colorize("&8&m                                              "));
     }
 
     public function getPermission(): string {
         return "glacia.info";
     }
 
-    private function translateFlagsToText(int $flags): string {
-        $map = [
-            ItemFlags::ALL => "All Items",
-            ItemFlags::ARMOR => "Armor",
-            ItemFlags::SWORD => "Sword",
-            ItemFlags::AXE => "Axe",
-            ItemFlags::PICKAXE => "Pickaxe",
-            ItemFlags::SHOVEL => "Shovel",
-            ItemFlags::HOE => "Hoe",
-            ItemFlags::BOW => "Bow",
-            ItemFlags::TRIDENT => "Trident",
-            ItemFlags::FEET => "Boots",
-            ItemFlags::LEGS => "Leggings",
-            ItemFlags::TORSO => "Chestplate",
-            ItemFlags::HEAD => "Helmet",
-        ];
-
-        $applies = [];
-        foreach ($map as $bit => $name) {
-            if (($flags & $bit) === $bit) {
-                $applies[] = $name;
-            }
+    /**
+     * Convert ItemEnchantmentTags strings (e.g. "pickaxe", "flint_and_steel") into
+     * a human readable, comma-separated list.
+     *
+     * @param string[] $tags
+     */
+    private static function formatApplicableItems(array $tags): string {
+        if ($tags === []) {
+            return "None";
         }
 
-        return implode(", ", $applies) ?: "None";
+        $pretty = [];
+        foreach ($tags as $tag) {
+            $pretty[] = ucwords(str_replace('_', ' ', (string) $tag));
+        }
+
+        return implode(", ", $pretty);
     }
 }

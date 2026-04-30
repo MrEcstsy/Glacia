@@ -60,13 +60,16 @@ final class InviteSubCommand extends BaseSubCommand {
         $targetUuid = $target->getUniqueId();
         FactionInviteManager::getInstance()->invitePlayer($targetUuid, $factionId);
         
+        $inviteTime = GeneralUtils::translateTime(FactionInviteManager::getInstance()->getInviteTime($targetUuid, $factionId));
+        $factionName = $faction->getName();
         $sender->sendMessage(GlaciaUtils::format("faction.status.invite_sent", [
             "player" => $target->getName(),
-            "time" => GeneralUtils::translateTime(FactionInviteManager::getInstance()->getInviteTime($targetUuid, $factionId))
+            "faction" => $factionName,
+            "time" => $inviteTime,
         ], "none"));
         $target->sendMessage(GlaciaUtils::format("faction.status.invite_received", [
-            "faction" => $faction->getName(),
-            "time" => GeneralUtils::translateTime(FactionInviteManager::getInstance()->getInviteTime($targetUuid, $factionId))
+            "faction" => $factionName,
+            "time" => $inviteTime,
         ], "none"));
     }
 

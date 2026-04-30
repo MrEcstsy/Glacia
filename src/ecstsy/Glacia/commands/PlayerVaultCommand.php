@@ -92,12 +92,18 @@ final class PlayerVaultCommand extends BaseCommand {
             return;
         }
 
-        (new PlayerVaultScreen(
-            $player,
-            $player->getUniqueId()->toString(),
-            $player->getName(),
-            $vaultNumber
-        ))->display($player);
+        try {
+            (new PlayerVaultScreen(
+                $player,
+                $player->getUniqueId()->toString(),
+                $player->getName(),
+                $vaultNumber
+            ))->display($player);
+        } catch (\Throwable $e) {
+            Loader::getPlayerVaultManager()->abortOpenEditor($player->getUniqueId()->toString(), $vaultNumber);
+            $player->sendMessage(C::colorize("&r&cFailed to open that vault right now."));
+            Loader::getInstance()->getLogger()->warning("Failed to open vault #{$vaultNumber} for {$player->getName()}: " . $e->getMessage());
+        }
     }
 
     private function searchVaults(Player $player, string $query) : void

@@ -9,6 +9,7 @@ use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
 use pocketmine\entity\Living;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
@@ -40,6 +41,7 @@ final class ExecuteEnchant implements EntityDamageByEntityEnchantmentHandler {
             5 => 8,
             default => 4
         };
+        $chance = EnchantTuningManager::getLevelInt("execute", "chance-by-level", $level, $chance);
 
         $maxHealth = $victim->getMaxHealth();
         if ($maxHealth <= 0 || $victim->getHealth() / $maxHealth > 0.25) return;
@@ -56,7 +58,7 @@ final class ExecuteEnchant implements EntityDamageByEntityEnchantmentHandler {
         $victim->setHealth($newHealth);
 
         if ($session !== null) {
-            $session->addCooldown("execute", 1);
+            $session->addCooldown("execute", max(0, EnchantTuningManager::getInt("execute", "cooldown", 1)));
         }
 
         if ($damager instanceof Player) {

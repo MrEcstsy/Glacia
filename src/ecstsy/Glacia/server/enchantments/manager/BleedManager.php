@@ -68,4 +68,9 @@ final class BleedManager {
             20 * ($cycles + 1)
         );
     }
+
+    public static function clearPlayer(Player $player): void
+    {
+        unset(self::$active[strtolower($player->getName())]);
+    }
 }

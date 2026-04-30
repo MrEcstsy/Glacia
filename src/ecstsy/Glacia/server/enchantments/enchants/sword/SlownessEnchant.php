@@ -9,6 +9,7 @@ use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
@@ -41,6 +42,8 @@ final class SlownessEnchant implements EntityDamageByEntityEnchantmentHandler {
         ];
 
         $cfg = $data[$level] ?? $data[1];
+        $cfg["chance"] = EnchantTuningManager::getLevelInt("slowness", "chance-by-level", $level, (int) $cfg["chance"]);
+        $cfg["duration"] = EnchantTuningManager::getLevelInt("slowness", "effect-duration-seconds-by-level", $level, (int) $cfg["duration"]);
 
         if (!ProcLuckManager::roll($damager, "slowness", $cfg["chance"], 2, 12)) return;
         if ($session !== null && $session->isOnCooldown("slowness")) return;
@@ -52,7 +55,7 @@ final class SlownessEnchant implements EntityDamageByEntityEnchantmentHandler {
                 $cfg["effectLevel"]
             ));
             if ($session !== null) {
-                $session->addCooldown("slowness", 1);
+                $session->addCooldown("slowness", max(0, EnchantTuningManager::getInt("slowness", "cooldown", 1)));
             }
         }
     }

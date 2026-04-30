@@ -24,10 +24,6 @@ final class KothCommand extends BaseCommand {
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void
     {
-        if (!$sender instanceof Player) {
-            return;
-        }
-
         $manager = Loader::getCaptureManager();
         $action = strtolower((string) ($args["action"] ?? "help"));
         $id = strtolower((string) ($args["id"] ?? ""));
@@ -51,6 +47,10 @@ final class KothCommand extends BaseCommand {
                     $sender->sendMessage(C::colorize("&r&cUsage: /koth {$action} <id>"));
                     return;
                 }
+                if (!$sender instanceof Player) {
+                    $sender->sendMessage(C::colorize("&r&cThis action requires an in-game player position."));
+                    return;
+                }
                 $ok = $manager->setKothPosition($id, $action, $sender->getPosition());
                 $sender->sendMessage(C::colorize($ok
                     ? "&r&a✔ &r&7Set {$action} for KOTH &f{$id}&7."
@@ -61,6 +61,10 @@ final class KothCommand extends BaseCommand {
             case "spawn":
                 if ($id === "") {
                     $sender->sendMessage(C::colorize("&r&cUsage: /koth spawn <id>"));
+                    return;
+                }
+                if (!$sender instanceof Player) {
+                    $sender->sendMessage(C::colorize("&r&cThis action requires an in-game player position."));
                     return;
                 }
                 $ok = $manager->setKothSpawn($id, $sender->getPosition());

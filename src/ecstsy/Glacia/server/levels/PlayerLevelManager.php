@@ -6,8 +6,10 @@ namespace ecstsy\Glacia\server\levels;
 
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\player\GlaciaPlayer;
+use ecstsy\Glacia\utils\RewardResolver;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
+use pocketmine\console\ConsoleCommandSender;
 use pocketmine\entity\Entity;
 use pocketmine\entity\Living;
 use pocketmine\player\Player;
@@ -25,6 +27,8 @@ final class PlayerLevelManager {
     private static int $defaultMobXp = 8;
     /** @var array<string, int> */
     private static array $mobXp = [];
+    /** @var array<int, array{items: array<int, array<string, mixed>>, commands: string[]}> */
+    private static array $levelRewards = [];
 
     public static function loadFromConfig() : void
     {
@@ -49,6 +53,23 @@ final class PlayerLevelManager {
         self::$mobXp = [];
         foreach ((array) ($mobXp["overrides"] ?? []) as $key => $value) {
             self::$mobXp[self::normalizeMobKey((string) $key)] = max(0, (int) $value);
+        }
+
+        self::$levelRewards = [];
+        foreach ((array) ($config?->get("level-rewards", []) ?? []) as $level => $row) {
+            if (!is_numeric((string) $level) || !is_array($row)) {
+                continue;
+            }
+
+            $rewardLevel = (int) $level;
+            if ($rewardLevel <= 0) {
+                continue;
+            }
+
+            self::$levelRewards[$rewardLevel] = [
+                "items" => array_values(array_filter((array) ($row["items"] ?? []), static fn(mixed $entry): bool => is_array($entry))),
+                "commands" => array_values(array_filter(array_map("strval", (array) ($row["commands"] ?? [])), static fn(string $cmd): bool => trim($cmd) !== "")),
+            ];
         }
     }
 
@@ -126,10 +147,6 @@ final class PlayerLevelManager {
             return 0;
         }
 
-        if (method_exists($entity, "getLevelXpDropAmount")) {
-            return max(0, (int) $entity->getLevelXpDropAmount());
-        }
-
         $key = self::normalizeMobKey($entity::class);
         return self::$mobXp[$key] ?? self::$defaultMobXp;
     }
@@ -154,6 +171,53 @@ final class PlayerLevelManager {
                     C::colorize("&r&bLevel &8| &r&f" . $player->getName() . " &7has reached level &b" . number_format($level) . "&7.")
                 );
             }
+        }
+
+        self::grantLevelRewards($player, $level);
+    }
+
+    private static function grantLevelRewards(Player $player, int $level): void
+    {
+        $rewardSet = self::$levelRewards[$level] ?? null;
+        if (!is_array($rewardSet)) {
+            return;
+        }
+
+        $granted = 0;
+        foreach ((array) ($rewardSet["items"] ?? []) as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+
+            $item = RewardResolver::resolveItem($entry, $player);
+            if ($item === null) {
+                continue;
+            }
+
+            foreach ($player->getInventory()->addItem($item) as $leftover) {
+                $player->getWorld()->dropItem($player->getPosition(), $leftover);
+            }
+            $granted++;
+        }
+
+        $console = new ConsoleCommandSender(Loader::getInstance()->getServer(), Loader::getInstance()->getServer()->getLanguage());
+        foreach ((array) ($rewardSet["commands"] ?? []) as $raw) {
+            if (!is_string($raw) || trim($raw) === "") {
+                continue;
+            }
+
+            $command = str_replace(
+                ["{player}", "{name}", "{username}", "{uuid}", "{level}"],
+                [$player->getName(), $player->getName(), $player->getName(), $player->getUniqueId()->toString(), (string) $level],
+                $raw
+            );
+            Loader::getInstance()->getServer()->dispatchCommand($console, $command);
+            $granted++;
+        }
+
+        if ($granted > 0) {
+            $player->sendMessage(C::colorize("&r&6★ &r&7You received &f" . number_format($granted) . " &7reward(s) for reaching level &f" . number_format($level) . "&7."));
+            PlayerUtils::playSound($player, "random.orb");
         }
     }
 

@@ -39,8 +39,14 @@ final class RankManager {
 
         Loader::getDatabase()->executeSelect(QueryStmts::PLAYER_PERMISSIONS_SELECT, [], function(array $rows): void {
             foreach ($rows as $r) {
-                $this->ranks[$r["rank_key"]]?->addOwnPermission($r["permission"]);
+                $rank = $this->ranks[$r["rank_key"]] ?? null;
+
+                if (!$rank !== null) {
+                    $rank->addOwnPermission($r["permission"]);
+                }
             }
+
+            $this->refreshPermissionsForOnlinePlayers();
         });
     }
 

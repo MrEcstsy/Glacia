@@ -23,7 +23,7 @@ final class CreateWarpCommand extends BaseCommand {
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void
     {
         if (!$sender instanceof Player) {
-            $sender->sendMessage(GlaciaUtils::format("general.ingame-only"));
+            $sender->sendMessage(C::colorize("&r&cConsole cannot set a warp position directly. Use an in-game player to run /createwarp."));
             return;
         }
 

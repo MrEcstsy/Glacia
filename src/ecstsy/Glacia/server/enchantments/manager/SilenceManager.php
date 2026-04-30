@@ -93,4 +93,9 @@ final class SilenceManager {
             20
         );
     }
+
+    public static function clearPlayer(Player $player): void
+    {
+        unset(self::$stored[strtolower($player->getName())]);
+    }
 }

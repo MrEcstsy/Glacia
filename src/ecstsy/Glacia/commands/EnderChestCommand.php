@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\commands;
 
 use CortexPE\Commando\BaseCommand;
-use muqsit\invmenu\InvMenu;
-use muqsit\invmenu\type\InvMenuTypeIds;
+use ecstsy\Glacia\utils\screens\enderchest\EnderChestScreen;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
-use pocketmine\utils\TextFormat as C;
 
 final class EnderChestCommand extends BaseCommand {
 
@@ -24,10 +22,7 @@ final class EnderChestCommand extends BaseCommand {
             return;
         }
 
-        $menu = InvMenu::create(InvMenuTypeIds::TYPE_CHEST, $sender->getEnderInventory());
-        $menu->setName(C::colorize("&r&8Ender Chest"));
-        $menu->send($sender);
-        $sender->sendMessage(C::colorize("&r&aOpened your ender chest."));
+        EnderChestScreen::displayOwn($sender);
     }
 
     public function getPermission() : string

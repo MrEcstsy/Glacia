@@ -8,7 +8,7 @@ use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\levels\PlayerLevelManager;
-use ecstsy\MartianUtilities\utils\GeneralUtils;
+use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -69,7 +69,7 @@ final class LevelCommand extends BaseCommand {
         }
 
         $lookup = (string) ($args["arg2"] ?? "");
-        $value = GeneralUtils::parseShorthandNumber((string) ($args["amount"] ?? ""));
+        $value = GlaciaUtils::parseShorthandNumber((string) ($args["amount"] ?? ""));
         if ($lookup === "" || $value <= 0) {
             $sender->sendMessage(C::colorize("&r&cUsage: /level {$mode} <player> <amount>"));
             return;

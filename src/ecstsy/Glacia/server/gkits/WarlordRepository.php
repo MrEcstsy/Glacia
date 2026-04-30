@@ -94,6 +94,27 @@ final class WarlordRepository
         ], $defaults);
     }
 
+    /**
+     * @return array<string, int>
+     */
+    public static function getSpawnGuards(): array
+    {
+        $config = self::getConfig();
+        $guards = $config["spawn-guards"] ?? [];
+        if (!is_array($guards)) {
+            $guards = [];
+        }
+
+        return [
+            "boss.max-active-global" => max(1, (int) ($guards["boss"]["max-active-global"] ?? 1)),
+            "boss.player-cooldown" => max(1, GeneralUtils::parseTimeString((string) ($guards["boss"]["player-cooldown"] ?? "10m"))),
+            "boss.global-cooldown" => max(1, GeneralUtils::parseTimeString((string) ($guards["boss"]["global-cooldown"] ?? "5m"))),
+            "warlord.max-active-per-world" => max(1, (int) ($guards["warlord"]["max-active-per-world"] ?? 3)),
+            "warlord.player-cooldown" => max(1, GeneralUtils::parseTimeString((string) ($guards["warlord"]["player-cooldown"] ?? "3m"))),
+            "warlord.max-lifetime" => max(60, GeneralUtils::parseTimeString((string) ($guards["warlord"]["max-lifetime"] ?? "15m"))),
+        ];
+    }
+
     public static function getWarlordById(string $id): ?array
     {
         $id = strtolower(trim($id));

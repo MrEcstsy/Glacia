@@ -7,16 +7,17 @@ namespace ecstsy\Glacia\commands\sub\factions;
 use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
-use ecstsy\Glacia\player\GlaciaPlayer;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\factions\Faction;
 use ecstsy\Glacia\server\factions\FactionManager;
 use ecstsy\Glacia\server\factions\relations\RelationManager;
 use ecstsy\Glacia\utils\GlaciaUtils;
+use ecstsy\Glacia\utils\QueryStmts;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
+use Ramsey\Uuid\UuidInterface;
 
 final class WhoSubCommand extends BaseSubCommand {
 
@@ -73,7 +74,6 @@ final class WhoSubCommand extends BaseSubCommand {
     private function displayFactionInfo(CommandSender $sender, Faction $faction): void
     {
         $playerManager = PlayerManager::getInstance();
-        $allSessions = $playerManager->getSessions();
 
         $memberEntries = [
             "leader" => [],
@@ -82,16 +82,22 @@ final class WhoSubCommand extends BaseSubCommand {
             "recruit" => [],
         ];
 
-        foreach ($allSessions as $session) {
-            /** @var GlaciaPlayer $session */
-            if ($session->getFactionId() !== $faction->getFactionId()) {
-                continue;
+        foreach ($faction->getMembers() as $member) {
+            $uuid = $member->getUuid();
+            $role = $member->getRole();
+            if (!isset($memberEntries[$role])) {
+                $role = "member";
             }
 
-            $role = $session->getFactionRole() ?? "recruit";
+            $session = $playerManager->getSessionByUuid($uuid);
+            $name = $session !== null
+                ? $session->getUsername()
+                : $this->resolveUsernameFromDatabase($uuid);
+
             $symbol = GlaciaUtils::getFactionRoleSymbol($role);
-            $color = $session->isConnected() ? "&a" : "&c";
-            $memberEntries[$role][] = "{$color}{$symbol}{$session->getUsername()}";
+            $online = $session !== null && $session->isConnected();
+            $state = $online ? "&a" : "&7";
+            $memberEntries[$role][] = "{$state}{$symbol}{$name}&7" . ($online ? " &a●" : " &8○");
         }
 
         $orderedMembers = [];
@@ -124,26 +130,57 @@ final class WhoSubCommand extends BaseSubCommand {
             }
         }
 
-        $relationColor = GlaciaUtils::getRelationColor($relation);
-        $lines = [];
-        $lines[] = "&r&b------ {$relationColor}{$faction->getName()} &3------";
-        $lines[] = "&r&b> &fDescription: &7{$faction->getDescription()}";
-        $lines[] = "&r&b> &fLeader: &7{$faction->getLeaderName()}";
-        $lines[] = C::colorize("&r&b> &fMembers: &7" . count($orderedMembers));
+        $nameColor = match (strtolower($relation)) {
+            "own" => "&a",
+            "enemy" => "&c",
+            "ally" => "&d",
+            default => "&f",
+        };
 
-        if ($orderedMembers !== []) {
-            $lines[] = "   " . implode("&7, ", $orderedMembers);
+        $description = trim($faction->getDescription()) !== "" ? $faction->getDescription() : "No description set.";
+        $factionName = $faction->getName();
+        $centeredTitle = self::padCenterAmpersand("{$nameColor}&l{$factionName}");
+
+        $lines = [];
+        $lines[] = $centeredTitle;
+        $lines[] = "&r&bLeader: &f{$faction->getLeaderName()}";
+        $lines[] = "&r&bDescription: &7{$description}";
+        $lines[] = "&r&bMembers: &f" . count($faction->getMembers());
+
+        foreach ($orderedMembers !== [] ? array_chunk($orderedMembers, 3) : [] as $chunk) {
+            $lines[] = "&r&8· &r" . implode("&r&7 │ &r", $chunk);
         }
 
-        $lines[] = C::colorize("&r&b> &fPower/Max/Claims: &7{$faction->getFactionPower()}/{$faction->getMaxPower()}/{$faction->getClaimCount()}");
-        $lines[] = C::colorize("&r&b> &fFaction Value: &7$" . number_format($faction->getFactionValue()));
-        $lines[] = C::colorize("&r&b> &fFaction Bank: &7$" . number_format(Loader::getFactionUpgradeManager()->getBankBalance($faction->getFactionId()), 2));
-        $lines[] = "&r&b> &fAllies: &7" . ($allyNames === [] ? "None" : implode("&7, ", $allyNames));
-        $lines[] = "&r&b> &fEnemies: &7" . ($enemyNames === [] ? "None" : implode("&7, ", $enemyNames));
+        $lines[] = C::colorize("&r&bPower / Max / Claims: &f{$faction->getFactionPower()} &8| &f{$faction->getMaxPower()} &8| &f{$faction->getClaimCount()}");
+        $lines[] = C::colorize("&r&bFaction Value: &f$" . number_format($faction->getFactionValue()));
+        $lines[] = C::colorize("&r&bFaction Bank: &f$" . number_format(Loader::getFactionUpgradeManager()->getBankBalance($faction->getFactionId()), 2));
+        $lines[] = "&r&bAllies: &7" . ($allyNames === [] ? "None" : implode("&7, ", $allyNames));
+        $lines[] = "&r&bEnemies: &7" . ($enemyNames === [] ? "None" : implode("&7, ", $enemyNames));
 
         foreach ($lines as $line) {
             $sender->sendMessage(C::colorize($line));
         }
+    }
+
+    private function resolveUsernameFromDatabase(UuidInterface $uuid): string {
+        $name = null;
+        Loader::getDatabase()->executeSelect(QueryStmts::PLAYERS_USERNAME_BY_UUID, [
+            "uuid" => $uuid->toString(),
+        ], function (array $rows) use (&$name): void {
+            $name = isset($rows[0]["username"]) ? (string) $rows[0]["username"] : null;
+        });
+        Loader::getDatabase()->waitAll();
+
+        return ($name !== null && $name !== "") ? $name : "Unknown";
+    }
+
+    /** Centers &amp;-formatted text using plain-text width (approx. chat strip). */
+    private static function padCenterAmpersand(string $ampersandFormatted, int $lineWidth = 52): string {
+        $stripped = preg_replace('/&[0-9a-fk-or]/i', '', $ampersandFormatted) ?? "";
+        $len = strlen($stripped);
+        $pad = max(0, (int) floor(($lineWidth - $len) / 2));
+
+        return "&r" . str_repeat(" ", $pad) . $ampersandFormatted;
     }
 
     public function getPermission(): string {

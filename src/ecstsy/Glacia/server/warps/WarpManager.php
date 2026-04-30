@@ -7,6 +7,7 @@ namespace ecstsy\Glacia\server\warps;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\utils\QueryStmts;
 use pocketmine\player\Player;
+use pocketmine\world\Position;
 use pocketmine\utils\SingletonTrait;
 use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
@@ -57,10 +58,15 @@ final class WarpManager
      */
     public function createWarp(Player $player, string $warp_name) : void
     {
-        $pos  = $player->getPosition();
+        $this->createWarpAt($player->getPosition(), $warp_name);
+    }
+
+    public function createWarpAt(Position $position, string $warp_name) : void
+    {
+        $pos  = $position;
         $args = [
             "warp_name"  => $warp_name,
-            "world" => $player->getWorld()->getFolderName(),
+            "world" => $position->getWorld()->getFolderName(),
             "x" => $pos->getFloorX(),
             "y" => $pos->getFloorY(),
             "z" => $pos->getFloorZ()

@@ -32,6 +32,8 @@ final class SchemaMigrationManager
             "kills" => "INT DEFAULT 0",
             "deaths" => "INT DEFAULT 0",
             "slot_credits" => "INT DEFAULT 0",
+            "item_flip_credits" => "INT DEFAULT 0",
+            "title" => "TEXT DEFAULT NULL",
         ],
         "glacia_factions" => [
             "max_members" => "INT DEFAULT 5",
@@ -40,6 +42,9 @@ final class SchemaMigrationManager
         "glacia_faction_upgrade_bank" => [
             "bank_balance" => "REAL NOT NULL DEFAULT 0",
             "upgrade_data" => "TEXT NOT NULL DEFAULT '{}'",
+        ],
+        "glacia_faction_roles" => [
+            "view_audit_log" => "INTEGER DEFAULT 0",
         ],
         "glacia_combat_loggers" => [
             "dead_on_login" => "INT DEFAULT 0",

@@ -5,10 +5,15 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\listeners;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
+use ecstsy\Glacia\server\items\armor\HeroicArmorDurabilityManager;
+use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\Glacia\server\items\armor\abilities\YijkiLightningStrike;
 use ecstsy\Glacia\server\items\armor\ArmorSetManager;
+use ecstsy\Glacia\utils\GlaciaUtils;
 use pocketmine\event\Listener;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\inventory\ArmorInventory;
@@ -17,9 +22,21 @@ use pocketmine\inventory\Inventory;
 use pocketmine\item\Durable;
 use pocketmine\item\Item;
 use pocketmine\player\Player;
+use pocketmine\scheduler\ClosureTask;
 use pocketmine\utils\TextFormat as C;
 
 final class CustomArmorListener implements Listener {
+
+    /**
+     * Heroic armor baseline (independent from set bonuses).
+     * Weighted like vanilla slot scaling (chest > legs > boots/helmet),
+     * tuned to be stronger than diamond overall for PvP.
+     */
+    private const HEROIC_REDUCTION_HELMET = 0.04;
+    private const HEROIC_REDUCTION_CHESTPLATE = 0.10;
+    private const HEROIC_REDUCTION_LEGGINGS = 0.08;
+    private const HEROIC_REDUCTION_BOOTS = 0.06;
+    private const HEROIC_REDUCTION_CAP = 0.32;
 
     /** @var array<string, string|null> */
     private array $activeSets = [];
@@ -109,9 +126,37 @@ final class CustomArmorListener implements Listener {
                     $event->setBaseDamage($damage);
                     break;
             }
+
+            if ($victim instanceof Player && RuneManager::shouldTriggerPotionPurge($damager)) {
+                $event->setBaseDamage($event->getBaseDamage() * RuneManager::getNullFieldDamageMultiplier($damager));
+                $radius = RuneManager::getPotionPurgeRadius();
+                foreach ($damager->getWorld()->getPlayers() as $nearby) {
+                    if ($nearby->getPosition()->distanceSquared($damager->getPosition()) > ($radius * $radius)) {
+                        continue;
+                    }
+
+                    if (GlaciaUtils::isAlly($damager, $nearby)) {
+                        continue;
+                    }
+
+                    $nearby->getEffects()->clear();
+                }
+            }
         }
 
         if ($victim instanceof Player) {
+            $this->scheduleHeroicDurabilityReconcile($victim);
+
+            if (
+                $damager instanceof Player &&
+                RuneManager::hasStormcallerWard($victim) &&
+                $event->getCause() === \pocketmine\event\entity\EntityDamageEvent::CAUSE_MAGIC &&
+                ArmorSetManager::getInstance()->getFullSet($damager) === "yijki"
+            ) {
+                $event->cancel();
+                return;
+            }
+
             $victimSet = ArmorSetManager::getInstance()->getFullSet($victim);
 
             switch ($victimSet) {
@@ -143,6 +188,19 @@ final class CustomArmorListener implements Listener {
                         }
                     }
                     break;
+            }
+
+            $legendaryReduction = RuneManager::getLegendaryDamageReduction($victim);
+            if ($legendaryReduction > 0.0) {
+                $event->setBaseDamage($event->getBaseDamage() * max(0.0, 1.0 - ($legendaryReduction / 100)));
+            }
+
+            // Apply heroic baseline at the end so it stacks cleanly with
+            // set-bonus logic but remains independent from full-set checks.
+            $baseDamage = (float) $event->getBaseDamage();
+            $heroicMultiplier = $this->getHeroicArmorReductionMultiplier($victim, $baseDamage);
+            if ($heroicMultiplier < 1.0) {
+                $event->setBaseDamage($baseDamage * $heroicMultiplier);
             }
         }
     }
@@ -242,9 +300,85 @@ final class CustomArmorListener implements Listener {
 
         foreach ($armorInventory->getContents() as $slot => $armor) {
             if ($armor instanceof Durable && !$armor->isNull()) {
-                $armor->applyDamage($amount);
+                HeroicArmorDurabilityManager::applyVirtualDurabilityDamage($armor, $amount);
                 $armorInventory->setItem($slot, $armor);
             }
         }
+    }
+
+    private function getHeroicArmorReductionMultiplier(Player $player, float $damage): float
+    {
+        $armor = $player->getArmorInventory();
+
+        // Only count "true heroic" pieces (Heroic Upgrade state).
+        $armorPoints = 0;
+        $armorPoints += $this->isHeroicArmorPiece($armor->getHelmet(), "helmet") ? 3 : 0;
+        $armorPoints += $this->isHeroicArmorPiece($armor->getChestplate(), "chestplate") ? 8 : 0;
+        $armorPoints += $this->isHeroicArmorPiece($armor->getLeggings(), "leggings") ? 6 : 0;
+        $armorPoints += $this->isHeroicArmorPiece($armor->getBoots(), "boots") ? 3 : 0;
+
+        if ($armorPoints <= 0 || $damage <= 0.0) {
+            return 1.0;
+        }
+
+        // Mimic vanilla armor penetration scaling: reduction depends on incoming damage.
+        // We treat heroic as "armor-only" with 0 armor toughness (so it follows the classic
+        // armorPoints - damage/(2 + toughness/4) behavior).
+        $toughness = 0.0;
+        $armorPoints = min(20.0, (float) $armorPoints);
+
+        $mitigationFraction = min(
+            20.0,
+            max(
+                $armorPoints / 5.0,
+                $armorPoints - ($damage / (2.0 + ($toughness / 4.0)))
+            )
+        ) / 25.0; // 0.00 .. 0.80
+
+        $mitigationFraction = max(0.0, min(0.8, $mitigationFraction));
+        return 1.0 - $mitigationFraction;
+    }
+
+    private function isHeroicArmorPiece(Item $item, ?string $requiredPiece = null): bool
+    {
+        return HeroicArmorDurabilityManager::isHeroicArmor($item, $requiredPiece);
+    }
+
+    private function scheduleHeroicDurabilityReconcile(Player $victim): void
+    {
+        $snapshot = [];
+        $armorInventory = $victim->getArmorInventory();
+        foreach ($armorInventory->getContents() as $slot => $item) {
+            if (!$item instanceof Durable || !$this->isHeroicArmorPiece($item)) {
+                continue;
+            }
+            $snapshot[$slot] = $item->getDamage();
+        }
+
+        if ($snapshot === []) {
+            return;
+        }
+
+        $playerName = $victim->getName();
+        Loader::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(
+            function () use ($playerName, $snapshot): void {
+                $player = Loader::getInstance()->getServer()->getPlayerExact($playerName);
+                if (!$player instanceof Player || !$player->isOnline()) {
+                    return;
+                }
+
+                $armor = $player->getArmorInventory();
+                foreach ($snapshot as $slot => $oldDamage) {
+                    $item = $armor->getItem((int) $slot);
+                    if (!$item instanceof Durable || !$this->isHeroicArmorPiece($item)) {
+                        continue;
+                    }
+
+                    if (HeroicArmorDurabilityManager::absorbObservedDamageIncrease($item, (int) $oldDamage)) {
+                        $armor->setItem((int) $slot, $item);
+                    }
+                }
+            }
+        ), 1);
     }
 }

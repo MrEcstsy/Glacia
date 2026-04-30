@@ -25,10 +25,6 @@ final class OutpostCommand extends BaseCommand {
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void
     {
-        if (!$sender instanceof Player) {
-            return;
-        }
-
         $manager = Loader::getCaptureManager();
         $action = strtolower((string) ($args["action"] ?? "help"));
         $id = strtolower((string) ($args["id"] ?? ""));
@@ -50,6 +46,10 @@ final class OutpostCommand extends BaseCommand {
             case "setpoint":
                 if ($id === "") {
                     $sender->sendMessage(C::colorize("&r&cUsage: /outpost setpoint <id>"));
+                    return;
+                }
+                if (!$sender instanceof Player) {
+                    $sender->sendMessage(C::colorize("&r&cThis action requires an in-game player position."));
                     return;
                 }
                 $ok = $manager->setOutpostPoint($id, $sender->getPosition());

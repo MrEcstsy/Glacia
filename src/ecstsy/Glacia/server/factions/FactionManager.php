@@ -82,6 +82,10 @@ final class FactionManager {
         $this->factions[$id] = $faction;
 
         $faction->addMember($id, Uuid::fromString($leaderUuid), "leader");
+        $leaderSession = Loader::getPlayerManager()->getSessionByUuid(Uuid::fromString($leaderUuid));
+        if ($leaderSession !== null && $leaderSession->getPower() <= 0) {
+            $leaderSession->setPower(100);
+        }
         Loader::getFactionUpgradeManager()->ensureFaction($faction);
         return $faction;
     }
@@ -119,6 +123,8 @@ final class FactionManager {
                 $session->joinFaction(null, null);
             }
         }
+
+        Loader::getCollectionChestManager()->removeAllForFaction($id);
 
         $relations = RelationManager::getInstance()->getRelationsFor($id, null, true);
         foreach (array_keys($relations) as $otherId) {

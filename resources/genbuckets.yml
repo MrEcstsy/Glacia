@@ -3,10 +3,20 @@ enabled: true
 # Safety cap so buckets do not try to generate forever in open space.
 max-length: 256
 blocks-per-step: 1
-step-interval-ticks: 3
-use-cooldown-seconds: 1
+step-interval-ticks: 1
+use-cooldown-seconds: 0
+require-sneak-to-start: true
+allow-water-pass: true
+stop-on-generated-break: true
 
 costs:
-  sand: 25000
-  cobble: 10000
-  obsidian: 50000
+  sand: 1250
+  cobble: 950
+  obsidian: 3200
+
+ocean-buster:
+  enabled: true
+  cost: 500000
+  claimed-use-permission: "glacia.sponge.use"
+  overworld-worlds:
+    - world

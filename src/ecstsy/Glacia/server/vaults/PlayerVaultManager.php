@@ -7,6 +7,7 @@ namespace ecstsy\Glacia\server\vaults;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\player\GlaciaPlayer;
 use ecstsy\Glacia\utils\QueryStmts;
+use ecstsy\Glacia\utils\StorageUtils;
 use ecstsy\MartianUtilities\utils\ItemUtils;
 use pocketmine\inventory\Inventory;
 use pocketmine\item\Item;
@@ -36,7 +37,7 @@ final class PlayerVaultManager {
             foreach ($rows as $row) {
                 $ownerUuid = (string) $row["owner_uuid"];
                 $vaultNumber = (int) $row["vault_number"];
-                $contents = json_decode((string) $row["contents"], true);
+                $contents = StorageUtils::decodeJsonString((string) $row["contents"], "player vault {$ownerUuid}:{$vaultNumber}");
                 if (!is_array($contents)) {
                     $contents = [];
                 }
@@ -152,6 +153,20 @@ final class PlayerVaultManager {
         unset($this->openEditors[$this->getVaultKey($ownerUuid, $vaultNumber)]);
     }
 
+    public function releaseViewerLocks(string $viewerUuid) : void
+    {
+        foreach ($this->openEditors as $key => $currentViewerUuid) {
+            if ($currentViewerUuid === $viewerUuid) {
+                unset($this->openEditors[$key]);
+            }
+        }
+    }
+
+    public function getOpenEditorCount() : int
+    {
+        return count($this->openEditors);
+    }
+
     public function searchVaults(string $ownerUuid, array $vaultNumbers, string $query) : array
     {
         $needle = strtolower(trim(C::clean($query)));
@@ -239,10 +254,8 @@ final class PlayerVaultManager {
         ksort($contents);
         $this->vaults[$ownerUuid][$vaultNumber] = $contents;
 
-        try {
-            $encodedContents = json_encode($contents, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
-            Loader::getInstance()->getLogger()->warning("Failed to save player vault {$ownerUuid}:{$vaultNumber}: " . $e->getMessage());
+        $encodedContents = StorageUtils::encodeJsonString($contents, "player vault {$ownerUuid}:{$vaultNumber}");
+        if ($encodedContents === null) {
             return;
         }
 
@@ -306,9 +319,8 @@ final class PlayerVaultManager {
 
         foreach ($this->vaults as $ownerUuid => $vaults) {
             foreach ($vaults as $vaultNumber => $contents) {
-                try {
-                    $encodedContents = json_encode($contents, JSON_THROW_ON_ERROR);
-                } catch (\JsonException) {
+                $encodedContents = StorageUtils::encodeJsonString($contents, "player vault {$ownerUuid}:{$vaultNumber}");
+                if ($encodedContents === null) {
                     continue;
                 }
 

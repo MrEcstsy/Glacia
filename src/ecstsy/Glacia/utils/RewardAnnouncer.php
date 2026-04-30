@@ -22,7 +22,7 @@ final class RewardAnnouncer {
 
         $header = strtolower($sourceType) === "slotbot"
             ? "&r&3&l(!) &r&b" . $opener->getName() . " spun the &fSlotbot&b and received"
-            : "&r&3&l(!) &r&b" . $opener->getName() . " opened a &f{$sourceType}&b: &r{$sourceName}&r&b and received";
+            : "&r&3&l(!) &r&b" . $opener->getName() . " opened a &r" . self::cleanSourceName($sourceName) . "&r&b and received";
         $message = C::colorize($header);
         foreach ($rewards as $reward) {
             $message .= "\n" . C::colorize("&r&5* &r&f" . $reward->getCount() . "x &r" . self::getItemName($reward));
@@ -44,5 +44,12 @@ final class RewardAnnouncer {
         }
 
         return C::WHITE . $item->getName();
+    }
+
+    private static function cleanSourceName(string $sourceName): string
+    {
+        return preg_replace('/&[0-9a-fk-oru]|§[0-9a-fk-oru]/i', '', $sourceName) === "Lootbox"
+            ? C::WHITE . "Reward"
+            : preg_replace('/(?:&[0-9a-fk-oru]|§[0-9a-fk-oru])*Lootbox(?:&[0-9a-fk-oru]|§[0-9a-fk-oru])*:\s*/i', '', $sourceName);
     }
 }

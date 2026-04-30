@@ -98,11 +98,15 @@ final class ClaimManager
     }
 
     public function deleteAllForFaction(string $factionId): void {
+        $keys = [];
         foreach ($this->claims as $key => $claim) {
             if ($claim->getFactionId() === $factionId) {
-                unset($this->claims[$key]);
+                $keys[] = $key;
             }
+        }
 
+        foreach ($keys as $key) {
+            unset($this->claims[$key]);
         }
 
         Loader::getDatabase()->executeChange(QueryStmts::FACTION_CLAIM_DELETE_FACTION, [

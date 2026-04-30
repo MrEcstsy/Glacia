@@ -7,6 +7,7 @@ namespace ecstsy\Glacia\server\enchantments\enchants\sword;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
 use ecstsy\Glacia\server\items\runes\RuneManager;
 use pocketmine\entity\Living;
@@ -26,27 +27,27 @@ final class LifestealEnchant implements EntityDamageByEntityEnchantmentHandler {
             return;
         }
 
-        $chance = match ($level) {
+        $chance = EnchantTuningManager::getLevelInt("lifesteal", "chance-by-level", $level, match ($level) {
             1 => 1,
             2 => 1,
             3 => 2,
             4 => 2,
             5 => 2,
             default => 0
-        };
+        });
 
         if (!ProcLuckManager::roll($damager, "lifesteal", $chance, 1, 1)) {
             return;
         }
 
-        $heal = match ($level) {
+        $heal = EnchantTuningManager::getLevelFloat("lifesteal", "heal-by-level", $level, match ($level) {
             1 => 1.0,
             2 => 1.5,
             3 => 2.0,
             4 => 2.5,
             5 => 3.0,
             default => 1.0
-        };
+        });
 
         $victim = $event->getEntity();
         if ($victim instanceof Player) {

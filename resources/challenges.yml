@@ -1,0 +1,75 @@
+enabled: true
+reset-seconds: 86400
+active-count: 5
+faction-participant-limit: 3
+
+challenge-pool:
+  - id: envoys_broken
+    display: "&bMost Envoys Broken"
+    metric: envoys_broken
+    rewards:
+      1st:
+        - id: money_note
+          amount: 5000000
+      2nd:
+        - id: money_note
+          amount: 2500000
+      3rd:
+        - id: money_note
+          amount: 1000000
+
+  - id: bosses_killed
+    display: "&cMost Bosses Killed"
+    metric: bosses_killed
+    rewards:
+      1st:
+        - id: money_note
+          amount: 4000000
+      2nd:
+        - id: money_note
+          amount: 2000000
+      3rd:
+        - id: money_note
+          amount: 1000000
+
+  - id: zone_mobs_killed
+    display: "&6Most Zone Mobs Killed"
+    metric: zone_mobs_killed
+    rewards:
+      1st:
+        - id: money_note
+          amount: 3000000
+      2nd:
+        - id: money_note
+          amount: 1500000
+      3rd:
+        - id: money_note
+          amount: 750000
+
+  - id: enchant_books_opened
+    display: "&dMost Enchant Books Opened"
+    metric: enchant_books_opened
+    rewards:
+      1st:
+        - id: money_note
+          amount: 3000000
+      2nd:
+        - id: money_note
+          amount: 1500000
+      3rd:
+        - id: money_note
+          amount: 750000
+
+  - id: xp_spent_enchanter
+    display: "&aMost XP Spent At Enchanter"
+    metric: xp_spent_enchanter
+    rewards:
+      1st:
+        - id: money_note
+          amount: 3500000
+      2nd:
+        - id: money_note
+          amount: 1750000
+      3rd:
+        - id: money_note
+          amount: 900000

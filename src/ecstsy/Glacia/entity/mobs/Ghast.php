@@ -13,7 +13,7 @@ class Ghast extends SpawnerEntity
 {
 
     protected function getInitialSizeInfo() : EntitySizeInfo{
-        return new EntitySizeInfo(4.0, 4.0);
+        return new EntitySizeInfo(2.2, 2.2);
     }
 
     public static function getNetworkTypeId() : string{

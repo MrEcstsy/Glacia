@@ -114,13 +114,13 @@ final class Faction {
     public function setSpawnerWorth(int $worth): void
     {
         $this->spawnerWorth = max(0, $worth);
-        $this->refreshFactionScoreboards();
+        $this->refreshScoreboards();
     }
 
     public function adjustSpawnerWorth(int $delta): void
     {
         $this->spawnerWorth = max(0, $this->spawnerWorth + $delta);
-        $this->refreshFactionScoreboards();
+        $this->refreshScoreboards();
     }
 
     public function recalculateSpawnerWorth(): void
@@ -151,7 +151,7 @@ final class Faction {
         }
 
         $this->spawnerWorth = max(0, $total);
-        $this->refreshFactionScoreboards();
+        $this->refreshScoreboards();
     }
 
     public function isOverclaimable(): bool {
@@ -184,6 +184,11 @@ final class Faction {
         Loader::getDatabase()->executeSelect(QueryStmts::FACTION_MEMBERS_SELECT_BY_FACTION, [
             "faction_id" => $this->factionId
         ], function(array $rows): void {
+            // Avoid wiping in-memory members before the first DB write wins (async select can
+            // finish with 0 rows while addMember() has already appended the leader).
+            if ($rows === []) {
+                return;
+            }
             $this->members = [];
             foreach ($rows as $row) {
                 $this->members[] = new FactionMember(
@@ -218,6 +223,7 @@ final class Faction {
                     "faction_id" => $this->factionId,
                     "member_uuid" => $memberUuid->toString(),
                     "role_key" => $roleKey,
+                    "joined_at" => $this->members[$idx]->getJoinedAt(),
                 ]);
                 $this->members[$idx]->setRole($roleKey);
             }
@@ -238,6 +244,8 @@ final class Faction {
             $session->setFactionId($this->factionId);
             $session->setFactionRole($roleKey);
         }
+
+        $this->refreshScoreboards();
     }
 
     public function kickMember(string $factionId, UuidInterface $memberUuid): void {
@@ -254,19 +262,24 @@ final class Faction {
             $session->setFactionId(null);
             $session->setFactionRole(null);
         }
+
+        $this->refreshScoreboards();
     }
 
     public function setMemberRole(string $factionId, UuidInterface $memberUuid, string $roleKey): void {
+        $idx = $this->findMemberIndexByUuid($memberUuid);
+        if ($idx === null) {
+            return;
+        }
+
         Loader::getDatabase()->executeChange(QueryStmts::FACTION_MEMBERS_UPDATE, [
             "faction_id" => $this->factionId,
             "member_uuid" => $memberUuid->toString(),
             "role_key" => $roleKey,
+            "joined_at" => $this->members[$idx]->getJoinedAt(),
         ]);
 
-        $idx = $this->findMemberIndexByUuid($memberUuid);
-        if ($idx !== null) {
-            $this->members[$idx]->setRole($roleKey);
-        }
+        $this->members[$idx]->setRole($roleKey);
 
         $session = Loader::getPlayerManager()->getSessionByUuid($memberUuid);
         if ($session !== null) {
@@ -280,6 +293,8 @@ final class Faction {
             $this->setLeader($memberUuid, $leaderName);
             $this->normalizeLeaderMembers($memberUuid->toString());
         }
+
+        $this->refreshScoreboards();
     }
 
     public function getFactionPower(): int {
@@ -326,7 +341,7 @@ final class Faction {
         ]);
     }
 
-    private function refreshFactionScoreboards(): void
+    public function refreshScoreboards(): void
     {
         foreach ($this->getOnlineMembers() as $member) {
             \ecstsy\Glacia\server\scoreboard\ScoreboardHelper::updateFactionLines($member);
@@ -345,6 +360,7 @@ final class Faction {
                 "faction_id" => $this->factionId,
                 "member_uuid" => $memberUuid,
                 "role_key" => "officer",
+                "joined_at" => $member->getJoinedAt(),
             ]);
             $member->setRole("officer");
 

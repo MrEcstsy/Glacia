@@ -26,6 +26,8 @@ final class FactionPermissions
     public const EDIT_SIGNS = 'edit-signs';
     public const EDIT_DESCRIPTION = 'change-description';
     public const INVITE_USERS = 'invite-users';
+    /** Per-role toggle for viewing /f audit (faction leader & officers always allowed). */
+    public const VIEW_AUDIT_LOG = 'view-audit-log';
 
     public static function getAllPermissions(): array
     {
@@ -54,6 +56,7 @@ final class FactionPermissions
             self::EDIT_SETTINGS => "Edit Settings",
             self::MANAGE_WARPS => "Manage Warps",
             self::EDIT_SIGNS => "Edit Signs",
+            self::VIEW_AUDIT_LOG => "View Faction Audit Log",
             default => ucwords(str_replace('_', ' ', $permission))
         };
     }

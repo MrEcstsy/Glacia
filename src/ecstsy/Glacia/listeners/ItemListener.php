@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\listeners;
 
 use ecstsy\Glacia\entity\boss\bosses\AstralDevourer;
+use ecstsy\Glacia\entity\boss\bosses\GlacialHydra;
+use ecstsy\Glacia\entity\boss\bosses\TitanKnight;
+use ecstsy\Glacia\entity\boss\BossEntity;
 use ecstsy\Glacia\entity\gkits\ForsakenChampion;
 use ecstsy\Glacia\entity\GlaciaExplosiveCreeper;
 use ecstsy\Glacia\entity\RiftEntity;
@@ -17,41 +20,61 @@ use ecstsy\Glacia\server\droppackages\DropPackageSession;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
 use ecstsy\Glacia\server\enchantments\Groups;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
+use ecstsy\Glacia\server\enchantments\manager\AdvancedEnchantState;
+use ecstsy\Glacia\server\enchantments\manager\EnchantCombatStateManager;
+use ecstsy\Glacia\server\enchantments\manager\NetherPigmanGuard;
 use ecstsy\Glacia\server\factions\FactionXpBoosterManager;
+use ecstsy\Glacia\server\factions\contribution\FactionContributionManager;
+use ecstsy\Glacia\server\fragments\FragmentManager;
 use ecstsy\Glacia\server\gkits\GKitRepository;
 use ecstsy\Glacia\server\gkits\WarlordRepository;
 use ecstsy\Glacia\server\hats\HatManager;
 use ecstsy\Glacia\server\homes\HomeManager;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
+use ecstsy\Glacia\server\items\GlaciaItemStackPolicy;
 use ecstsy\Glacia\server\items\armor\abilities\YijkiLightningStrike;
+use ecstsy\Glacia\server\items\armor\HeroicArmorDurabilityManager;
 use ecstsy\Glacia\server\items\genbuckets\GenBucketManager;
 use ecstsy\Glacia\server\items\pets\PetManager;
 use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\Glacia\server\items\trackers\TrackerManager;
 use ecstsy\Glacia\server\items\rename\ItemRenameManager;
 use ecstsy\Glacia\server\factions\claims\ClaimManager;
+use ecstsy\Glacia\server\lootboxes\CcProgressManager;
 use ecstsy\Glacia\server\lootboxes\LootboxRepository;
+use ecstsy\Glacia\server\etherealcrates\EtherealCrateRepository;
+use ecstsy\Glacia\server\enchantments\essence\EnchantEssenceManager;
 use ecstsy\Glacia\server\regions\Region;
 use ecstsy\Glacia\server\ranks\RankManager;
 use ecstsy\Glacia\server\ranks\RankProgressionManager;
+use ecstsy\Glacia\server\titles\TitleManager;
 use ecstsy\Glacia\tasks\ChunkBusterTask;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\Glacia\utils\screens\lootboxes\LootboxAnimationScreen;
+use ecstsy\Glacia\utils\screens\etherealcrates\EtherealCrateAnimationScreen;
 use ecstsy\Glacia\utils\screens\loot\OpenableLootPreviewScreen;
 use ecstsy\Glacia\utils\screens\slotbot\SlotbotMenuScreen;
 use ecstsy\Glacia\utils\screens\droppackages\DropPackageScreen;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use ecstsy\MartianUtilities\utils\ItemUtils;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
+use pocketmine\block\BlockTypeIds;
 use pocketmine\entity\Location;
 use pocketmine\block\utils\DyeColor;
+use pocketmine\block\Liquid;
 use pocketmine\entity\object\FireworkRocket;
+use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\block\BlockPlaceEvent;
+use pocketmine\event\entity\EntityItemPickupEvent;
+use pocketmine\event\entity\EntityTrampleFarmlandEvent;
 use pocketmine\event\inventory\InventoryTransactionEvent;
+use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\event\player\PlayerItemUseEvent;
 use pocketmine\inventory\ArmorInventory;
+use pocketmine\inventory\Inventory;
 use pocketmine\inventory\transaction\action\SlotChangeAction;
 use pocketmine\item\Armor;
 use pocketmine\item\Axe;
@@ -72,23 +95,69 @@ use pocketmine\math\Vector3;
 use pocketmine\nbt\tag\ByteTag;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\nbt\tag\IntTag;
+use pocketmine\nbt\tag\StringTag;
 use pocketmine\player\Player;
 use pocketmine\player\GameMode;
 use pocketmine\scheduler\CancelTaskException;
 use pocketmine\scheduler\ClosureTask;
+use pocketmine\scheduler\TaskHandler;
 use pocketmine\world\sound\XpCollectSound;
 use pocketmine\utils\TextFormat as C;
 use pocketmine\world\particle\BlockBreakParticle;
 use pocketmine\world\particle\PortalParticle;
 use pocketmine\world\Position;
+use pocketmine\world\World;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\item\ItemTypeIds;
 use pocketmine\Server;
+use Ramsey\Uuid\Uuid;
 
 final class ItemListener implements Listener {
 
     /** @var array<string, int> */
     private static array $genBucketCooldowns = [];
+    /** @var array<string, array{player:string,world:string,positions:array<string,bool>,handler:TaskHandler|null}> */
+    private static array $activeGenBucketChains = [];
+    /** @var array<string, string> */
+    private static array $activeGenBucketByPlayer = [];
+    /** @var array<string, string> */
+    private static array $generatedGenBucketBlockIndex = [];
+    /** @var array<string, array{entityId:int,world:string,spawnedAt:int}> */
+    private static array $activeBosses = [];
+    /** @var array<int, array{entityId:int,world:string,spawnedAt:int}> */
+    private static array $activeWarlords = [];
+    /** @var array<string, int> */
+    private static array $bossPlayerCooldowns = [];
+    private static int $bossGlobalCooldownUntil = 0;
+    /** @var array<string, int> */
+    private static array $warlordPlayerCooldowns = [];
+    /** @var array<string, int> */
+    private static array $relicCooldownSecondsCache = [];
+    private static ?int $soulCompassDefaultUsesCache = null;
+
+    public function __construct() {
+        Loader::getInstance()->getScheduler()->scheduleRepeatingTask(new ClosureTask(
+            function(): void {
+                $this->cleanupSpawnTracking();
+            }
+        ), 20 * 30);
+    }
+
+    public static function unregisterSpawnedEntity(\pocketmine\entity\Entity $entity): void
+    {
+        if ($entity instanceof BossEntity) {
+            foreach (self::$activeBosses as $key => $entry) {
+                if (($entry["entityId"] ?? -1) === $entity->getId()) {
+                    unset(self::$activeBosses[$key]);
+                    break;
+                }
+            }
+        }
+
+        if ($entity instanceof ForsakenChampion) {
+            unset(self::$activeWarlords[$entity->getId()]);
+        }
+    }
 
     public function onBlockPlace(BlockPlaceEvent $event): void {
         $player = $event->getPlayer();
@@ -161,6 +230,78 @@ final class ItemListener implements Listener {
             return;
         }
 
+        if ($id === "ocean_buster") {
+            $event->cancel();
+
+            if (!GenBucketManager::isOceanBusterEnabled()) {
+                $player->sendMessage(C::colorize("&r&cOcean busters are currently disabled."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $targetPos = null;
+            foreach ($event->getTransaction()->getBlocks() as [$x, $y, $z, $block]) {
+                $targetPos = new Position($x, $y, $z, $player->getWorld());
+                break;
+            }
+
+            if ($targetPos === null) {
+                $player->sendMessage(C::colorize("&r&cFailed to place the Ocean Buster."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $world = $targetPos->getWorld();
+            if (!GenBucketManager::isOceanBusterOverworld($world)) {
+                $player->sendMessage(C::colorize("&r&cOcean busters can only be used in the overworld wilderness."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $claim = ClaimManager::getInstance()->getClaimAtPosition($targetPos);
+            if ($claim !== null) {
+                $perm = GenBucketManager::getOceanBusterClaimedPermission();
+                if ($perm !== "" && !$player->hasPermission($perm)) {
+                    $player->sendMessage(C::colorize("&r&cYou need the 'Use Sponges' permission to use this in claims."));
+                    PlayerUtils::playSound($player, "note.bass");
+                    return;
+                }
+            }
+
+            $session = Loader::getPlayerManager()->getSession($player);
+            $cost = GenBucketManager::getOceanBusterCost();
+            if (
+                $player->getGamemode() !== GameMode::CREATIVE()
+                && $cost > 0
+                && ($session === null || $session->getBalance() < $cost)
+            ) {
+                $player->sendMessage(C::colorize("&r&cYou need &f$" . number_format($cost) . " &cto use an Ocean Buster."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $chunkX = $targetPos->getFloorX() >> 4;
+            $chunkZ = $targetPos->getFloorZ() >> 4;
+            $cleared = $this->clearChunkWater($world, $chunkX, $chunkZ);
+            if ($cleared <= 0) {
+                $player->sendMessage(C::colorize("&r&eThere was no water to clear in this chunk."));
+                PlayerUtils::playSound($player, "random.pop");
+                return;
+            }
+
+            if ($player->getGamemode() !== GameMode::CREATIVE()) {
+                if ($cost > 0 && $session !== null) {
+                    $session->removeBalance($cost);
+                }
+                $item->pop();
+                $player->getInventory()->setItemInHand($item);
+            }
+
+            $player->sendMessage(C::colorize("&r&b&lOCEAN BUSTER &8» &r&7Cleared &f" . number_format($cleared) . " &7water blocks in this chunk."));
+            PlayerUtils::playSound($player, "random.explode");
+            return;
+        }
+
         if ($id === "collection_chest") {
             return;
         }
@@ -174,9 +315,26 @@ final class ItemListener implements Listener {
         $item = $event->getItem();
         $session = Loader::getPlayerManager()->getSession($player);
 
+        if (
+            EnchantCombatStateManager::arePotionsDisabled($player) &&
+            in_array($item->getTypeId(), [ItemTypeIds::POTION, ItemTypeIds::SPLASH_POTION, ItemTypeIds::LINGERING_POTION], true)
+        ) {
+            $event->cancel();
+            $player->sendMessage(C::colorize("&r&cYour potions are sealed right now."));
+            PlayerUtils::playSound($player, "note.bass");
+            return;
+        }
+
         if ($item->getTypeId() === ItemTypeIds::ENDER_PEARL && PetManager::isPearlBlocked($player)) {
             $event->cancel();
             $player->sendMessage(C::colorize("&r&cA pet effect is preventing you from using ender pearls right now."));
+            PlayerUtils::playSound($player, "note.bass");
+            return;
+        }
+
+        if ($item->getTypeId() === ItemTypeIds::ENDER_PEARL && NetherPigmanGuard::snapshotBlocking($player)) {
+            $event->cancel();
+            $player->sendMessage(C::colorize("&r&cNether Warden feral energy is warping your pearls!"));
             PlayerUtils::playSound($player, "note.bass");
             return;
         }
@@ -200,6 +358,23 @@ final class ItemListener implements Listener {
         }
 
         $itemTag = $glaciaTag->getString("glaciaItem");
+
+        $petItemTags = [
+            "purity_wisp",
+            "gale_fox",
+            "shatterfang",
+            "hearthbloom",
+            "ironclad_wyrm",
+            "aegis_ram",
+            "rift_viper",
+            "sunscorch_jackal",
+        ];
+        if (EnchantCombatStateManager::arePetsDisabled($player) && in_array($itemTag, $petItemTags, true)) {
+            $event->cancel();
+            $player->sendMessage(C::colorize("&r&cYour pets are disabled right now."));
+            PlayerUtils::playSound($player, "note.bass");
+            return;
+        }
 
         if ($itemTag === "slot_ticket" || $itemTag === "heroic_slot_ticket") {
             $event->cancel();
@@ -228,9 +403,90 @@ final class ItemListener implements Listener {
                 return;
             }
 
-            $item->pop();
+            if (RuneManager::shouldPreserveConsumable($player, "lootbox")) {
+            } else {
+                $item->pop();
+            }
             $player->getInventory()->setItemInHand($item);
+            FactionContributionManager::addLootbagContribution($player);
             (new LootboxAnimationScreen($player, $box))->display($player);
+            return;
+        }
+
+        if ($itemTag === "ethereal_crate") {
+            $event->cancel();
+
+            $crateId = $glaciaTag->getString("ethereal_crate", "");
+            $crate = EtherealCrateRepository::getCrateByLookup($crateId);
+            if ($crate === null) {
+                $player->sendMessage(C::colorize("&r&cThis ethereal crate is invalid."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            if ($player->isSneaking()) {
+                OpenableLootPreviewScreen::display(
+                    $player,
+                    C::clean((string) ($crate["name"] ?? $crate["id"] ?? "Ethereal Crate")),
+                    [
+                        ["name" => "Admin", "entries" => (array) ($crate["loot-tables"]["admin"] ?? [])],
+                        ["name" => "Cosmetic", "entries" => (array) ($crate["loot-tables"]["cosmetic"] ?? [])],
+                        ["name" => "Treasure", "entries" => (array) ($crate["loot-tables"]["treasure"] ?? [])],
+                        ["name" => "Bonus", "entries" => (array) ($crate["loot-tables"]["bonus"] ?? [])],
+                    ]
+                );
+                PlayerUtils::playSound($player, "random.click");
+                return;
+            }
+
+            $consumeOnFirstRoll = function() use ($player, $crateId, $crate): bool {
+                if (RuneManager::shouldPreserveConsumable($player, "ethereal_crate")) {
+                    FactionContributionManager::addLootbagContribution($player);
+                    CcProgressManager::handleEtherealCrateOpened($player, $crate);
+                    return true;
+                }
+
+                $inHand = $player->getInventory()->getItemInHand();
+                $inHandGlacia = $inHand->getNamedTag()->getCompoundTag("Glacia");
+                if (
+                    $inHandGlacia !== null &&
+                    $inHandGlacia->getString("glaciaItem", "") === "ethereal_crate" &&
+                    $inHandGlacia->getString("ethereal_crate", "") === $crateId
+                ) {
+                    $inHand->pop();
+                    $player->getInventory()->setItemInHand($inHand);
+                    FactionContributionManager::addLootbagContribution($player);
+                    CcProgressManager::handleEtherealCrateOpened($player, $crate);
+                    return true;
+                }
+
+                // Fallback: consume one matching crate from inventory if hand changed while menu is open.
+                foreach ($player->getInventory()->getContents() as $slot => $stack) {
+                    $glacia = $stack->getNamedTag()->getCompoundTag("Glacia");
+                    if (
+                        $glacia !== null &&
+                        $glacia->getString("glaciaItem", "") === "ethereal_crate" &&
+                        $glacia->getString("ethereal_crate", "") === $crateId
+                    ) {
+                        $stack->pop();
+                        $player->getInventory()->setItem($slot, $stack);
+                        FactionContributionManager::addLootbagContribution($player);
+                        CcProgressManager::handleEtherealCrateOpened($player, $crate);
+                        return true;
+                    }
+                }
+
+                return false;
+            };
+
+            (new EtherealCrateAnimationScreen($player, $crate, $consumeOnFirstRoll))->display($player);
+            return;
+        }
+
+        if ($session === null) {
+            $event->cancel();
+            $player->sendMessage(C::colorize("&r&cYour profile is still loading. Try again in a moment."));
+            PlayerUtils::playSound($player, "note.bass");
             return;
         }
 
@@ -260,6 +516,80 @@ final class ItemListener implements Listener {
             return;
         }
 
+        if ($itemTag === "title_voucher") {
+            $event->cancel();
+
+            $titleId = strtolower(trim($glaciaTag->getString("title_id", "")));
+            $titleData = TitleManager::get($titleId);
+            if ($titleId === "" || $titleData === null) {
+                $player->sendMessage(C::colorize("&r&cThis title voucher is invalid."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            if (TitleManager::hasUnlocked($session, $titleId)) {
+                $player->sendMessage(C::colorize("&r&8You already unlocked this title."));
+                PlayerUtils::playSound($player, "random.click");
+                return;
+            }
+
+            if (!TitleManager::unlock($session, $titleId)) {
+                $player->sendMessage(C::colorize("&r&cFailed to claim this title voucher."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            RankManager::getInstance()->updatePermission($player);
+            $this->consumeHeldItem($player, $item);
+            $player->sendTitle(C::colorize("&r&aTitle Unlocked!"), C::colorize("&r" . (string) ($titleData["format"] ?? "")), 5, 35, 10);
+            $player->sendMessage(C::colorize("&r&aUnlocked title: &r" . (string) ($titleData["format"] ?? "")));
+            PlayerUtils::playSound($player, "random.levelup");
+            $player->getWorld()->addSound($player->getPosition(), new XpCollectSound());
+            return;
+        }
+
+        if ($itemTag === "item_flip_credit_voucher") {
+            $event->cancel();
+            $credits = max(1, $this->readFlexibleIntTag($glaciaTag, "credits", 10));
+            $session->addItemFlipCredits($credits);
+            $this->consumeHeldItem($player, $item);
+            $player->sendMessage(C::colorize("&r&aClaimed &f" . number_format($credits) . " &aItem Flip credits."));
+            PlayerUtils::playSound($player, "random.levelup");
+            return;
+        }
+
+        if ($itemTag === "admin_coin_note") {
+            $event->cancel();
+            $amount = $this->readFlexibleIntTag($glaciaTag, "amount", 0);
+            if ($amount <= 0) {
+                $player->sendMessage(C::colorize("&r&cThis Admin Coin voucher is invalid."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $amount = max(1, $amount);
+            $session->addAdminCoins($amount);
+            $this->consumeHeldItem($player, $item);
+            $player->sendMessage(C::colorize("&r&aClaimed &f" . number_format($amount) . " &aAdmin Coins."));
+            PlayerUtils::playSound($player, "random.levelup");
+            return;
+        }
+
+        if ($itemTag === "fragment") {
+            $event->cancel();
+            $fragmentId = strtolower($glaciaTag->getString("fragment_id", ""));
+            if ($fragmentId === "") {
+                $player->sendMessage(C::colorize("&r&cThis fragment is invalid."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            if (FragmentManager::handleUse($player, $fragmentId)) {
+                PlayerUtils::playSound($player, "random.levelup");
+            }
+            return;
+        }
+
         if (RankProgressionManager::isRankQuest($itemTag)) {
             $event->cancel();
 
@@ -271,7 +601,7 @@ final class ItemListener implements Listener {
             }
 
             $glaciaTag = $item->getNamedTag()->getCompoundTag("Glacia");
-            $remaining = $glaciaTag?->getInt("remaining", 0) ?? 0;
+            $remaining = $glaciaTag !== null ? $this->readFlexibleIntTag($glaciaTag, "remaining", 0) : 0;
             $completeTag = $glaciaTag?->getTag("complete");
             $complete = ($completeTag instanceof ByteTag || $completeTag instanceof IntTag) && $completeTag->getValue() === 1;
 
@@ -437,7 +767,10 @@ final class ItemListener implements Listener {
                 }
 
                 $repair = max(1, (int) ceil($maxDurability * 0.50));
-                $storedItem->setDamage(max(0, $storedItem->getDamage() - $repair));
+                $oldDamage = $storedItem->getDamage();
+                $newDamage = max(0, $oldDamage - $repair);
+                $storedItem->setDamage($newDamage);
+                HeroicArmorDurabilityManager::syncAfterRepair($storedItem, $oldDamage, $newDamage);
                 $player->getInventory()->setItem($slot, $storedItem);
                 $repaired++;
             }
@@ -453,7 +786,10 @@ final class ItemListener implements Listener {
                 }
 
                 $repair = max(1, (int) ceil($maxDurability * 0.50));
-                $storedItem->setDamage(max(0, $storedItem->getDamage() - $repair));
+                $oldDamage = $storedItem->getDamage();
+                $newDamage = max(0, $oldDamage - $repair);
+                $storedItem->setDamage($newDamage);
+                HeroicArmorDurabilityManager::syncAfterRepair($storedItem, $oldDamage, $newDamage);
                 $player->getArmorInventory()->setItem($slot, $storedItem);
                 $repaired++;
             }
@@ -479,12 +815,14 @@ final class ItemListener implements Listener {
             }
 
             $tagged = 0;
+            $origin = $player->getPosition();
+            $maxDistanceSquared = 9 * 9;
             foreach ($player->getWorld()->getPlayers() as $nearby) {
                 if ($nearby->getId() === $player->getId()) {
                     continue;
                 }
 
-                if ($nearby->getPosition()->distance($player->getPosition()) > 9) {
+                if ($nearby->getPosition()->distanceSquared($origin) > $maxDistanceSquared) {
                     continue;
                 }
 
@@ -527,21 +865,7 @@ final class ItemListener implements Listener {
                 return;
             }
 
-            $targets = [];
-            foreach ($player->getWorld()->getPlayers() as $nearby) {
-                if ($nearby->getId() === $player->getId()) {
-                    continue;
-                }
-
-                if ($nearby->getPosition()->distance($player->getPosition()) > 8) {
-                    continue;
-                }
-
-                $targets[] = $nearby;
-            }
-
-            usort($targets, static fn(Player $a, Player $b): int => $a->getPosition()->distanceSquared($player->getPosition()) <=> $b->getPosition()->distanceSquared($player->getPosition()));
-            $targetPlayer = $targets[0] ?? null;
+            $targetPlayer = $this->findNearestEnemyPlayer($player, 8.0);
             $strikePosition = $targetPlayer?->getPosition() ?? $player->getPosition();
             YijkiLightningStrike::strike($player, $strikePosition, 4.0, 3.0);
 
@@ -890,6 +1214,12 @@ final class ItemListener implements Listener {
                 PlayerUtils::playSound($player, "note.bass");
                 return;
             }
+            $warlordDenyReason = null;
+            if (!$this->canSpawnWarlord($player, $warlordDenyReason)) {
+                $player->sendMessage(C::colorize("&r&c" . ($warlordDenyReason ?? "You cannot summon a warlord right now.")));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
 
             $warlord = WarlordRepository::getForKit($kit);
             $reward = GKitRepository::createChampionReward($kit);
@@ -944,6 +1274,7 @@ final class ItemListener implements Listener {
                 0
             ), $nbt);
             $champion->spawnToAll();
+            $this->registerWarlordSpawn($champion, $player);
 
             $item->pop();
             $player->getInventory()->setItemInHand($item);
@@ -989,7 +1320,7 @@ final class ItemListener implements Listener {
                 return;
             }
 
-            $uses = max(0, $glaciaTag->getInt("uses", $this->getSoulCompassDefaultUses()));
+            $uses = max(0, $this->readFlexibleIntTag($glaciaTag, "uses", $this->getSoulCompassDefaultUses()));
             if ($uses <= 0) {
                 $player->sendMessage(C::colorize("&r&cThis Soul Compass has lost all of its charge."));
                 PlayerUtils::playSound($player, "note.bass");
@@ -1094,11 +1425,54 @@ final class ItemListener implements Listener {
 
             switch ($bossName) {
                 case "astral_devourer":
+                    $bossDenyReason = null;
+                    if (!$this->canSpawnBoss($player, $bossName, $bossDenyReason)) {
+                        $player->sendMessage(C::colorize("&r&c" . ($bossDenyReason ?? "You cannot summon a boss right now.")));
+                        PlayerUtils::playSound($player, "note.bass");
+                        break;
+                    }
                     $boss = new AstralDevourer($player->getLocation());
                     $boss->spawnToAll();
+                    $this->registerBossSpawn($boss, $player, $bossName);
 
                     PlayerUtils::playSound($player, "mob.wither.spawn");
                     $player->sendMessage(C::colorize("&r&l&a[!] &r&aYou have summoned an Astral Devourer!"));
+
+                    $item->pop();
+                    $player->getInventory()->setItemInHand($item);
+                    break;
+
+                case "titan_knight":
+                    $bossDenyReason = null;
+                    if (!$this->canSpawnBoss($player, $bossName, $bossDenyReason)) {
+                        $player->sendMessage(C::colorize("&r&c" . ($bossDenyReason ?? "You cannot summon a boss right now.")));
+                        PlayerUtils::playSound($player, "note.bass");
+                        break;
+                    }
+                    $boss = new TitanKnight($player->getLocation());
+                    $boss->spawnToAll();
+                    $this->registerBossSpawn($boss, $player, $bossName);
+
+                    PlayerUtils::playSound($player, "mob.wither.spawn");
+                    $player->sendMessage(C::colorize("&r&l&a[!] &r&aYou have summoned the &5Astral Sovereign&a!"));
+
+                    $item->pop();
+                    $player->getInventory()->setItemInHand($item);
+                    break;
+
+                case "glacial_hydra":
+                    $bossDenyReason = null;
+                    if (!$this->canSpawnBoss($player, $bossName, $bossDenyReason)) {
+                        $player->sendMessage(C::colorize("&r&c" . ($bossDenyReason ?? "You cannot summon a boss right now.")));
+                        PlayerUtils::playSound($player, "note.bass");
+                        break;
+                    }
+                    $boss = new GlacialHydra($player->getLocation());
+                    $boss->spawnToAll();
+                    $this->registerBossSpawn($boss, $player, $bossName);
+
+                    PlayerUtils::playSound($player, "mob.enderdragon.growl");
+                    $player->sendMessage(C::colorize("&r&l&a[!] &r&aYou have summoned the &bGlacial Hydra&a!"));
 
                     $item->pop();
                     $player->getInventory()->setItemInHand($item);
@@ -1371,6 +1745,18 @@ final class ItemListener implements Listener {
             $groupEnchants = CustomEnchantments::getByGroup($group);
             $color = Groups::translateGroupToColor(Groups::getGroupId($group));
 
+            if (strtolower($group) === "mastery") {
+                $blocked = array_values(array_filter(array_map(
+                    static fn(mixed $id): string => strtolower(trim((string) $id)),
+                    EnchantTuningManager::getSettingsArray("mastery-book-disabled-enchants")
+                ), static fn(string $id): bool => $id !== ""));
+                if ($blocked !== []) {
+                    $groupEnchants = array_values(array_filter($groupEnchants, static function ($enchant) use ($blocked): bool {
+                        return !in_array(strtolower($enchant->getName()), $blocked, true);
+                    }));
+                }
+            }
+
             if (empty($groupEnchants)) {
                 $player->sendMessage(C::colorize("&r&4Failed to examine '&fRC Book&r&4'"));
                 $player->sendMessage(C::colorize("&r&cThere are no enchantments in the group '&f" . $group . "&r&4'"));   
@@ -1440,8 +1826,31 @@ final class ItemListener implements Listener {
 
             $item->pop();
             $player->getInventory()->setItemInHand($item);
+            Loader::getChallengeManager()->incrementProgress($player, "enchant_books_opened", 1);
             $player->sendMessage(C::colorize(str_replace(["{group-color}", "{group-name}", "{enchant-color}", "{level}"], [$color, $group, CustomEnchantments::getEnchantmentDisplayName($randomEnchant->getName(), $color), GeneralUtils::getRomanNumeral($level)], "&r&7You examined {group-color}{group-name}&r&7 book and found {enchant-color} {level}")));
         }
+    }
+
+    public function onBlockBreak(BlockBreakEvent $event): void
+    {
+        if (!GenBucketManager::stopOnGeneratedBreak()) {
+            return;
+        }
+
+        $block = $event->getBlock();
+        $key = self::toWorldBlockKey(
+            $block->getPosition()->getWorld(),
+            $block->getPosition()->getFloorX(),
+            $block->getPosition()->getFloorY(),
+            $block->getPosition()->getFloorZ()
+        );
+        $chainKey = self::$generatedGenBucketBlockIndex[$key] ?? null;
+        if ($chainKey === null) {
+            return;
+        }
+
+        unset(self::$generatedGenBucketBlockIndex[$key]);
+        $this->stopGenBucketChain($chainKey, true);
     }
 
     public function onInteract(PlayerInteractEvent $event): void {
@@ -1493,6 +1902,12 @@ final class ItemListener implements Listener {
                 return;
             }
 
+            if (GenBucketManager::requireSneakToStart() && !$player->isSneaking()) {
+                $player->sendMessage(C::colorize("&r&eSneak while right-clicking to start this gen bucket."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
             $cooldown = GenBucketManager::getUseCooldownSeconds();
             $now = time();
             $cooldownKey = $player->getUniqueId()->toString();
@@ -1504,9 +1919,9 @@ final class ItemListener implements Listener {
                 return;
             }
 
-            $cost = GenBucketManager::getCost($material);
-            if ($player->getGamemode() !== GameMode::CREATIVE() && $cost > 0 && $session->getBalance() < $cost) {
-                $player->sendMessage(C::colorize("&r&cYou need &f$" . number_format($cost) . " &cto use this gen bucket."));
+            $costPerBlock = GenBucketManager::getCost($material);
+            if ($player->getGamemode() !== GameMode::CREATIVE() && $costPerBlock > 0 && $session->getBalance() < $costPerBlock) {
+                $player->sendMessage(C::colorize("&r&cYou need at least &f$" . number_format($costPerBlock) . " &cto start this gen bucket."));
                 PlayerUtils::playSound($player, "note.bass");
                 return;
             }
@@ -1515,7 +1930,6 @@ final class ItemListener implements Listener {
             $start = $origin->getSide($event->getFace());
             $world = $origin->getWorld();
             $maxLength = GenBucketManager::getMaxLength();
-            $airTypeId = VanillaBlocks::AIR()->getTypeId();
             $blocksPerStep = GenBucketManager::getBlocksPerStep();
 
               if (
@@ -1530,59 +1944,93 @@ final class ItemListener implements Listener {
             if (
                 $start->getFloorY() < 0 ||
                 $start->getFloorY() >= $world->getMaxY() ||
-                $world->getBlock($start)->getTypeId() !== $airTypeId
+                !GenBucketManager::canReplaceWithGeneratedBlock($world->getBlock($start))
             ) {
                 $player->sendMessage(C::colorize("&r&cThat path is already blocked."));
                 PlayerUtils::playSound($player, "note.bass");
                 return;
             }
 
-            if ($player->getGamemode() !== GameMode::CREATIVE()) {
-                if ($cost > 0) {
-                    $session->removeBalance($cost);
-                }
-
-                $item->pop();
-                $player->getInventory()->setItemInHand($item);
-            }
-
             if ($cooldown > 0) {
                 self::$genBucketCooldowns[$cooldownKey] = $now + $cooldown;
             }
 
+            $playerUuid = $player->getUniqueId()->toString();
+            if (isset(self::$activeGenBucketByPlayer[$playerUuid])) {
+                $this->stopGenBucketChain(self::$activeGenBucketByPlayer[$playerUuid], false);
+            }
+
             PlayerUtils::playSound($player, "random.click");
+
+            $chainKey = $playerUuid . ":" . $material . ":" . $direction . ":" . microtime(true);
+            self::$activeGenBucketByPlayer[$playerUuid] = $chainKey;
+            self::$activeGenBucketChains[$chainKey] = [
+                "player" => $playerUuid,
+                "world" => strtolower($world->getFolderName()),
+                "positions" => [],
+                "handler" => null
+            ];
 
             $cursor = $start;
             $placed = 0;
             $interval = GenBucketManager::getStepIntervalTicks();
-            Loader::getInstance()->getScheduler()->scheduleRepeatingTask(new ClosureTask(function() use ($player, $world, $generatedBlock, $airTypeId, $maxLength, $blocksPerStep, $face, $material, $direction, $cost, &$cursor, &$placed): void {
+            $handler = Loader::getInstance()->getScheduler()->scheduleRepeatingTask(new ClosureTask(function() use ($player, $world, $generatedBlock, $maxLength, $blocksPerStep, $face, $costPerBlock, $chainKey, &$cursor, &$placed): void {
+                if (!isset(self::$activeGenBucketChains[$chainKey])) {
+                    return;
+                }
+
                 if (!$player->isConnected() || $player->getWorld() !== $world) {
-                    throw new CancelTaskException();
+                    $this->stopGenBucketChain($chainKey, false);
+                    return;
                 }
 
                 $placedThisStep = 0;
                 for ($i = 0; $i < $blocksPerStep; $i++) {
                     if ($placed >= $maxLength) {
                         PlayerUtils::playSound($player, "random.pop");
-                        throw new CancelTaskException();
+                        $this->stopGenBucketChain($chainKey, false);
+                        return;
                     }
 
                     if ($cursor->getFloorY() < 0 || $cursor->getFloorY() >= $world->getMaxY()) {
                         PlayerUtils::playSound($player, "random.pop");
-                        throw new CancelTaskException();
+                        $this->stopGenBucketChain($chainKey, false);
+                        return;
                     }
 
                     if ($this->getGenBucketBlockedRegionAt($cursor) !== null) {
                         PlayerUtils::playSound($player, "note.bass");
-                        throw new CancelTaskException();
+                        $this->stopGenBucketChain($chainKey, false);
+                        return;
                     }
 
-                    if ($world->getBlock($cursor)->getTypeId() !== $airTypeId) {
+                    $targetBlock = $world->getBlock($cursor);
+                    if (!GenBucketManager::canReplaceWithGeneratedBlock($targetBlock)) {
                         PlayerUtils::playSound($player, "random.pop");
-                        throw new CancelTaskException();
+                        $this->stopGenBucketChain($chainKey, false);
+                        return;
+                    }
+
+                    $session = Loader::getPlayerManager()->getSession($player);
+                    if (
+                        $player->getGamemode() !== GameMode::CREATIVE()
+                        && $costPerBlock > 0
+                        && ($session === null || $session->getBalance() < $costPerBlock)
+                    ) {
+                        $player->sendMessage(C::colorize("&r&cGen bucket stopped because you ran out of money."));
+                        PlayerUtils::playSound($player, "note.bass");
+                        $this->stopGenBucketChain($chainKey, false);
+                        return;
+                    }
+
+                    if ($player->getGamemode() !== GameMode::CREATIVE() && $costPerBlock > 0 && $session !== null) {
+                        $session->removeBalance($costPerBlock);
                     }
 
                     $world->setBlock($cursor, clone $generatedBlock);
+                    $blockKey = self::toWorldBlockKey($world, $cursor->getFloorX(), $cursor->getFloorY(), $cursor->getFloorZ());
+                    self::$activeGenBucketChains[$chainKey]["positions"][$blockKey] = true;
+                    self::$generatedGenBucketBlockIndex[$blockKey] = $chainKey;
                     $placed++;
                     $placedThisStep++;
                     $cursor = $this->offsetPosition($cursor, $face);
@@ -1592,6 +2040,7 @@ final class ItemListener implements Listener {
                     PlayerUtils::playSound($player, "dig.stone");
                 }
             }), $interval);
+            self::$activeGenBucketChains[$chainKey]["handler"] = $handler;
             return;
         }
 
@@ -1631,11 +2080,163 @@ final class ItemListener implements Listener {
         $player->getInventory()->setItemInHand($item);
     }
 
+    public function onEntityTrampleFarmland(EntityTrampleFarmlandEvent $event): void
+    {
+        $entity = $event->getEntity();
+        if (!$entity instanceof Player) {
+            return;
+        }
+
+        if (RuneManager::shouldPreventFarmlandTrample($entity)) {
+            $event->cancel();
+        }
+    }
+
+    /**
+     * @priority HIGHEST
+     */
+    public function onAutoLapis(InventoryTransactionEvent $event): void
+    {
+        $transaction = $event->getTransaction();
+        $player = $transaction->getSource();
+        $actions = array_values($transaction->getActions());
+
+        foreach ($actions as $action) {
+            if (!$action instanceof SlotChangeAction) {
+                continue;
+            }
+
+            $inventory = $action->getInventory();
+            if (!str_contains($inventory::class, "EnchantInventory")) {
+                continue;
+            }
+
+            $this->refillEnchantingLapis($player, $inventory);
+            return;
+        }
+    }
+
+    /**
+     * @priority HIGHEST
+     */
+    public function onDragCharms(InventoryTransactionEvent $event): void
+    {
+        $transaction = $event->getTransaction();
+        $actions = array_values($transaction->getActions());
+        if (count($actions) !== 2) {
+            return;
+        }
+
+        foreach ($actions as $i => $action) {
+            if (!$action instanceof SlotChangeAction) {
+                continue;
+            }
+            $otherAction = $actions[($i + 1) % 2];
+            if (!$otherAction instanceof SlotChangeAction) {
+                continue;
+            }
+            if ($this->isInvMenuSlotAction($action) || $this->isInvMenuSlotAction($otherAction)) {
+                continue;
+            }
+
+            $itemClickedWith = $action->getTargetItem();
+            $itemClicked = $action->getSourceItem();
+            if ($itemClickedWith->getCount() !== 1 || $itemClicked->isNull()) {
+                continue;
+            }
+
+            $withTag = $itemClickedWith->getNamedTag()->getCompoundTag("Glacia");
+            $onTag = $itemClicked->getNamedTag()->getCompoundTag("Glacia");
+            $withId = $withTag?->getString("glaciaItem", "") ?? "";
+            $onId = $onTag?->getString("glaciaItem", "") ?? "";
+            $player = $transaction->getSource();
+            if (!$player instanceof Player) {
+                continue;
+            }
+
+            // Charm Dust -> Charm Shard
+            if ($withId === "charm_dust" && $onId === "charm_shard" && $withTag !== null && $onTag !== null) {
+                $event->cancel();
+
+                $bonus = max(1, $withTag->getInt("bonus", 5));
+                $currentSuccess = max(1, min(100, $onTag->getInt("success", 70)));
+                $currentBonus = max(0, $onTag->getInt("bonus_success", 0));
+                $newBonus = $currentBonus + $bonus;
+
+                $updatedShard = GlaciaItemFactory::charmShard($currentSuccess, $newBonus);
+                $action->getInventory()->setItem($action->getSlot(), $updatedShard);
+                $otherAction->getInventory()->setItem($otherAction->getSlot(), VanillaItems::AIR());
+
+                $player->sendMessage(C::colorize("&r&aCharm Dust applied! &f+{$bonus}% &aadded to shard."));
+                PlayerUtils::playSound($player, "random.levelup");
+                return;
+            }
+
+            // Charm Shard -> Enchantment Book
+            if ($withId === "charm_shard" && $onId === "enchantment_book" && $withTag !== null && $onTag !== null) {
+                $event->cancel();
+
+                $success = max(1, min(100, $withTag->getInt("success", 70) + $withTag->getInt("bonus_success", 0)));
+                $enchantName = $onTag->getString("enchant_book", "");
+                $bookLevel = max(1, $onTag->getInt("level", 1));
+                $bookType = strtolower($onTag->getString("book_type", "custom"));
+                $destroy = max(0, min(100, $onTag->getInt("destroy", 0)));
+                $newLevel = $bookLevel;
+
+                if ($bookType === "vanilla" || $onTag->getString("vanilla_enchant", "") !== "") {
+                    $vanillaId = $onTag->getString("vanilla_enchant", $enchantName);
+                    $vanilla = GlaciaItemFactory::resolveVanillaEnchantment($vanillaId);
+                    if ($vanilla === null) {
+                        $player->sendMessage(C::colorize("&r&cInvalid target enchantment book."));
+                        return;
+                    }
+                    if ($bookLevel >= $vanilla->getMaxLevel()) {
+                        $player->sendMessage(C::colorize("&r&cThis enchantment book is already at max level."));
+                        PlayerUtils::playSound($player, "note.bass");
+                        return;
+                    }
+                    $newLevel = min($vanilla->getMaxLevel(), $bookLevel + 1);
+                    $rebuilt = GlaciaItemFactory::vanillaEnchantmentBook($vanillaId, $newLevel, $onTag->getInt("success", 50), $destroy);
+                } else {
+                    $custom = CustomEnchantments::getEnchantmentByName($enchantName);
+                    if ($custom === null) {
+                        $player->sendMessage(C::colorize("&r&cInvalid target enchantment book."));
+                        return;
+                    }
+                    if ($bookLevel >= $custom->getMaxLevel()) {
+                        $player->sendMessage(C::colorize("&r&cThis enchantment book is already at max level."));
+                        PlayerUtils::playSound($player, "note.bass");
+                        return;
+                    }
+                    $newLevel = min($custom->getMaxLevel(), $bookLevel + 1);
+                    $rebuilt = GlaciaItemFactory::enchantmentBook($custom, $newLevel, $onTag->getInt("success", 50), $destroy);
+                }
+
+                $otherAction->getInventory()->setItem($otherAction->getSlot(), VanillaItems::AIR());
+                if (mt_rand(1, 100) <= $success) {
+                    if ($rebuilt !== null) {
+                        $action->getInventory()->setItem($action->getSlot(), $rebuilt);
+                    }
+                    $player->sendMessage(C::colorize("&r&aCharm Shard succeeded! Book upgraded to &f" . GeneralUtils::getRomanNumeral($newLevel) . "&a."));
+                    PlayerUtils::playSound($player, "random.levelup");
+                } else {
+                    $action->getInventory()->setItem($action->getSlot(), VanillaItems::AIR());
+                    $player->sendMessage(C::colorize("&r&cCharm Shard failed. The book was destroyed."));
+                    PlayerUtils::playSound($player, "note.bass");
+                }
+                return;
+            }
+        }
+    }
+
     /**
      * @priority HIGHEST
      */
     public function onDragEnchant(InventoryTransactionEvent $event): void
     {
+        if ($event->isCancelled()) {
+            return;
+        }
         $transaction = $event->getTransaction();
         $actions = array_values($transaction->getActions());
 
@@ -1650,6 +2251,111 @@ final class ItemListener implements Listener {
 
                         $itemClickedWithGlaciaItem = $itemClickedWithTag?->getString("glaciaItem", "");
                         $itemClickedGlaciaItem = $itemClickedTag?->getString("glaciaItem", "");
+
+                        $shardAction = null;
+                        $bookAction = null;
+                        $dustAction = null;
+                        if ($itemClickedWithGlaciaItem === "charm_shard") {
+                            $shardAction = $action;
+                        } elseif ($itemClickedGlaciaItem === "charm_shard") {
+                            $shardAction = $otherAction;
+                        }
+                        if ($itemClickedWithGlaciaItem === "enchantment_book") {
+                            $bookAction = $action;
+                        } elseif ($itemClickedGlaciaItem === "enchantment_book") {
+                            $bookAction = $otherAction;
+                        }
+                        if ($itemClickedWithGlaciaItem === "charm_dust") {
+                            $dustAction = $action;
+                        } elseif ($itemClickedGlaciaItem === "charm_dust") {
+                            $dustAction = $otherAction;
+                        }
+
+                        if ($dustAction instanceof SlotChangeAction && $shardAction instanceof SlotChangeAction) {
+                            $event->cancel();
+                            $player = $transaction->getSource();
+                            $dustTag = $dustAction->getTargetItem()->getNamedTag()->getCompoundTag("Glacia");
+                            $shardItem = clone $shardAction->getSourceItem();
+                            $shardTag = $shardItem->getNamedTag()->getCompoundTag("Glacia");
+                            if ($player instanceof Player && $dustTag !== null && $shardTag !== null) {
+                                $bonus = max(1, $dustTag->getInt("bonus", 5));
+                                $currentBonus = max(0, $shardTag->getInt("bonus_success", 0));
+                                $shardItem = GlaciaItemFactory::charmShard(
+                                    $shardTag->getInt("success", 70),
+                                    $currentBonus + $bonus
+                                );
+
+                                $shardAction->getInventory()->setItem($shardAction->getSlot(), $shardItem);
+                                $dustAction->getInventory()->setItem($dustAction->getSlot(), VanillaItems::AIR());
+                                $player->sendMessage(C::colorize("&r&aCharm Dust applied! &f+{$bonus}% &asuccess added to shard."));
+                                PlayerUtils::playSound($player, "random.levelup");
+                            }
+                            return;
+                        }
+
+                        if ($shardAction instanceof SlotChangeAction && $bookAction instanceof SlotChangeAction) {
+                            $event->cancel();
+                            $player = $transaction->getSource();
+                            if (!$player instanceof Player) {
+                                return;
+                            }
+                            $bookItem = clone $bookAction->getSourceItem();
+                            $bookTag = $bookItem->getNamedTag()->getCompoundTag("Glacia");
+                            $shardTag = $shardAction->getTargetItem()->getNamedTag()->getCompoundTag("Glacia");
+                            if ($bookTag === null || $shardTag === null || $bookTag->getString("glaciaItem", "") !== "enchantment_book") {
+                                return;
+                            }
+
+                            $success = max(1, min(100, $shardTag->getInt("success", 70) + $shardTag->getInt("bonus_success", 0)));
+                            $enchantName = $bookTag->getString("enchant_book", "");
+                            $bookLevel = max(1, $bookTag->getInt("level", 1));
+                            $bookType = strtolower($bookTag->getString("book_type", "custom"));
+                            $destroy = max(0, min(100, $bookTag->getInt("destroy", 0)));
+                            $newLevel = $bookLevel;
+
+                            if ($bookType === "vanilla" || $bookTag->getString("vanilla_enchant", "") !== "") {
+                                $vanillaId = $bookTag->getString("vanilla_enchant", $enchantName);
+                                $vanilla = GlaciaItemFactory::resolveVanillaEnchantment($vanillaId);
+                                if ($vanilla === null) {
+                                    $player->sendMessage(C::colorize("&r&cInvalid target book."));
+                                    return;
+                                }
+                                if ($bookLevel >= $vanilla->getMaxLevel()) {
+                                    $player->sendMessage(C::colorize("&r&cThis enchantment book is already at max level."));
+                                    PlayerUtils::playSound($player, "note.bass");
+                                    return;
+                                }
+                                $newLevel = min($vanilla->getMaxLevel(), $bookLevel + 1);
+                                $rebuilt = GlaciaItemFactory::vanillaEnchantmentBook($vanillaId, $newLevel, $bookTag->getInt("success", 50), $destroy);
+                            } else {
+                                $custom = CustomEnchantments::getEnchantmentByName($enchantName);
+                                if ($custom === null) {
+                                    $player->sendMessage(C::colorize("&r&cInvalid target book."));
+                                    return;
+                                }
+                                if ($bookLevel >= $custom->getMaxLevel()) {
+                                    $player->sendMessage(C::colorize("&r&cThis enchantment book is already at max level."));
+                                    PlayerUtils::playSound($player, "note.bass");
+                                    return;
+                                }
+                                $newLevel = min($custom->getMaxLevel(), $bookLevel + 1);
+                                $rebuilt = GlaciaItemFactory::enchantmentBook($custom, $newLevel, $bookTag->getInt("success", 50), $destroy);
+                            }
+
+                            $shardAction->getInventory()->setItem($shardAction->getSlot(), VanillaItems::AIR());
+                            if (mt_rand(1, 100) <= $success) {
+                                if ($rebuilt !== null) {
+                                    $bookAction->getInventory()->setItem($bookAction->getSlot(), $rebuilt);
+                                }
+                                $player->sendMessage(C::colorize("&r&aCharm Shard succeeded! Book upgraded to &f" . GeneralUtils::getRomanNumeral($newLevel) . "&a."));
+                                PlayerUtils::playSound($player, "random.levelup");
+                            } else {
+                                $bookAction->getInventory()->setItem($bookAction->getSlot(), VanillaItems::AIR());
+                                $player->sendMessage(C::colorize("&r&cCharm Shard failed. The book was destroyed."));
+                                PlayerUtils::playSound($player, "note.bass");
+                            }
+                            return;
+                        }
 
                         if(
                             $itemClickedWithGlaciaItem === "magicdust" ||
@@ -1688,7 +2394,7 @@ final class ItemListener implements Listener {
                                     return;
                                 }
 
-                                if (!$vanillaEnchantment->canApplyTo($itemClicked)) {
+                                if (!$this->canApplyVanillaEnchantTo($itemClicked, $vanillaName)) {
                                     $player->sendMessage(C::colorize("&cThat item can't receive this enchant."));
                                     return;
                                 }
@@ -1710,6 +2416,11 @@ final class ItemListener implements Listener {
 
                                 if (!$enchantment->matches($itemClicked)) {
                                     $player->sendMessage(C::colorize("&cThat item can't receive this enchant."));
+                                    return;
+                                }
+
+                                if ($this->hasConfiguredEnchantConflict($itemClicked, $enchantName)) {
+                                    $player->sendMessage(C::colorize("&cThat enchant conflicts with one already on this item."));
                                     return;
                                 }
                             }
@@ -1760,7 +2471,7 @@ final class ItemListener implements Listener {
                                 }
 
                                 if(!$saved){
-                                    $otherAction->getInventory()->setItem($otherAction->getSlot(), VanillaItems::AIR());
+                                    $this->consumeEnchantmentBookWithTinkerRoll($player, $otherAction);
                                 }
 
                                 $action->getInventory()->setItem($action->getSlot(), $itemClicked);
@@ -1769,7 +2480,16 @@ final class ItemListener implements Listener {
 
                             $destroyRoll = mt_rand(1, 100) <= $destroy;
 
-                            $isProtected = $itemClicked->getNamedTag()->getCompoundTag("Glacia")?->getByte("protected", 0) === 1;
+                            $glaciaItemTag = $itemClicked->getNamedTag()->getCompoundTag("Glacia");
+                            $isProtected = $glaciaItemTag?->getByte("protected", 0) === 1;
+                            if (!$isProtected) {
+                                foreach ($itemClicked->getLore() as $line) {
+                                    if (str_contains(strtoupper(C::clean($line)), "PROTECTED")) {
+                                        $isProtected = true;
+                                        break;
+                                    }
+                                }
+                            }
 
                             if ($destroyRoll) {
                                 if ($isProtected) {
@@ -1779,7 +2499,7 @@ final class ItemListener implements Listener {
                                     $player->sendMessage(C::colorize("&cEnchantment failed & your item was destroyed."));
                                 }
 
-                                $otherAction->getInventory()->setItem($otherAction->getSlot(), VanillaItems::AIR());
+                                $this->consumeEnchantmentBookWithTinkerRoll($player, $otherAction);
                                 return;
                             }
 
@@ -1799,13 +2519,76 @@ final class ItemListener implements Listener {
                             }
 
                             if (!$bookSaved) {
-                                $otherAction->getInventory()->setItem($otherAction->getSlot(), VanillaItems::AIR());
+                                $this->consumeEnchantmentBookWithTinkerRoll($player, $otherAction);
                             }
 
                             $action->getInventory()->setItem($action->getSlot(), $itemClicked);
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private function refillEnchantingLapis(Player $player, Inventory $inventory): void
+    {
+        $lapisSlot = 1;
+        $lapisInTable = $inventory->getItem($lapisSlot);
+        $current = $lapisInTable->getTypeId() === VanillaItems::LAPIS_LAZULI()->getTypeId() ? $lapisInTable->getCount() : 0;
+
+        if ($current >= 64) {
+            return;
+        }
+
+        $available = $this->countLapisInInventory($player);
+        if ($available <= 0) {
+            return;
+        }
+
+        $toMove = min(64 - $current, $available);
+        if ($toMove <= 0) {
+            return;
+        }
+
+        $this->removeLapisFromInventory($player, $toMove);
+        $newLapis = VanillaItems::LAPIS_LAZULI();
+        $newLapis->setCount($current + $toMove);
+        $inventory->setItem($lapisSlot, $newLapis);
+    }
+
+    private function countLapisInInventory(Player $player): int
+    {
+        $typeId = VanillaItems::LAPIS_LAZULI()->getTypeId();
+        $total = 0;
+        foreach ($player->getInventory()->getContents() as $item) {
+            if ($item->getTypeId() === $typeId) {
+                $total += $item->getCount();
+            }
+        }
+
+        return $total;
+    }
+
+    private function removeLapisFromInventory(Player $player, int $amount): void
+    {
+        if ($amount <= 0) {
+            return;
+        }
+
+        $typeId = VanillaItems::LAPIS_LAZULI()->getTypeId();
+        $inventory = $player->getInventory();
+        foreach ($inventory->getContents() as $slot => $item) {
+            if ($item->getTypeId() !== $typeId) {
+                continue;
+            }
+
+            $take = min($amount, $item->getCount());
+            $item->setCount($item->getCount() - $take);
+            $amount -= $take;
+
+            $inventory->setItem($slot, $item->getCount() > 0 ? $item : VanillaItems::AIR());
+            if ($amount <= 0) {
+                return;
             }
         }
     }
@@ -1829,6 +2612,12 @@ final class ItemListener implements Listener {
 
             $otherAction = $actions[($i + 1) % 2];
             if (!$otherAction instanceof SlotChangeAction) {
+                continue;
+            }
+            if ($this->isInvMenuSlotAction($action) || $this->isInvMenuSlotAction($otherAction)) {
+                continue;
+            }
+            if ($this->isInvMenuSlotAction($action) || $this->isInvMenuSlotAction($otherAction)) {
                 continue;
             }
 
@@ -1922,6 +2711,142 @@ final class ItemListener implements Listener {
     /**
      * @priority HIGHEST
      */
+    public function onDragCcEnhancer(InventoryTransactionEvent $event): void
+    {
+        $transaction = $event->getTransaction();
+        $actions = array_values($transaction->getActions());
+        if (count($actions) !== 2) {
+            return;
+        }
+
+        foreach ($actions as $i => $action) {
+            if (!$action instanceof SlotChangeAction) {
+                continue;
+            }
+
+            $otherAction = $actions[($i + 1) % 2];
+            if (!$otherAction instanceof SlotChangeAction) {
+                continue;
+            }
+            if ($this->isInvMenuSlotAction($action) || $this->isInvMenuSlotAction($otherAction)) {
+                continue;
+            }
+
+            $itemClickedWith = $action->getTargetItem();
+            $itemClicked = $action->getSourceItem();
+            if ($itemClicked->getTypeId() === BlockTypeIds::AIR) {
+                continue;
+            }
+            if ($itemClickedWith->getCount() !== 1) {
+                continue;
+            }
+
+            $glaciaTag = $itemClickedWith->getNamedTag()->getCompoundTag("Glacia");
+            if ($glaciaTag === null || $glaciaTag->getString("glaciaItem", "") !== CcProgressManager::ENHANCER_DEFINITION) {
+                continue;
+            }
+
+            $targetTag = $itemClicked->getNamedTag()->getCompoundTag("Glacia");
+            $player = $transaction->getSource();
+            if ($targetTag === null || $targetTag->getString("glaciaItem", "") !== "lootbox") {
+                $player->sendMessage(C::colorize("&r&cYou can only apply a CC Enhancer to a configured CC lootbox."));
+                return;
+            }
+
+            $event->cancel();
+            $currentId = strtolower($targetTag->getString("lootbox", ""));
+            $nextId = CcProgressManager::getNextLootboxId($currentId);
+            if ($nextId === null) {
+                $player->sendMessage(C::colorize("&r&cThat CC cannot be upgraded any further."));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $success = max(1, min(100, $glaciaTag->getInt("success", CcProgressManager::getEnhancerSuccessRate())));
+            $otherAction->getInventory()->setItem($otherAction->getSlot(), VanillaItems::AIR());
+
+            if (mt_rand(1, 100) <= $success) {
+                try {
+                    $upgraded = GlaciaItemFactory::lootbox($nextId, $player);
+                } catch (\Throwable) {
+                    $player->sendMessage(C::colorize("&r&cThe next CC in your enhancer order is invalid."));
+                    PlayerUtils::playSound($player, "note.bass");
+                    return;
+                }
+
+                $action->getInventory()->setItem($action->getSlot(), $upgraded);
+                $player->sendMessage(C::colorize("&r&aCC Enhancer succeeded! &f" . ucfirst(str_replace("_", " ", $currentId)) . " &awas upgraded."));
+                PlayerUtils::playSound($player, "random.levelup");
+            } else {
+                $action->getInventory()->setItem($action->getSlot(), $itemClicked);
+                $player->sendMessage(C::colorize("&r&cCC Enhancer failed, but the crate was preserved."));
+                PlayerUtils::playSound($player, "note.bass");
+            }
+            return;
+        }
+    }
+
+    /**
+     * @priority HIGHEST
+     */
+    public function onDragEssence(InventoryTransactionEvent $event): void
+    {
+        $transaction = $event->getTransaction();
+        $actions = array_values($transaction->getActions());
+        if (count($actions) !== 2) {
+            return;
+        }
+
+        foreach ($actions as $i => $action) {
+            if (!$action instanceof SlotChangeAction) {
+                continue;
+            }
+
+            $otherAction = $actions[($i + 1) % 2];
+            if (!$otherAction instanceof SlotChangeAction) {
+                continue;
+            }
+            if ($this->isInvMenuSlotAction($action) || $this->isInvMenuSlotAction($otherAction)) {
+                continue;
+            }
+
+            $itemClickedWith = $action->getTargetItem();
+            $itemClicked = $action->getSourceItem();
+            if ($itemClickedWith->getCount() !== 1) {
+                continue;
+            }
+
+            $glaciaTag = $itemClickedWith->getNamedTag()->getCompoundTag("Glacia");
+            if ($glaciaTag === null || $glaciaTag->getString("glaciaItem", "") !== "enchant_essence") {
+                continue;
+            }
+
+            $player = $transaction->getSource();
+            $essenceId = strtolower($glaciaTag->getString("essence_id", ""));
+            if ($essenceId === "") {
+                $player->sendMessage(C::colorize("&r&cThis essence is invalid."));
+                return;
+            }
+
+            $reason = null;
+            if (!EnchantEssenceManager::canApply($itemClicked, $essenceId, $reason)) {
+                $player->sendMessage(C::colorize("&r&c" . ($reason ?? "This essence cannot be applied here.")));
+                PlayerUtils::playSound($player, "note.bass");
+                return;
+            }
+
+            $event->cancel();
+            $otherAction->getInventory()->setItem($otherAction->getSlot(), VanillaItems::AIR());
+            $action->getInventory()->setItem($action->getSlot(), EnchantEssenceManager::apply($itemClicked, $essenceId));
+            $player->sendMessage(C::colorize("&r&aApplied the &f" . ucfirst(str_replace("_", " ", $essenceId)) . " Essence&a."));
+            PlayerUtils::playSound($player, "random.levelup");
+            return;
+        }
+    }
+
+    /**
+     * @priority HIGHEST
+     */
     public function onDragPetTamer(InventoryTransactionEvent $event): void
     {
         $transaction = $event->getTransaction();
@@ -1940,6 +2865,12 @@ final class ItemListener implements Listener {
             if (!$otherAction instanceof SlotChangeAction) {
                 continue;
             }
+            if ($this->isInvMenuSlotAction($action) || $this->isInvMenuSlotAction($otherAction)) {
+                continue;
+            }
+            if ($this->isInvMenuSlotAction($action) || $this->isInvMenuSlotAction($otherAction)) {
+                continue;
+            }
 
             $itemClickedWith = $action->getTargetItem();
             $itemClicked = $action->getSourceItem();
@@ -1949,7 +2880,7 @@ final class ItemListener implements Listener {
             }
 
             $player = $transaction->getSource();
-            if (!$this->isPetItem($itemClicked)) {
+            if (!GlaciaItemStackPolicy::isPetItem($itemClicked)) {
                 $player->sendMessage(C::colorize("&cYou can only apply a Pet Tamer to a pet item."));
                 continue;
             }
@@ -1978,6 +2909,7 @@ final class ItemListener implements Listener {
 
             $otherAction = $actions[($i + 1) % 2];
             if(!$otherAction instanceof SlotChangeAction) continue;
+            if ($this->isInvMenuSlotAction($action) || $this->isInvMenuSlotAction($otherAction)) continue;
 
             $itemClickedWith = $action->getTargetItem();
             $itemClicked = $action->getSourceItem();
@@ -1990,7 +2922,15 @@ final class ItemListener implements Listener {
             $itemTag = $glaciaTag->getString("glaciaItem");
             $player = $transaction->getSource();
 
-            if ($itemTag !== "whitescroll" && $itemTag !== "blackscroll" && $itemTag !== "transmog" && !str_contains($itemTag, "orb")) {
+            if (
+                $itemTag !== "whitescroll" &&
+                $itemTag !== "holy_whitescroll" &&
+                $itemTag !== "holy_water" &&
+                $itemTag !== "blackscroll" &&
+                $itemTag !== "transmog" &&
+                $itemTag !== "heroic_upgrade" &&
+                !str_contains($itemTag, "orb")
+            ) {
                 continue;
             }
 
@@ -2034,6 +2974,80 @@ final class ItemListener implements Listener {
                 return;
             }
 
+            if ($itemTag === "holy_whitescroll") {
+                $itemTagRoot = $itemClicked->getNamedTag()->getCompoundTag("Glacia") ?? new CompoundTag();
+                if ($itemTagRoot->getByte("protected", 0) !== 1) {
+                    $player->sendMessage(C::colorize("&cHoly White Scrolls require a White Scroll first."));
+                    PlayerUtils::playSound($player, "note.bass");
+                    return;
+                }
+
+                $maxHolyLives = max(1, $itemTagRoot->getInt("holy_white_max", 3));
+                $usedHolyLives = max(0, $itemTagRoot->getInt("holy_white_used", 0));
+                $isActive = $itemTagRoot->getByte("holy_white_active", 0) === 1;
+                if ($usedHolyLives >= $maxHolyLives) {
+                    $itemTagRoot->setByte("holy_white_corrupted", 1);
+                    $itemClicked->getNamedTag()->setTag("Glacia", $itemTagRoot);
+                    $this->refreshHolyWhiteLore($itemClicked, $usedHolyLives, $maxHolyLives);
+                    $action->getInventory()->setItem($action->getSlot(), $itemClicked);
+                    $player->sendMessage(C::colorize("&cThis item is CORRUPTED and cannot take more Holy White Scrolls."));
+                    PlayerUtils::playSound($player, "note.bass");
+                    return;
+                }
+                if ($isActive) {
+                    $player->sendMessage(C::colorize("&cA Holy White Scroll is already active on this item. It must trigger on death first."));
+                    PlayerUtils::playSound($player, "note.bass");
+                    return;
+                }
+
+                $itemTagRoot->setInt("holy_white_used", $usedHolyLives);
+                $itemTagRoot->setInt("holy_white_max", $maxHolyLives);
+                $itemTagRoot->setByte("holy_white_active", 1);
+                $itemTagRoot->setByte("holy_white_corrupted", 0);
+                $itemClicked->getNamedTag()->setTag("Glacia", $itemTagRoot);
+                $this->refreshHolyWhiteLore($itemClicked, $usedHolyLives, $maxHolyLives);
+
+                $otherAction->getInventory()->setItem($otherAction->getSlot(), VanillaItems::AIR());
+                $action->getInventory()->setItem($action->getSlot(), $itemClicked);
+                $remaining = max(0, $maxHolyLives - $usedHolyLives);
+                $player->sendMessage(C::colorize("&aHoly White Scroll primed! &f{$remaining} &7possible death-saves remaining."));
+                PlayerUtils::playSound($player, "random.levelup");
+                return;
+            }
+
+            if ($itemTag === "holy_water") {
+                $itemTagRoot = $itemClicked->getNamedTag()->getCompoundTag("Glacia") ?? new CompoundTag();
+                if ($itemTagRoot->getByte("protected", 0) !== 1) {
+                    $player->sendMessage(C::colorize("&cHoly Water can only be used on White-Scrolled items."));
+                    PlayerUtils::playSound($player, "note.bass");
+                    return;
+                }
+
+                $maxHolyLives = max(1, $itemTagRoot->getInt("holy_white_max", 3));
+                $usedHolyLives = max(0, $itemTagRoot->getInt("holy_white_used", 0));
+                if ($maxHolyLives >= 4) {
+                    $player->sendMessage(C::colorize("&cThis item has already been revitalized."));
+                    PlayerUtils::playSound($player, "note.bass");
+                    return;
+                }
+                if ($usedHolyLives < $maxHolyLives) {
+                    $player->sendMessage(C::colorize("&cHoly Water can only be used once the item is fully corrupted."));
+                    PlayerUtils::playSound($player, "note.bass");
+                    return;
+                }
+
+                $itemTagRoot->setInt("holy_white_max", 4);
+                $itemTagRoot->setByte("holy_white_corrupted", 0);
+                $itemClicked->getNamedTag()->setTag("Glacia", $itemTagRoot);
+                $this->refreshHolyWhiteLore($itemClicked, $usedHolyLives, 4);
+
+                $otherAction->getInventory()->setItem($otherAction->getSlot(), VanillaItems::AIR());
+                $action->getInventory()->setItem($action->getSlot(), $itemClicked);
+                $player->sendMessage(C::colorize("&bHoly Water applied! Corruption cap boosted to &f4&b."));
+                PlayerUtils::playSound($player, "random.levelup");
+                return;
+            }
+
             if ($itemTag === "transmog") {
                 $itemRoot = $itemClicked->getNamedTag()->getCompoundTag("Glacia") ?? new CompoundTag();
 
@@ -2050,6 +3064,35 @@ final class ItemListener implements Listener {
 
                 $player->sendMessage(C::colorize("&aTransmog Scroll applied! This item's enchants will now be ordered by rarity."));
                 PlayerUtils::playSound($player, "random.levelup");
+                return;
+            }
+
+            if ($itemTag === "heroic_upgrade") {
+                if (!$itemClicked instanceof Armor || !$itemClicked instanceof Durable) {
+                    $player->sendMessage(C::colorize("&cYou can only apply a Heroic Upgrade to armor."));
+                    PlayerUtils::playSound($player, "note.bass");
+                    return;
+                }
+
+                if (HeroicArmorDurabilityManager::isHeroicArmor($itemClicked)) {
+                    $player->sendMessage(C::colorize("&cThis armor is already heroic."));
+                    PlayerUtils::playSound($player, "note.bass");
+                    return;
+                }
+
+                $success = max(1, min(100, $glaciaTag->getInt("success", EnchantTuningManager::getInt("heroicarmor", "upgrade-success-chance", 65))));
+                $otherAction->getInventory()->setItem($otherAction->getSlot(), VanillaItems::AIR());
+
+                if (mt_rand(1, 100) <= $success) {
+                    $itemClicked = HeroicArmorDurabilityManager::upgradeItemToHeroic($itemClicked);
+                    $action->getInventory()->setItem($action->getSlot(), $itemClicked);
+                    $player->sendMessage(C::colorize("&r&aHeroic Upgrade succeeded! &fThis armor is now heroic."));
+                    PlayerUtils::playSound($player, "random.levelup");
+                } else {
+                    $action->getInventory()->setItem($action->getSlot(), $itemClicked);
+                    $player->sendMessage(C::colorize("&r&cHeroic Upgrade failed."));
+                    PlayerUtils::playSound($player, "note.bass");
+                }
                 return;
             }
 
@@ -2207,6 +3250,7 @@ final class ItemListener implements Listener {
 
             $otherAction = $actions[($i + 1) % 2];
             if(!$otherAction instanceof SlotChangeAction) continue;
+            if ($this->isInvMenuSlotAction($action) || $this->isInvMenuSlotAction($otherAction)) continue;
 
             $itemClickedWith = $action->getTargetItem();
             $itemClicked = $action->getSourceItem();
@@ -2287,6 +3331,43 @@ final class ItemListener implements Listener {
         return $this->getGroupWeight($dustGroup) >= $this->getGroupWeight($bookGroup);
     }
 
+    /**
+     * Keep transmog [count] suffix stable after normal inventory moves.
+     * @priority MONITOR
+     */
+    public function onTransmogSlotSync(InventoryTransactionEvent $event): void
+    {
+        foreach ($event->getTransaction()->getActions() as $action) {
+            if (!$action instanceof SlotChangeAction) {
+                continue;
+            }
+            if ($this->isInvMenuSlotAction($action)) {
+                continue;
+            }
+
+            $target = $action->getTargetItem();
+            if ($target->isNull()) {
+                continue;
+            }
+
+            $glacia = $target->getNamedTag()->getCompoundTag("Glacia");
+            if ($glacia?->getByte("transmog", 0) !== 1) {
+                continue;
+            }
+
+            $item = clone $target;
+            $enchCount = count(CustomEnchantmentManager::getEnchantments($item));
+            $baseName = $item->getCustomName() !== "" ? $item->getCustomName() : $item->getName();
+            $baseName = preg_replace('/\s*(?:(?:§|&).)?\[\d+\]\s*$/u', '', $baseName) ?? $baseName;
+            $newName = $baseName . C::colorize(" &r&l&b[&f{$enchCount}&b]");
+            if ($item->getCustomName() === $newName) {
+                continue;
+            }
+            $item->setCustomName($newName);
+            $action->getInventory()->setItem($action->getSlot(), $item);
+        }
+    }
+
     public function onHatArmorSync(InventoryTransactionEvent $event): void
     {
         $player = $event->getTransaction()->getSource();
@@ -2306,9 +3387,137 @@ final class ItemListener implements Listener {
                         HatManager::syncHelmetChange($player);
                     }
                 ), 1);
+
                 return;
             }
         }
+    }
+
+    /**
+     * @priority HIGHEST
+     */
+    public function onBlockPetAsHelmet(InventoryTransactionEvent $event): void
+    {
+        if ($event->isCancelled()) {
+            return;
+        }
+        $source = $event->getTransaction()->getSource();
+        if (!$source instanceof Player) {
+            return;
+        }
+
+        foreach ($event->getTransaction()->getActions() as $action) {
+            if (!$action instanceof SlotChangeAction) {
+                continue;
+            }
+            $inventory = $action->getInventory();
+            if (!$inventory instanceof ArmorInventory || $inventory->getHolder() !== $source) {
+                continue;
+            }
+            if ($action->getSlot() !== ArmorInventory::SLOT_HEAD) {
+                continue;
+            }
+            if (GlaciaItemStackPolicy::isPetItem($action->getTargetItem())) {
+                $event->cancel();
+                $source->sendTip(C::colorize("&r&cYou cannot wear pet items on your head."));
+                PlayerUtils::playSound($source, "note.bass");
+                return;
+            }
+        }
+    }
+
+    /**
+     * Fetter: block re-armoring into a recently disarmed slot.
+     * @priority HIGHEST
+     */
+    public function onFetterLockedArmor(InventoryTransactionEvent $event): void
+    {
+        if ($event->isCancelled()) {
+            return;
+        }
+        $source = $event->getTransaction()->getSource();
+        if (!$source instanceof Player) {
+            return;
+        }
+        foreach ($event->getTransaction()->getActions() as $action) {
+            if (!$action instanceof SlotChangeAction) {
+                continue;
+            }
+            $inv = $action->getInventory();
+            if (!$inv instanceof ArmorInventory || $inv->getHolder() !== $source) {
+                continue;
+            }
+            $slot = $action->getSlot();
+            if (!AdvancedEnchantState::isFetterSlotLocked($source, $slot)) {
+                continue;
+            }
+            $newItem = $action->getSourceItem();
+            if ($newItem->isNull() || $newItem->getCount() === 0) {
+                continue;
+            }
+            $event->cancel();
+            $source->sendMessage(C::colorize("&r&7That armor slot is &cFetter-locked&7!"));
+            PlayerUtils::playSound($source, "note.bass");
+            return;
+        }
+    }
+
+    /**
+     * UIs (InvMenu, etc.) use their own inventory holders, not the player, so this only affects main/ender/cursor.
+     * @priority MONITOR
+     */
+    public function onUnstackLowKeyGlaciaInPlayerStorage(InventoryTransactionEvent $event): void
+    {
+        if ($event->isCancelled()) {
+            return;
+        }
+        $source = $event->getTransaction()->getSource();
+        if (!$source instanceof Player) {
+            return;
+        }
+        Loader::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(
+            function() use ($source): void {
+                if ($source->isConnected()) {
+                    GlaciaItemStackPolicy::normalizePlayerStorages($source);
+                }
+            }
+        ), 1);
+    }
+
+    /**
+     * @priority MONITOR
+     */
+    public function onJoinUnstackLowKeyGlacia(PlayerJoinEvent $event): void
+    {
+        $player = $event->getPlayer();
+        Loader::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(
+            function() use ($player): void {
+                if ($player->isConnected()) {
+                    GlaciaItemStackPolicy::normalizePlayerStorages($player);
+                }
+            }
+        ), 1);
+    }
+
+    /**
+     * @priority MONITOR
+     */
+    public function onPickupUnstackLowKeyGlacia(EntityItemPickupEvent $event): void
+    {
+        if ($event->isCancelled()) {
+            return;
+        }
+        $collector = $event->getEntity();
+        if (!$collector instanceof Player) {
+            return;
+        }
+        Loader::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(
+            function() use ($collector): void {
+                if ($collector->isConnected()) {
+                    GlaciaItemStackPolicy::normalizePlayerStorages($collector);
+                }
+            }
+        ), 1);
     }
 
     /**
@@ -2379,6 +3588,11 @@ final class ItemListener implements Listener {
             PlayerUtils::playSound($player, "random.levelup");
             return;
         }
+    }
+
+    private function isInvMenuSlotAction(SlotChangeAction $action): bool
+    {
+        return str_contains(strtolower($action->getInventory()::class), "invmenu");
     }
 
     private function getGroupWeight(string $group): int {
@@ -2501,6 +3715,39 @@ final class ItemListener implements Listener {
         return $default;
     }
 
+    private function consumeEnchantmentBookWithTinkerRoll(Player $player, SlotChangeAction $bookAction): void
+    {
+        $bookAction->getInventory()->setItem($bookAction->getSlot(), VanillaItems::AIR());
+
+        $settings = EnchantTuningManager::getSettingsArray("charm-upgrades");
+        $chance = max(0, min(100, (int) ($settings["tinkerer-roll-chance"] ?? 0)));
+        if ($chance <= 0 || mt_rand(1, 100) > $chance) {
+            return;
+        }
+
+        $shardWeight = max(0, (int) ($settings["tinkerer-shard-weight"] ?? 40));
+        $dustWeight = max(0, (int) ($settings["tinkerer-dust-weight"] ?? 60));
+        $totalWeight = max(1, $shardWeight + $dustWeight);
+        $roll = mt_rand(1, $totalWeight);
+
+        if ($roll <= $shardWeight) {
+            $min = max(1, (int) ($settings["shard-success-min"] ?? 50));
+            $max = max($min, (int) ($settings["shard-success-max"] ?? 80));
+            $reward = GlaciaItemFactory::charmShard(mt_rand($min, $max), 0);
+            $name = "Charm Shard";
+        } else {
+            $min = max(1, (int) ($settings["dust-bonus-min"] ?? 3));
+            $max = max($min, (int) ($settings["dust-bonus-max"] ?? 8));
+            $reward = GlaciaItemFactory::charmDust(mt_rand($min, $max));
+            $name = "Charm Dust";
+        }
+
+        foreach ($player->getInventory()->addItem($reward) as $leftover) {
+            $player->getWorld()->dropItem($player->getPosition(), $leftover);
+        }
+        $player->sendMessage(C::colorize("&r&dTinkering residue gave you &f{$name}&d."));
+    }
+
     private function handleRelicCooldown(Player $player, \ecstsy\Glacia\player\GlaciaPlayer $session, string $cooldownKey, int $seconds, string $display): bool
     {
         if ($this->shouldBypassPetCooldown($player, $cooldownKey)) {
@@ -2524,15 +3771,26 @@ final class ItemListener implements Listener {
 
     private function getRelicCooldownSeconds(string $key, int $fallback): int
     {
+        if (isset(self::$relicCooldownSecondsCache[$key])) {
+            return self::$relicCooldownSecondsCache[$key];
+        }
+
         $config = GeneralUtils::getConfiguration(Loader::getInstance(), "misc.yml");
         $value = $config?->getNested("relic-cooldowns.{$key}", "{$fallback}s");
-        return max(1, GeneralUtils::parseTimeString((string) $value));
+        $seconds = max(1, GeneralUtils::parseTimeString((string) $value));
+        self::$relicCooldownSecondsCache[$key] = $seconds;
+        return $seconds;
     }
 
     private function getSoulCompassDefaultUses(): int
     {
+        if (self::$soulCompassDefaultUsesCache !== null) {
+            return self::$soulCompassDefaultUsesCache;
+        }
+
         $config = GeneralUtils::getConfiguration(Loader::getInstance(), "envoy.yml");
-        return max(1, (int) ($config?->getNested("soul-compass.default-uses", 8) ?? 8));
+        self::$soulCompassDefaultUsesCache = max(1, (int) ($config?->getNested("soul-compass.default-uses", 8) ?? 8));
+        return self::$soulCompassDefaultUsesCache;
     }
 
     private function displayDropPackagePreview(Player $player, string $packageType, string $displayName): void
@@ -2643,11 +3901,22 @@ final class ItemListener implements Listener {
         $player->getInventory()->setItemInHand($item);
     }
 
+    private function giveOrDrop(Player $player, \pocketmine\item\Item $item): void
+    {
+        foreach ($player->getInventory()->addItem($item) as $leftover) {
+            $player->getWorld()->dropItem($player->getPosition(), $leftover);
+        }
+    }
+
     private function consumePetCooldownIfNeeded(Player $player, \ecstsy\Glacia\player\GlaciaPlayer $session, string $cooldownKey, int $seconds): void
     {
-        if (!$this->shouldBypassPetCooldown($player, $cooldownKey)) {
-            $session->addCooldown($cooldownKey, $seconds);
+        if ($this->shouldBypassPetCooldown($player, $cooldownKey)) {
+            return;
         }
+        if (str_starts_with($cooldownKey, "pet.") && AdvancedEnchantState::consumePrimalPactFreePet($player)) {
+            return;
+        }
+        $session->addCooldown($cooldownKey, max(1, (int) ceil($seconds * RuneManager::getPetCooldownMultiplier($player))));
     }
 
     /**
@@ -2656,12 +3925,14 @@ final class ItemListener implements Listener {
     private function getNearbyEnemyPlayers(Player $player, float $radius): array
     {
         $targets = [];
+        $origin = $player->getPosition();
+        $maxDistanceSquared = $radius * $radius;
         foreach ($player->getWorld()->getPlayers() as $nearby) {
             if ($nearby->getId() === $player->getId()) {
                 continue;
             }
 
-            if ($nearby->getPosition()->distance($player->getPosition()) > $radius) {
+            if ($nearby->getPosition()->distanceSquared($origin) > $maxDistanceSquared) {
                 continue;
             }
 
@@ -2673,9 +3944,195 @@ final class ItemListener implements Listener {
 
     private function findNearestEnemyPlayer(Player $player, float $radius): ?Player
     {
-        $targets = $this->getNearbyEnemyPlayers($player, $radius);
-        usort($targets, static fn(Player $a, Player $b): int => $a->getPosition()->distanceSquared($player->getPosition()) <=> $b->getPosition()->distanceSquared($player->getPosition()));
-        return $targets[0] ?? null;
+        $origin = $player->getPosition();
+        $maxDistanceSquared = $radius * $radius;
+        $bestDistanceSquared = null;
+        $bestPlayer = null;
+
+        foreach ($player->getWorld()->getPlayers() as $nearby) {
+            if ($nearby->getId() === $player->getId()) {
+                continue;
+            }
+
+            $distanceSquared = $nearby->getPosition()->distanceSquared($origin);
+            if ($distanceSquared > $maxDistanceSquared) {
+                continue;
+            }
+
+            if ($bestDistanceSquared === null || $distanceSquared < $bestDistanceSquared) {
+                $bestDistanceSquared = $distanceSquared;
+                $bestPlayer = $nearby;
+            }
+        }
+
+        return $bestPlayer;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function getSpawnGuardConfig(): array
+    {
+        return WarlordRepository::getSpawnGuards();
+    }
+
+    private function canSpawnBoss(Player $player, string $bossId, ?string &$reason = null): bool
+    {
+        $this->cleanupSpawnTracking();
+        $cfg = $this->getSpawnGuardConfig();
+        $maxActive = max(1, (int) ($cfg["boss.max-active-global"] ?? 1));
+        if (count(self::$activeBosses) >= $maxActive) {
+            $reason = "A boss is already active globally.";
+            return false;
+        }
+
+        if ($this->canBypassBossCooldown($player)) {
+            return true;
+        }
+
+        $now = time();
+        if (self::$bossGlobalCooldownUntil > $now) {
+            $reason = "Boss summoning is on global cooldown for " . GeneralUtils::translateTime(self::$bossGlobalCooldownUntil - $now) . ".";
+            return false;
+        }
+
+        $uuid = $player->getUniqueId()->toString();
+        $playerUntil = self::$bossPlayerCooldowns[$uuid] ?? 0;
+        if ($playerUntil > $now) {
+            $reason = "You can summon another boss in " . GeneralUtils::translateTime($playerUntil - $now) . ".";
+            return false;
+        }
+        return true;
+    }
+
+    private function registerBossSpawn(BossEntity $boss, Player $player, string $bossId): void
+    {
+        $cfg = $this->getSpawnGuardConfig();
+        $now = time();
+        $playerCd = max(1, (int) ($cfg["boss.player-cooldown"] ?? 600));
+        $globalCd = max(1, (int) ($cfg["boss.global-cooldown"] ?? 300));
+        self::$activeBosses[$bossId] = [
+            "entityId" => $boss->getId(),
+            "world" => $boss->getWorld()->getFolderName(),
+            "spawnedAt" => $now
+        ];
+
+        if ($this->canBypassBossCooldown($player)) {
+            return;
+        }
+
+        self::$bossPlayerCooldowns[$player->getUniqueId()->toString()] = $now + $playerCd;
+        self::$bossGlobalCooldownUntil = $now + $globalCd;
+    }
+
+    private function canBypassBossCooldown(Player $player): bool
+    {
+        return $player->hasPermission("glacia.boss.bypasscooldown") || $player->hasPermission("glacia.admin");
+    }
+
+    private function canSpawnWarlord(Player $player, ?string &$reason = null): bool
+    {
+        $this->cleanupSpawnTracking();
+        $cfg = $this->getSpawnGuardConfig();
+        $maxPerWorld = max(1, (int) ($cfg["warlord.max-active-per-world"] ?? 3));
+        $worldName = $player->getWorld()->getFolderName();
+        $activeInWorld = 0;
+        foreach (self::$activeWarlords as $entry) {
+            if (($entry["world"] ?? "") === $worldName) {
+                $activeInWorld++;
+            }
+        }
+        if ($activeInWorld >= $maxPerWorld) {
+            $reason = "Too many warlords are active in this world right now.";
+            return false;
+        }
+
+        $now = time();
+        $uuid = $player->getUniqueId()->toString();
+        $playerUntil = self::$warlordPlayerCooldowns[$uuid] ?? 0;
+        if ($playerUntil > $now) {
+            $reason = "You can summon another warlord in " . GeneralUtils::translateTime($playerUntil - $now) . ".";
+            return false;
+        }
+        return true;
+    }
+
+    private function registerWarlordSpawn(ForsakenChampion $champion, Player $player): void
+    {
+        $cfg = $this->getSpawnGuardConfig();
+        $now = time();
+        $playerCd = max(1, (int) ($cfg["warlord.player-cooldown"] ?? 180));
+        self::$activeWarlords[$champion->getId()] = [
+            "entityId" => $champion->getId(),
+            "world" => $champion->getWorld()->getFolderName(),
+            "spawnedAt" => $now
+        ];
+        self::$warlordPlayerCooldowns[$player->getUniqueId()->toString()] = $now + $playerCd;
+    }
+
+    private function cleanupSpawnTracking(): void
+    {
+        $now = time();
+        $cfg = $this->getSpawnGuardConfig();
+        $maxLifetime = max(60, (int) ($cfg["warlord.max-lifetime"] ?? 900));
+
+        foreach (self::$bossPlayerCooldowns as $uuid => $until) {
+            if ($until <= $now) {
+                unset(self::$bossPlayerCooldowns[$uuid]);
+            }
+        }
+        foreach (self::$warlordPlayerCooldowns as $uuid => $until) {
+            if ($until <= $now) {
+                unset(self::$warlordPlayerCooldowns[$uuid]);
+            }
+        }
+
+        foreach (self::$activeBosses as $key => $entry) {
+            $world = Server::getInstance()->getWorldManager()->getWorldByName((string) ($entry["world"] ?? ""));
+            if ($world === null || $world->getEntity((int) ($entry["entityId"] ?? -1)) === null) {
+                unset(self::$activeBosses[$key]);
+            }
+        }
+
+        foreach (self::$activeWarlords as $entityId => $entry) {
+            $world = Server::getInstance()->getWorldManager()->getWorldByName((string) ($entry["world"] ?? ""));
+            $entity = $world?->getEntity((int) ($entry["entityId"] ?? -1));
+            if (!$entity instanceof ForsakenChampion) {
+                unset(self::$activeWarlords[$entityId]);
+                continue;
+            }
+
+            if (($entry["spawnedAt"] + $maxLifetime) <= $now) {
+                $entity->close();
+                unset(self::$activeWarlords[$entityId]);
+            }
+        }
+    }
+
+    private function hasConfiguredEnchantConflict(Item $item, string $incomingEnchant): bool
+    {
+        $incoming = strtolower(trim($incomingEnchant));
+        $existing = array_map(
+            static fn(string $name): string => strtolower($name),
+            array_keys(CustomEnchantmentManager::getEnchantments($item))
+        );
+
+        if (in_array($incoming, $existing, true)) {
+            return false;
+        }
+
+        $incomingConflicts = EnchantTuningManager::getConflicts($incoming);
+        foreach ($existing as $current) {
+            if (in_array($current, $incomingConflicts, true)) {
+                return true;
+            }
+
+            if (in_array($incoming, EnchantTuningManager::getConflicts($current), true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function isBookLikeItem(Item $item): bool
@@ -2686,27 +4143,41 @@ final class ItemListener implements Listener {
             || $typeId === VanillaItems::ENCHANTED_BOOK()->getTypeId();
     }
 
-    private function isPetItem(Item $item): bool
+    private function refreshHolyWhiteLore(Item $item, int $used, int $max): void
     {
-        $glacia = $item->getNamedTag()->getCompoundTag("Glacia");
-        if ($glacia === null) {
-            return false;
+        $lore = [];
+        foreach ($item->getLore() as $line) {
+            $clean = C::clean($line);
+            if (
+                str_starts_with($clean, "Holy Lives:") ||
+                $clean === "CORRUPTED" ||
+                $clean === "SEMI-CORRUPT" ||
+                $clean === "HOLY WHITE ACTIVE"
+            ) {
+                continue;
+            }
+            $lore[] = $line;
         }
 
-        return in_array($glacia->getString("glaciaItem", ""), [
-            "purity_wisp",
-            "gale_fox",
-            "shatterfang",
-            "hearthbloom",
-            "ironclad_wyrm",
-            "aegis_ram",
-            "rift_viper",
-            "sunscorch_jackal",
-            "runesage_owl",
-            "stormcore_behemoth",
-            "veilmoth",
-            "blastforge_hound"
-        ], true);
+        while ($lore !== [] && C::clean((string) end($lore)) === "") {
+            array_pop($lore);
+        }
+        if ($lore !== []) {
+            $lore[] = "";
+        }
+        $remaining = max(0, $max - $used);
+        $lore[] = C::colorize("&r&bHoly Lives: &f{$remaining}/{$max}");
+        $active = ($item->getNamedTag()->getCompoundTag("Glacia")?->getByte("holy_white_active", 0) ?? 0) === 1;
+        if ($used >= $max) {
+            $lore[] = C::colorize("&r&c&lCORRUPTED");
+        } elseif ($used > 0) {
+            $lore[] = C::colorize("&r&6&lSEMI-CORRUPT");
+        }
+        if ($active) {
+            $lore[] = C::colorize("&r&f&lHOLY WHITE ACTIVE");
+        }
+
+        $item->setLore($lore);
     }
 
     private function setPetTamerState(Item $item, bool $active): Item
@@ -2782,6 +4253,74 @@ final class ItemListener implements Listener {
         PlayerUtils::playSound($player, "note.bass");
     }
 
+    private function stopGenBucketChain(string $chainKey, bool $notifyPlayer): void
+    {
+        $chain = self::$activeGenBucketChains[$chainKey] ?? null;
+        if ($chain === null) {
+            return;
+        }
+
+        unset(self::$activeGenBucketChains[$chainKey]);
+        if ((self::$activeGenBucketByPlayer[$chain["player"] ?? ""] ?? null) === $chainKey) {
+            unset(self::$activeGenBucketByPlayer[$chain["player"]]);
+        }
+
+        foreach (array_keys($chain["positions"] ?? []) as $blockKey) {
+            if ((self::$generatedGenBucketBlockIndex[$blockKey] ?? null) === $chainKey) {
+                unset(self::$generatedGenBucketBlockIndex[$blockKey]);
+            }
+        }
+
+        $handler = $chain["handler"] ?? null;
+        if ($handler instanceof TaskHandler && !$handler->isCancelled()) {
+            $handler->cancel();
+        }
+
+        if (!$notifyPlayer) {
+            return;
+        }
+
+        $player = null;
+        try {
+            $player = Server::getInstance()->getPlayerByUUID(Uuid::fromString((string) $chain["player"]));
+        } catch (\Throwable) {
+            // Ignore invalid UUIDs from stale chain entries.
+        }
+        if ($player !== null && $player->isConnected()) {
+            $player->sendMessage(C::colorize("&r&eGen bucket chain stopped."));
+            PlayerUtils::playSound($player, "random.pop");
+        }
+    }
+
+    private static function toWorldBlockKey(World $world, int $x, int $y, int $z): string
+    {
+        return strtolower($world->getFolderName()) . ":" . $x . ":" . $y . ":" . $z;
+    }
+
+    private function clearChunkWater(World $world, int $chunkX, int $chunkZ): int
+    {
+        $cleared = 0;
+        $minX = $chunkX << 4;
+        $minZ = $chunkZ << 4;
+        $maxY = $world->getMaxY();
+        for ($x = $minX; $x < $minX + 16; $x++) {
+            for ($z = $minZ; $z < $minZ + 16; $z++) {
+                for ($y = 0; $y < $maxY; $y++) {
+                    $pos = new Vector3($x, $y, $z);
+                    $block = $world->getBlock($pos);
+                    if (!$block instanceof Liquid) {
+                        continue;
+                    }
+
+                    $world->setBlock($pos, VanillaBlocks::AIR());
+                    $cleared++;
+                }
+            }
+        }
+
+        return $cleared;
+    }
+
     private function sanitizeChampionArmor(Armor $item): Armor
     {
         $root = $item->getNamedTag();
@@ -2813,6 +4352,36 @@ final class ItemListener implements Listener {
             Facing::WEST => new Position($position->getFloorX() - 1, $position->getFloorY(), $position->getFloorZ(), $position->getWorld()),
             Facing::UP => new Position($position->getFloorX(), $position->getFloorY() + 1, $position->getFloorZ(), $position->getWorld()),
             Facing::DOWN => new Position($position->getFloorX(), $position->getFloorY() - 1, $position->getFloorZ(), $position->getWorld()),
+        };
+    }
+
+    private function readFlexibleIntTag(CompoundTag $tag, string $key, int $default = 0): int
+    {
+        $raw = $tag->getTag($key);
+        if ($raw instanceof IntTag || $raw instanceof ByteTag) {
+            return (int) $raw->getValue();
+        }
+        if ($raw instanceof StringTag && is_numeric($raw->getValue())) {
+            return (int) $raw->getValue();
+        }
+
+        return $default;
+    }
+
+    private function canApplyVanillaEnchantTo(Item $item, string $enchantName): bool
+    {
+        $compact = strtolower(str_replace(['_', '-', ' '], '', $enchantName));
+
+        return match (true) {
+            in_array($compact, ['mending', 'vanishing', 'curseofvanishing', 'unbreaking'], true) => $item instanceof Durable,
+            in_array($compact, ['protection', 'fireprotection', 'blastprotection', 'projectileprotection', 'thorns'], true) => $item instanceof Armor,
+            in_array($compact, ['respiration', 'aquaaffinity'], true) => $item instanceof Armor && $item->getArmorSlot() === ArmorInventory::SLOT_HEAD,
+            in_array($compact, ['featherfalling', 'frostwalker'], true) => $item instanceof Armor && $item->getArmorSlot() === ArmorInventory::SLOT_FEET,
+            $compact === 'swiftsneak' => $item instanceof Armor && $item->getArmorSlot() === ArmorInventory::SLOT_LEGS,
+            in_array($compact, ['sharpness', 'smite', 'baneofarthropods', 'knockback', 'fireaspect'], true) => $item instanceof Sword,
+            in_array($compact, ['power', 'punch', 'flame', 'infinity'], true) => $item instanceof Bow,
+            in_array($compact, ['efficiency', 'silktouch', 'fortune'], true) => $item instanceof Pickaxe || $item instanceof Axe || $item instanceof Shovel || $item instanceof Hoe,
+            default => $item instanceof Durable,
         };
     }
 }

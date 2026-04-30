@@ -29,6 +29,22 @@ use pocketmine\utils\TextFormat;
 
 final class CustomEnchantments {
     use RegistryTrait;
+    /** @var array<string, string> legacy id (UPPER) => current id (UPPER) */
+    private const LEGACY_ID_MAP = [
+        "TRIAD_WARD" => "TRIADWARD",
+        "HARMONIC_SURGE" => "HARMONICSURGE",
+        "AUREATE_BURDEN" => "AUREATEBURDEN",
+        "NETHER_WARDEN" => "NETHERWARDEN",
+        "ASCETIC_AEGIS" => "ASCETICAEGIS",
+        "AURORA_WARD" => "AURORAWARD",
+        "STEADFAST_FURY" => "STEADFASTFURY",
+        "PRIMAL_PACT" => "PRIMALPACT",
+        "DISCORD_VERDICT" => "DISCORDVERDICT",
+        "ALCHEMIST_EDGE" => "ALCHEMISTEDGE",
+        "SUPPLY_SCOUR" => "SUPPLYSCOUR",
+        "TRIFOLD_REND" => "TRIFOLDREND",
+        "IRON_MUZZLE" => "IRONMUZZLE",
+    ];
 
     public static array $definitions = [
         // SIMPLE
@@ -336,8 +352,29 @@ final class CustomEnchantments {
             'maxLevel' => 4,
             'flags' => [ItemEnchantmentTags::BOOTS],
         ],
+        "trophyseeker" => [
+            'display' => '{group-color}Trophy Seeker',
+            'description' => 'Increases chance to catch bigger and\nbetter fish.',
+            'group' => 'EXOTIC',
+            'maxLevel' => 5,
+            'flags' => [ItemEnchantmentTags::FISHING_ROD],
+        ],
+        'detonate' => [
+            'display' => '{group-color}Detonate',
+            'description' => "Summons up to a 3x3x3 explosion\naround any block you break.",
+            'group' => 'EXOTIC',
+            'maxLevel' => 9,
+            'flags' => [ItemEnchantmentTags::PICKAXE],
+        ],
 
         // LEGENDARY
+        'watchmen' => [
+            'display' => '{group-color}Watchmen',
+            'description' => "Chance to summon iron golems to\nprotect you",
+            'group' => 'LEGENDARY',
+            'maxLevel' => 3,
+            'flags' => [ItemEnchantmentTags::CHESTPLATE],
+        ],
         'tank' => [
             'display' => '{group-color}Tank',
             'description' => 'Take less damage from axes.',
@@ -450,6 +487,13 @@ final class CustomEnchantments {
             'maxLevel' => 5,
             'flags' => [ItemEnchantmentTags::SWORD],
         ],
+        'insanity' => [
+            'display' => '{group-color}Insanity',
+            'description' => "You swing your axe like a maniac.\nMultiplies damage against players who\nare weilding a SWORD at the time they\nare hit.",
+            'group' => 'LEGENDARY',
+            'maxLevel' => 8,
+            'flags' => [ItemEnchantmentTags::AXE],
+        ],
 
         //mastery
         'iceaspect' => [
@@ -462,6 +506,13 @@ final class CustomEnchantments {
         'disarmor' => [
             'display' => '{group-color}Disarmor',
             'description' => 'Chance to remove a piece of armor from enemy into their inventory.',
+            'group' => 'MASTERY',
+            'maxLevel' => 5,
+            'flags' => [ItemEnchantmentTags::SWORD],
+        ],
+        'brotherhood' => [
+            'display' => '{group-color}Brotherhood',
+            'description' => "When your Disarmor procs, this has a chance\nto empower nearby allies (3x3) who also\nhave this enchant so their next Disarmor\nproc is guaranteed.",
             'group' => 'MASTERY',
             'maxLevel' => 5,
             'flags' => [ItemEnchantmentTags::SWORD],
@@ -515,11 +566,327 @@ final class CustomEnchantments {
             'maxLevel' => 5,
             'flags' => [ItemEnchantmentTags::PICKAXE],
         ],
+        'watchmen' => [
+            'display' => '{group-color}Watchmen',
+            'description' => 'Chance to summon Iron Golems that defend you by attacking your attacker.',
+            'group' => 'MASTERY',
+            'maxLevel' => 5,
+            'flags' => [ItemEnchantmentTags::CHESTPLATE],
+        ],
+        'pulse' => [
+            'display' => '{group-color}Pulse',
+            'description' => 'Chance to knock enemies away when you are hit.',
+            'group' => 'UNIQUE',
+            'maxLevel' => 5,
+            'flags' => [ItemEnchantmentTags::CHESTPLATE],
+        ],
+        'pellet' => [
+            'display' => '{group-color}Pellet',
+            'description' => 'Chance to blast enemies back on bow hit.',
+            'group' => 'EXOTIC',
+            'maxLevel' => 2,
+            'flags' => [ItemEnchantmentTags::BOW],
+        ],
+        'phantom' => [
+            'display' => '{group-color}Phantom',
+            'description' => 'Chance to deal double damage at night.',
+            'group' => 'ELITE',
+            'maxLevel' => 5,
+            'flags' => [ItemEnchantmentTags::AXE],
+        ],
+        'mecha' => [
+            'display' => '{group-color}Mecha',
+            'description' => 'Auto sells your inventory when it is full while mining.',
+            'group' => 'SIMPLE',
+            'maxLevel' => 1,
+            'flags' => [ItemEnchantmentTags::PICKAXE],
+        ],
+        'flourish' => [
+            'display' => '{group-color}Flourish',
+            'description' => 'Take less damage when focused by multiple enemies.',
+            'group' => 'LEGENDARY',
+            'maxLevel' => 1,
+            'flags' => [ItemEnchantmentTags::CHESTPLATE],
+        ],
+        'trickshot' => [
+            'display' => '{group-color}Trickshot',
+            'description' => 'Headshots deal massive bonus damage.',
+            'group' => 'ELITE',
+            'maxLevel' => 1,
+            'flags' => [ItemEnchantmentTags::BOW],
+        ],
+        'plague' => [
+            'display' => '{group-color}Plague',
+            'description' => 'Chance to weaken enemy damage around you when hit.',
+            'group' => 'MASTERY',
+            'maxLevel' => 5,
+            'flags' => [ItemEnchantmentTags::CHESTPLATE],
+        ],
+        'trixal' => [
+            'display' => '{group-color}Trixal',
+            'description' => 'Your pickaxe never loses durability.',
+            'group' => 'EXOTIC',
+            'maxLevel' => 1,
+            'flags' => [ItemEnchantmentTags::PICKAXE],
+        ],
+        'kerbus' => [
+            'display' => '{group-color}Kerbus',
+            'description' => 'Chance to block disarmor effects on you.',
+            'group' => 'MASTERY',
+            'maxLevel' => 2,
+            'flags' => [ItemEnchantmentTags::CHESTPLATE],
+        ],
+        'slingshot' => [
+            'display' => '{group-color}Slingshot',
+            'description' => 'Chance to wipe ender pearls from enemies on bow hit.',
+            'group' => 'LEGENDARY',
+            'maxLevel' => 5,
+            'flags' => [ItemEnchantmentTags::BOW],
+        ],
+        'jeopardy' => [
+            'display' => '{group-color}Jeopardy',
+            'description' => 'Chance to disable enemy potion usage.',
+            'group' => 'LEGENDARY',
+            'maxLevel' => 5,
+            'flags' => [ItemEnchantmentTags::AXE],
+        ],
+        'static' => [
+            'display' => '{group-color}Static',
+            'description' => 'Chance to increase enemy golden apple cooldown when hit.',
+            'group' => 'LEGENDARY',
+            'maxLevel' => 3,
+            'flags' => [ItemEnchantmentTags::LEGGINGS],
+        ],
+        'hexlock' => [
+            'display' => '{group-color}Hexlock',
+            'description' => 'Chance to disable enemy pets and boost your enchant proc chance.',
+            'group' => 'MASTERY',
+            'maxLevel' => 3,
+            'flags' => [ItemEnchantmentTags::SWORD, ItemEnchantmentTags::AXE],
+        ],
+        'siegebreaker' => [
+            'display' => '{group-color}Siegebreaker',
+            'description' => 'Chance to heavily damage armor and empower your bow briefly.',
+            'group' => 'MASTERY',
+            'maxLevel' => 1,
+            'flags' => [ItemEnchantmentTags::BOW],
+        ],
+        'thunderfamine' => [
+            'display' => '{group-color}Thunderfamine',
+            'description' => 'Chance to call lightning bursts and drain enemy hunger.',
+            'group' => 'MASTERY',
+            'maxLevel' => 2,
+            'flags' => [ItemEnchantmentTags::AXE],
+        ],
+        'bulwark' => [
+            'display' => '{group-color}Bulwark',
+            'description' => 'Chance to negate damage and repair armor briefly.',
+            'group' => 'MASTERY',
+            'maxLevel' => 2,
+            'flags' => [ItemEnchantmentTags::BOOTS],
+        ],
+        'muravieva' => [
+            'display' => '{group-color}Blackhand',
+            'description' => 'Chance to pull black market loot and trigger x5 mob drops.',
+            'group' => 'MASTERY',
+            'maxLevel' => 5,
+            'flags' => [ItemEnchantmentTags::SWORD],
+        ],
+
+        'triadward' => [
+            'display' => '{group-color}Triarch Sigil',
+            'description' => "Take 5% less damage per level from players wearing\nDreadviel, Stormcaller, or Frostbound (25% at max).\nAt max level you also deal 10% less damage.",
+            'group' => 'MASTERY',
+            'maxLevel' => 4,
+            'flags' => [ItemEnchantmentTags::HELMET],
+        ],
+        'hearttide' => [
+            'display' => '{group-color}Lifetide',
+            'description' => "The higher your health, the less damage you take;\nthe lower your health, the more you take.",
+            'group' => 'LEGENDARY',
+            'maxLevel' => 6,
+            'flags' => [ItemEnchantmentTags::HELMET],
+        ],
+        'furylash' => [
+            'display' => '{group-color}Wrathbreak',
+            'description' => "Each level adds 1% chance to reset an attacker's\nRage stack to 0 when they hit you.",
+            'group' => 'MASTERY',
+            'maxLevel' => 10,
+            'flags' => [ItemEnchantmentTags::CHESTPLATE],
+        ],
+        'mirrorbrand' => [
+            'display' => '{group-color}Glassbrand',
+            'description' => "Each level adds 1% chance to deflect offensive\nweapon enchantments back at the attacker.",
+            'group' => 'MASTERY',
+            'maxLevel' => 4,
+            'flags' => [ItemEnchantmentTags::CHESTPLATE],
+        ],
+        'glimmerfade' => [
+            'display' => '{group-color}Nullglimmer',
+            'description' => "On proc, silences the attacker's custom enchants\nfor 2s per level (they must re-apply buffs like Overload).",
+            'group' => 'MASTERY',
+            'maxLevel' => 3,
+            'flags' => [ItemEnchantmentTags::CHESTPLATE],
+        ],
+        'forewarned' => [
+            'display' => '{group-color}Premonition',
+            'description' => "The next hit from your opponent deals half damage.",
+            'group' => 'LEGENDARY',
+            'maxLevel' => 3,
+            'flags' => [ItemEnchantmentTags::CHESTPLATE],
+        ],
+        'maliceward' => [
+            'display' => '{group-color}Hexproof',
+            'description' => "On proc, become immune to harmful custom enchants\nfor 5s per level (up to 25s at level 5).",
+            'group' => 'EXOTIC',
+            'maxLevel' => 5,
+            'flags' => [ItemEnchantmentTags::CHESTPLATE],
+        ],
+        'blastward' => [
+            'display' => '{group-color}Shellshock',
+            'description' => "Grants immunity to explosive damage (TNT, creepers, etc.).",
+            'group' => 'ELITE',
+            'maxLevel' => 2,
+            'flags' => [ItemEnchantmentTags::CHESTPLATE],
+        ],
+        'vilewound' => [
+            'display' => '{group-color}Rotbrand',
+            'description' => "On proc, your attacker suffers bleeding tick damage\nsimilar to the Bleed enchant.",
+            'group' => 'UNIQUE',
+            'maxLevel' => 5,
+            'flags' => [ItemEnchantmentTags::CHESTPLATE],
+        ],
+        'coupdegrace' => [
+            'display' => '{group-color}Final Verdict',
+            'description' => "When the attacker is below 5 hearts, disable their\narmor enchants for 7s. If you are below 5 hearts on proc,\nnegate all incoming damage for 2s instead.",
+            'group' => 'MASTERY',
+            'maxLevel' => 1,
+            'flags' => [ItemEnchantmentTags::LEGGINGS],
+        ],
+        'harmonicsurge' => [
+            'display' => '{group-color}Choirglass',
+            'description' => "Each level adds 1% to randomly trigger an enchant\nfrom your armor. If it rolls a Mastery tier, you instantly\nheal 4 extra hearts.",
+            'group' => 'MASTERY',
+            'maxLevel' => 3,
+            'flags' => [ItemEnchantmentTags::LEGGINGS],
+        ],
+        'phalanx' => [
+            'display' => '{group-color}Warband',
+            'description' => "The more unique players hitting you, the faster\nyour natural health regeneration (scales with attackers).",
+            'group' => 'EXOTIC',
+            'maxLevel' => 2,
+            'flags' => [ItemEnchantmentTags::LEGGINGS],
+        ],
+        'stormrite' => [
+            'display' => '{group-color}Tempest Omen',
+            'description' => "Summons a charged creeper that detonates after 2s,\nshredding enemy armor durability and blocking Gapples\nuntil they leave combat.",
+            'group' => 'EXOTIC',
+            'maxLevel' => 2,
+            'flags' => [ItemEnchantmentTags::LEGGINGS],
+        ],
+        'aureateburden' => [
+            'display' => '{group-color}Midas Toll',
+            'description' => "Immune to Gapple sickness, but your Gapple\ncooldown is +18s; minus 1s per level (min 15s at L8).",
+            'group' => 'UNIQUE',
+            'maxLevel' => 8,
+            'flags' => [ItemEnchantmentTags::LEGGINGS],
+        ],
+        'netherwarden' => [
+            'display' => '{group-color}Hellforged',
+            'description' => "Summons a powerful zombie pigman defender.\nPlayers within 5x5 cannot throw pearls until it dies.",
+            'group' => 'MASTERY',
+            'maxLevel' => 2,
+            'flags' => [ItemEnchantmentTags::BOOTS],
+        ],
+        'fetter' => [
+            'display' => '{group-color}Soulshackle',
+            'description' => "When Disarmor procs on a foe, they cannot re-equip\nthat armor piece for 3s per level.",
+            'group' => 'MASTERY',
+            'maxLevel' => 2,
+            'flags' => [ItemEnchantmentTags::BOOTS],
+        ],
+        'asceticaegis' => [
+            'display' => '{group-color}Oathbound',
+            'description' => "The more enchants the attacker's weapon has, the\nless damage you and allies in a 3x3 take.",
+            'group' => 'LEGENDARY',
+            'maxLevel' => 5,
+            'flags' => [ItemEnchantmentTags::BOOTS],
+        ],
+        'strategist' => [
+            'display' => "{group-color}Warlord's Tempo",
+            'description' => "Captures KOTH 2% faster than normal while worn.",
+            'group' => 'LEGENDARY',
+            'maxLevel' => 1,
+            'flags' => [ItemEnchantmentTags::BOOTS],
+        ],
+        'auroraward' => [
+            'display' => '{group-color}Sunveil',
+            'description' => "When struck, passively heal allies and yourself in a 9x9.\nHealing is doubled at night.",
+            'group' => 'EXOTIC',
+            'maxLevel' => 3,
+            'flags' => [ItemEnchantmentTags::BOOTS],
+        ],
+        'steadfastfury' => [
+            'display' => '{group-color}Bloodrush',
+            'description' => "Rage no longer falls off when you are hit. Stacks cap\nat x10 and only reset if you miss an attack entirely.",
+            'group' => 'MASTERY',
+            'maxLevel' => 1,
+            'flags' => [ItemEnchantmentTags::SWORD],
+        ],
+        'primalpact' => [
+            'display' => '{group-color}Beastbond',
+            'description' => "On proc, for 10s your next pet use triggers twice, or if\nunused, for 15s you reflect the enemy's pet procs back.",
+            'group' => 'MASTERY',
+            'maxLevel' => 4,
+            'flags' => [ItemEnchantmentTags::SWORD],
+        ],
+        'runeswell' => [
+            'display' => '{group-color}Runevein',
+            'description' => "Adds +2% proc chance to all axe enchants. After proc,\naxe soul costs are halved for 30 seconds.",
+            'group' => 'MASTERY',
+            'maxLevel' => 2,
+            'flags' => [ItemEnchantmentTags::AXE],
+        ],
+        'discordverdict' => [
+            'display' => '{group-color}Severance',
+            'description' => "If the victim has no linked Discord, force Double\nStrike and freeze. Linked accounts only get a short freeze.",
+            'group' => 'MASTERY',
+            'maxLevel' => 1,
+            'flags' => [ItemEnchantmentTags::AXE],
+        ],
+        'alchemistedge' => [
+            'display' => "{group-color}Alembic",
+            'description' => "For every 6 potions the enemy carries, gain +0.75 damage.\nIf they have none, you deal 25% less damage.",
+            'group' => 'LEGENDARY',
+            'maxLevel' => 4,
+            'flags' => [ItemEnchantmentTags::AXE],
+        ],
+        'supplyscour' => [
+            'display' => '{group-color}Marauder',
+            'description' => "On proc, randomly remove 1 ender pearl, Gapple, or\nheal potion from the victim's inventory.",
+            'group' => 'ELITE',
+            'maxLevel' => 7,
+            'flags' => [ItemEnchantmentTags::AXE],
+        ],
+        'trifoldrend' => [
+            'display' => '{group-color}Third Eye',
+            'description' => "Every third hit can deal double damage and double\narmor durability loss.",
+            'group' => 'UNIQUE',
+            'maxLevel' => 3,
+            'flags' => [ItemEnchantmentTags::AXE],
+        ],
+        'ironmuzzle' => [
+            'display' => '{group-color}Lockjaw',
+            'description' => "On proc, the victim cannot use commands, eat, or\ngapple for 3 seconds.",
+            'group' => 'SIMPLE',
+            'maxLevel' => 1,
+            'flags' => [ItemEnchantmentTags::AXE],
+        ],
     ];
 
     public static array $rarities = [];
 
-    /** @var CustomEnchant[] */
+    /** @var CustomEnchantment[] */
     public static array $enchants = [];
 
     public static function setup(): void {
@@ -794,12 +1161,81 @@ final class CustomEnchantments {
         }
     }
 
+    /** @var array<string, CustomEnchantment>|null */
+    private static ?array $displayNameIndex = null;
+
     /**
-     * @param string $name
-     * @return CustomEnchantment
+     * Normalizes any user-typed enchantment string (display name, internal id, legacy id,
+     * with or without spaces / Minecraft color codes / underscores) into a stable lookup key.
+     */
+    private static function normalizeEnchantKey(string $value): string {
+        $stripped = preg_replace('/(?:§|&)[0-9a-fk-orA-FK-OR]/', '', $value) ?? $value;
+        $alphaNum = preg_replace('/[^A-Za-z0-9]+/', '', $stripped) ?? '';
+        return strtoupper($alphaNum);
+    }
+
+    /**
+     * Builds (lazily) a normalized display-name -> enchantment index so users can use
+     * the cosmetic name shown by /ge list (e.g. "Final Verdict") as a lookup key.
+     *
+     * @return array<string, CustomEnchantment>
+     */
+    private static function getDisplayNameIndex(): array {
+        if (self::$displayNameIndex !== null) {
+            return self::$displayNameIndex;
+        }
+
+        $index = [];
+        foreach (self::$definitions as $id => $def) {
+            $upperId = strtoupper((string) $id);
+            $enchant = self::$enchants[$upperId] ?? null;
+            if (!$enchant instanceof CustomEnchantment) {
+                continue;
+            }
+
+            $display = (string) ($def['display'] ?? '');
+            $display = str_replace('{group-color}', '', $display);
+            $key = self::normalizeEnchantKey($display);
+            if ($key !== '' && !isset($index[$key])) {
+                $index[$key] = $enchant;
+            }
+        }
+
+        self::$displayNameIndex = $index;
+        return $index;
+    }
+
+    /**
+     * Resolve any flavour of enchantment input (internal id, legacy id, or display name
+     * shown by /ge list — including multi-word and color-coded variants) to a CustomEnchantment.
      */
     public static function getEnchantmentByName(string $name): ?CustomEnchantment {
-        return self::$enchants[strtoupper((string)$name)] ?? null;
+        $normalized = self::normalizeEnchantKey($name);
+        if ($normalized === '') {
+            return null;
+        }
+
+        if (isset(self::$enchants[$normalized])) {
+            return self::$enchants[$normalized];
+        }
+
+        $mapped = self::LEGACY_ID_MAP[$normalized] ?? null;
+        if ($mapped !== null && isset(self::$enchants[$mapped])) {
+            return self::$enchants[$mapped];
+        }
+
+        return self::getDisplayNameIndex()[$normalized] ?? null;
+    }
+
+    public static function getLegacyIdForName(string $name): ?string
+    {
+        $upper = self::normalizeEnchantKey($name);
+        foreach (self::LEGACY_ID_MAP as $legacy => $current) {
+            if ($current === $upper) {
+                return strtolower($legacy);
+            }
+        }
+        return null;
     }
     
     /**

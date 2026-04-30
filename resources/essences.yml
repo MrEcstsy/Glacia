@@ -1,0 +1,14 @@
+essences:
+  armored:
+    enabled: true
+    material: "prismarine_shard"
+    name: "&r&l&bArmored Essence"
+    lore:
+      - "&r&7Apply to armor with max level"
+      - "&r&fArmored &7to awaken a stronger"
+      - "&r&7version of the enchant."
+    enchant: "armored"
+    require-max-level: true
+    success-rate: 100
+    effects:
+      damage-reduction-per-level: 0.01

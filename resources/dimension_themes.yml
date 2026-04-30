@@ -1,0 +1,41 @@
+themes:
+  astral_veil:
+    display: "&dAstral Veil"
+    description: "&7A fractured celestial reach beyond the old End, saturated with voidlight and unstable relic energy."
+    world: "world_the_end"
+    zone-id: "endfall"
+    generator-preset: "astral_veil"
+    scoreboard-profile: "astral_veil"
+    terrain:
+      surface-block: "end_stone"
+      fill-block: "purpur_block"
+      spawn-platform-block: "obsidian"
+      base-island-height: 55
+      island-radius: 100
+      spawn-island-radius: 24
+      spawn-clear-radius: 10
+      spawn-platform-y: 64
+      noise-size: 12
+      noise-half: 6
+    ambience:
+      particles:
+        enabled: true
+        particle: "portal"
+        interval-ticks: 20
+        count: 4
+        radius: 5
+      sound:
+        enabled: true
+        sound: "portal.travel"
+        interval-ticks: 160
+        volume: 0.45
+        pitch: 0.75
+    resource-pack:
+      fog-color: "#6B55A8"
+      sky-color: "#120B24"
+      horizon-color: "#F07CFF"
+      client-biome: "the_end"
+      fog-identifier: "glacia:astral_veil"
+      notes:
+        - "Ships with resource_packs/GlaciaExoPack/client_biomes/the_end.json."
+        - "Ships with resource_packs/GlaciaExoPack/fogs/astral_veil.json."

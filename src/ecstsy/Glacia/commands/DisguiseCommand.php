@@ -53,7 +53,7 @@ final class DisguiseCommand extends BaseCommand
         }
 
         $permission = DisguiseManager::getPermission($input);
-        if (!$sender->hasPermission($permission)) {
+        if (!$sender->hasPermission($permission) && !$sender->hasPermission("glacia.admin")) {
             $sender->sendMessage(C::colorize("&r&cYou have not unlocked that disguise yet."));
             return;
         }

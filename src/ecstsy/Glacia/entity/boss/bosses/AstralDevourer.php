@@ -76,8 +76,8 @@ final class AstralDevourer extends BossEntity {
 
     public function getBossName(): string {
         return match ($this->getPhase()) {
-            2 => "&dAstral Devourer &7(Enraged)",
-            3 => "&cAstral Devourer &7(Ascended)",
+            2 => "&dAstral Devourer &r&7(Enraged)",
+            3 => "&cAstral Devourer &r&7(Ascended)",
             default => "&5Astral Devourer",
         };
     }

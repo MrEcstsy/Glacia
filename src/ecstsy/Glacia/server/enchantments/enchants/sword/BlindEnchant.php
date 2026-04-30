@@ -9,6 +9,7 @@ use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
@@ -41,12 +42,15 @@ final class BlindEnchant implements EntityDamageByEntityEnchantmentHandler {
         ];
 
         $cfg = $data[$level] ?? $data[1];
+        $cfg["chance"] = EnchantTuningManager::getLevelInt("blind", "chance-by-level", $level, (int) $cfg["chance"]);
+        $cfg["duration"] = EnchantTuningManager::getLevelInt("blind", "effect-duration-seconds-by-level", $level, (int) $cfg["duration"]);
+        $cfg["effectLevel"] = EnchantTuningManager::getLevelInt("blind", "effect-amplifier-by-level", $level, (int) $cfg["effectLevel"]);
 
         if (!ProcLuckManager::roll($damager, "blind", $cfg["chance"], 2, 12)) return;
         if ($session !== null && $session->isOnCooldown("blind")) return;
 
         if ($session !== null) {
-            $session->addCooldown("blind", 1);
+            $session->addCooldown("blind", max(0, EnchantTuningManager::getInt("blind", "cooldown", 1)));
         }
 
         $victim->getEffects()->add(

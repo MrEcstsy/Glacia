@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\utils\screens\auctionhouse;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\MartianUtilities\utils\ItemUtils;
 use ecstsy\MartianUtilities\utils\screens\BaseScreen;
 use pocketmine\item\VanillaItems;
@@ -43,7 +44,7 @@ final class AuctionHouseSellConfirmScreen extends BaseScreen {
                 return;
             }
 
-            $fee = $manager->calculateSellFee($this->price, $player);
+            $fee = (int) ceil($manager->calculateSellFee($this->price, $player) * RuneManager::getAuctionFeeMultiplier($player));
             if ($session->getBalance() < $fee) {
                 $player->sendMessage(C::colorize("&r&cYou do not have enough money to pay the listing fee."));
                 return;

@@ -14,6 +14,7 @@ final class QueryStmts {
     public const PLAYERS_CREATE = "glacia_players.create";
     public const PLAYERS_UPDATE = "glacia_players.update";
     public const PLAYERS_DELETE = "glacia_players.delete";
+    public const PLAYERS_USERNAME_BY_UUID = "glacia_players.username_by_uuid";
 
     public const PLAYER_RANK_INIT = "glacia_ranks.init";
     public const PLAYER_RANK_SELECT = "glacia_ranks.select";

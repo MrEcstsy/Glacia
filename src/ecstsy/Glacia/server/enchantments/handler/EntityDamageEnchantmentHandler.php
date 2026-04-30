@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\enchantments\handler;
 
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
-use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\event\entity\EntityDamageEvent;
 
 interface EntityDamageEnchantmentHandler {
-    public static function handle(EntityDamageByEntityEvent $event, CustomEnchantment $enchant, int $level): void;
+    public static function handle(EntityDamageEvent $event, CustomEnchantment $enchant, int $level): void;
 }

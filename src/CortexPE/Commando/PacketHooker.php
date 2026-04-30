@@ -65,15 +65,28 @@ class PacketHooker implements Listener {
 		$interceptor->interceptOutgoing(function(AvailableCommandsPacket $pk, NetworkSession $target) : bool{
 			if(self::$isIntercepting)return true;
 			$p = $target->getPlayer();
-			foreach($pk->commandData as $commandName => $commandData) {
-				$cmd = Server::getInstance()->getCommandMap()->getCommand((string)$commandName);
+			if($p === null){
+				return true;
+			}
+			foreach($pk->commandData as $commandIndex => $commandData) {
+				$commandName = null;
+				if(is_object($commandData) && property_exists($commandData, "commandName") && is_string($commandData->commandName)){
+					$commandName = $commandData->commandName;
+				}elseif(is_string($commandIndex)){
+					$commandName = $commandIndex;
+				}
+				if($commandName === null || $commandName === ""){
+					continue;
+				}
+
+				$cmd = Server::getInstance()->getCommandMap()->getCommand($commandName);
 				if($cmd instanceof BaseCommand) {
 					foreach($cmd->getConstraints() as $constraint){
 						if(!$constraint->isVisibleTo($p)){
 							continue 2;
 						}
 					}
-					$pk->commandData[$commandName]->overloads = self::generateOverloads($p, $cmd);
+					$pk->commandData[$commandIndex]->overloads = self::generateOverloads($p, $cmd);
 				}
 			}
 			$pk->softEnums = SoftEnumStore::getEnums();

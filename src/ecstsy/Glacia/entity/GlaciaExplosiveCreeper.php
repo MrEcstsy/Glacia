@@ -133,10 +133,26 @@ final class GlaciaExplosiveCreeper extends CustomCreeper {
         };
     }
 
-    private function updateNameTag(): void {
-        $this->setNameTag($this->getDisplayNameForType());
+    protected function updateNameTag(): void {
+        $health = max(0, (int) ceil($this->getHealth()));
+        $max = max(1, (int) ceil($this->getMaxHealth()));
+        $hpColor = C::RED;
+        $segments = 10;
+        $filled = (int) floor(($health / $max) * $segments);
+        $bar = str_repeat("❤", $filled) . C::GRAY . str_repeat("❤", max(0, $segments - $filled));
+
+        $this->setNameTag($this->getDisplayNameForType() . C::colorize("\n&r{$hpColor}{$bar} &8(&f{$health}&7/&f{$max}&8)"));
         $this->setNameTagAlwaysVisible(true);
         $this->setNameTagVisible(true);
+    }
+
+    protected function entityBaseTick(int $tickDiff = 1): bool
+    {
+        $hasUpdate = parent::entityBaseTick($tickDiff);
+        if (($this->ticksLived % 10) === 0) {
+            $this->updateNameTag();
+        }
+        return $hasUpdate;
     }
 
     protected function explode(): void {

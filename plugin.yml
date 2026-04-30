@@ -3,6 +3,8 @@ main: ecstsy\Glacia\Loader
 api: 5.3.0
 version: 1.0.0
 author: ecstsylove
+softdepend:
+  - Customies
 
 permissions:
   glacia.default:
@@ -10,6 +12,15 @@ permissions:
     default: true
   glacia.admin:
     description: Admin Glacia permission
+    default: op
+  glacia.boss.bypasscooldown:
+    description: Bypass boss summoning cooldowns for testing
+    default: op
+  glacia.staff.see-hidden:
+    description: See staff in /list and tab when they are in staff mode
+    default: op
+  glacia.sponge.use:
+    description: Allows use of ocean busters in claimed territory
     default: op
   glacia.command.ranks:
     default: op
@@ -45,9 +56,6 @@ permissions:
     default: op
   glacia.give-book:
     description: Permission to use /ge givebook command
-    default: op
-  glacia.give-item:
-    description: Permission to use /ge giveitem command
     default: op
   glacia.unenchant:
     description: Permission to use /ge unenchant command
@@ -100,9 +108,132 @@ permissions:
   glacia.eco.add:
     description: Permission to use /eco add command
     default: op
-  glacia.eco.take:
-    description: Permission to use /eco take command
-    default: op
   glacia.eco.reset:
     description: Permission to use /eco reset command
+    default: op
+  glacia.command.setTitle:
+    description: Permission to set titles with /settitle
+    default: op
+  glacia.nv:
+    description: Permission to use night vision command
+    default: op
+  glacia.nv.other:
+    description: Permission to toggle night vision for other players
+    default: op
+  glacia.staff:
+    description: Generic staff bypass permission used in some listeners
+    default: op
+  glacia.staffchat:
+    description: Access staff chat visibility/features
+    default: op
+  glacia.staff.freeze:
+    description: Permission to freeze and unfreeze players
+    default: op
+  glacia.staff.warn:
+    description: Permission to warn players with escalation
+    default: op
+  glacia.staff.history:
+    description: Permission to view staff moderation history
+    default: op
+  glacia.staff.reports:
+    description: Permission to receive/manage player reports
+    default: op
+  glacia.world.admin:
+    description: Full world management command access
+    default: op
+  glacia.world.create:
+    description: Create/generate worlds
+    default: op
+  glacia.world.load:
+    description: Load worlds
+    default: op
+  glacia.world.unload:
+    description: Unload worlds
+    default: op
+  glacia.world.delete:
+    description: Delete world folders
+    default: op
+  glacia.world.teleport:
+    description: Teleport players to worlds
+    default: op
+  glacia.world.setspawn:
+    description: Set world spawn points
+    default: op
+  glacia.command.world.admin:
+    description: Full access to world manager command
+    default: op
+  glacia.command.world.list:
+    description: List worlds via /world list
+    default: op
+  glacia.command.world.info:
+    description: Inspect world info via /world info
+    default: op
+  glacia.command.world.create:
+    description: Create worlds via /world create
+    default: op
+  glacia.command.world.load:
+    description: Load worlds via /world load
+    default: op
+  glacia.command.world.unload:
+    description: Unload worlds via /world unload
+    default: op
+  glacia.command.world.delete:
+    description: Delete worlds via /world delete
+    default: op
+  glacia.command.world.teleport:
+    description: Teleport to worlds via /world tp
+    default: op
+  glacia.command.world.setspawn:
+    description: Set world spawn via /world setspawn
+    default: op
+  glacia.command.world.gamerule:
+    description: View or change supported world gamerules via /world gamerule
+    default: op
+  glacia.command.world.*:
+    description: Grant all /world subcommand permissions
+    default: op
+  glacia.disguise.*:
+    description: Access all disguise unlock permissions
+    default: op
+  glacia.title.*:
+    description: Access all title unlock permissions
+    default: op
+  glacia.chat.advertise.bypass:
+    description: Bypass chat advertise filtering
+    default: op
+  glacia.chat.color:
+    description: Use & section-style codes in chat (players without this get codes stripped; [item]/[brag] embeds stay colored)
+    default: op
+  glacia.book-save-chance:
+    description: Bypass/boost for custom book save chance checks
+    default: op
+  glacia.pet.cooldown.bypass:
+    description: Bypass pet summon cooldown restrictions
+    default: op
+  glacia.ah.fee.0_75:
+    description: Reduced auction house listing fee tier
+    default: op
+  glacia.ah.listings.2:
+    description: Auction house listing slot tier (2)
+    default: op
+  glacia.ah.listings.3:
+    description: Auction house listing slot tier (3)
+    default: op
+  glacia.ah.listings.5:
+    description: Auction house listing slot tier (5)
+    default: op
+  glacia.ah.listings.6:
+    description: Auction house listing slot tier (6)
+    default: op
+  glacia.vault.*:
+    description: Grant all player vault tiers
+    default: op
+  glacia.vault.infinite:
+    description: Infinite player vault slots
+    default: op
+  glacia.home.increaser.use:
+    description: Use home cap increaser item/features
+    default: op
+  glacia.warp.others:
+    description: Permission to warp other players
     default: op

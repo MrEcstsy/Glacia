@@ -1,0 +1,98 @@
+id: ethereal_example
+name: "&d&lEthereal Crate"
+title: "&r&8Ethereal Crate"
+item-name: "&r&d&lExample Ethereal Crate"
+item-lore:
+  - "&r&7Unlocked at &fstore.example.com &7by &f{player}"
+  - ""
+  - "&r&f&l&nADMIN ITEMS"
+  - "&r&f&l* &fAdmin Item"
+  - ""
+  - "&r&e&l&nCOSMETIC ITEMS"
+  - "&r&e&l* &eCosmetic Item"
+  - ""
+  - "&r&6&l&nTREASURE ITEMS"
+  - "&r&6&l* &6Treasure Item"
+  - ""
+  - "&r&c&l&nBONUS ITEMS"
+  - "&r&c&l* &cBonus Item"
+aliases:
+  - ethereal
+  - ecrate
+
+animation:
+  seconds: 6
+  pane-colors:
+    - purple
+    - magenta
+    - light_blue
+    - blue
+  # Advanced path overrides are optional.
+  # If omitted, built-in monthly-style paths are used automatically.
+
+ui:
+  labels:
+    center-title: "&r&7Click ender chests to roll"
+    roll-title: "&r&5Roll Reward"
+    bonus-locked-title: "&r&cBonus Locked"
+    bonus-ready-title: "&r&6Roll Bonus Reward"
+    bonus-rolled-title: "&r&aBonus Rolled"
+  lore:
+    center:
+      - "&r&8Rewards are auto-claimed after each roll."
+      - "&r&8Close at any time to auto-collect leftovers."
+    roll:
+      - "&r&7Click to start this reward roll."
+    bonus-locked:
+      - "&r&7Claim all 9 rewards first."
+    bonus-ready:
+      - "&r&eClick to roll your bonus reward."
+    bonus-rolled:
+      - "&r&7Bonus will be granted when menu closes."
+
+sounds:
+  main-roll-start: ["random.orb", "random.pop2"]
+  main-roll-tick: ["random.click", "note.hat"]
+  main-roll-finish: ["random.levelup"]
+  bonus-roll-start: ["random.orb", "mob.endermen.portal"]
+  bonus-roll-tick: ["random.click", "random.pop2", "note.pling"]
+  bonus-roll-finish: ["random.levelup", "random.anvil_use"]
+
+loot-tables:
+  admin:
+    - chance: 10
+      type: item
+      id: "chunk_buster"
+      count: 1
+    - chance: 8
+      type: item
+      id: "ultimatebook"
+      count: 2
+  cosmetic:
+    - chance: 12
+      type: item
+      id: "renametag"
+      count: 1
+    - chance: 8
+      type: item
+      id: "bloody_note"
+      count: 1
+  treasure:
+    - chance: 18
+      type: item
+      id: "lootbox_vote"
+      count: 1
+    - chance: 10
+      type: item
+      id: "xpnote"
+      amount: 100000
+      count: 1
+  bonus:
+    - chance: 6
+      type: item
+      id: "cegg_lucky"
+      count: 6
+    - chance: 4
+      type: item
+      id: "ethereal_legendary_chest"
+      count: 1

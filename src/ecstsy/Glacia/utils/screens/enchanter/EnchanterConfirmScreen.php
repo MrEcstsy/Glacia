@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\utils\screens\enchanter;
 
+use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\enchanter\EnchanterRepository;
 use ecstsy\MartianUtilities\utils\screens\BaseScreen;
 use pocketmine\item\Item;
@@ -64,6 +65,7 @@ final class EnchanterConfirmScreen extends BaseScreen {
             }
 
             $player->getXpManager()->setCurrentTotalXp($currentXp - $totalCost);
+            Loader::getChallengeManager()->incrementProgress($player, "xp_spent_enchanter", $totalCost);
             $item->setCount($amount);
             $player->getInventory()->addItem($item);
 

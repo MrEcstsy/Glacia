@@ -6,6 +6,7 @@ namespace ecstsy\Glacia\server\enchantments\enchants\armor;
 
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\math\Vector3;
@@ -16,7 +17,10 @@ final class TricksterEnchant implements EntityDamageByEntityEnchantmentHandler {
     /** @var array<string, int> */
     private static array $cooldowns = [];
 
-    private const COOLDOWN = 3; 
+    private const DEFAULT_COOLDOWN = 20;
+    private const DEFAULT_BASE_CHANCE = 4;
+    private const DEFAULT_PER_LEVEL_CHANCE = 1;
+    private const DEFAULT_MAX_CHANCE = 12;
 
     public static function handle(EntityDamageByEntityEvent $event, CustomEnchantment $enchant, int $level): void {
         if ($event->isCancelled()) {
@@ -34,8 +38,10 @@ final class TricksterEnchant implements EntityDamageByEntityEnchantmentHandler {
             return;
         }
 
-        // lvl 1 = 8%, lvl 8 = 22%
-        $chance = min(22, 6 + ($level * 2));
+        $baseChance = max(0, EnchantTuningManager::getInt("trickster", "base-chance", self::DEFAULT_BASE_CHANCE));
+        $perLevelChance = max(0, EnchantTuningManager::getInt("trickster", "per-level-chance", self::DEFAULT_PER_LEVEL_CHANCE));
+        $maxChance = max(1, EnchantTuningManager::getInt("trickster", "max-chance", self::DEFAULT_MAX_CHANCE));
+        $chance = min(100, min($maxChance, $baseChance + ($level * $perLevelChance)));
 
         if (mt_rand(1, 100) > $chance) {
             return;
@@ -110,6 +116,12 @@ final class TricksterEnchant implements EntityDamageByEntityEnchantmentHandler {
     }
 
     private static function setCooldown(Player $player): void {
-        self::$cooldowns[strtolower($player->getName())] = time() + self::COOLDOWN;
+        $cooldown = max(0, EnchantTuningManager::getInt("trickster", "cooldown", self::DEFAULT_COOLDOWN));
+        self::$cooldowns[strtolower($player->getName())] = time() + $cooldown;
+    }
+
+    public static function clearPlayer(Player $player): void
+    {
+        unset(self::$cooldowns[strtolower($player->getName())]);
     }
 }

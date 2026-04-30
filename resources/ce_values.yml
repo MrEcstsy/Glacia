@@ -1,0 +1,977 @@
+# ============================================================
+# Glacia Custom Enchant Tuning (ce_values.yml)
+# ============================================================
+# This file controls CE balance without code edits.
+# After changes, run /greload cevalues (or /greload).
+#
+# Core rules:
+# - Percent chances use whole-number percent values.
+#   Example: 25 = 25% proc chance.
+# - Flat "chance-by-level" values are direct per-level chances.
+# - If an enchant has both "base-chance" and "chance-by-level",
+#   the enchant code decides how those values combine (varies by enchant).
+#
+# Units and scaling:
+# - Health/heal/damage values are in HALF-HEART units used by PMMP health.
+#   Example: 1.0 = half-heart, 2.0 = 1 full heart, 10.0 = 5 hearts.
+# - trigger-health-percent uses 0.0-1.0 decimal scale.
+#   Example: 0.30 = 30% HP threshold.
+# - Any "-seconds" value is seconds.
+# - cooldown values are seconds unless a key explicitly says ticks.
+# - Effect amplifiers are zero-based.
+#   Example: 0 = Effect I, 1 = Effect II, 2 = Effect III.
+#
+# Proc-luck (anti-dry-streak helper):
+# - enabled: true/false per enchant.
+# - luck-per-miss: chance bonus added after each failed proc.
+# - max-bonus: max extra chance that can be stacked from misses.
+#
+# Per-level maps:
+# - Use string level keys ("1", "2", "3", ...).
+# - Missing levels usually fall back to nearest/default in code.
+# - Keep level progression monotonic unless you intentionally want spikes.
+#
+# Advanced / “new set” enchants (triadward … ironmuzzle):
+# - For many procs, the PHP pass gives a per-hit base chance; ce_values "base-chance" is NOT
+#   used unless the enchant is wired to it. Tuning is mostly proc-luck and the scalars below.
+# - "luck-per-miss" and "max-bonus" should match the defaults passed to ProcLuckManager::roll
+#   in AdvancedSetEnchants (see code) unless you intentionally soften or harden dry streaks.
+# - runeswell: "axe-proc-bonus-per-level" adds to axe proc % (per Runeswell level).
+# - strategist: "koth-capture-bonus-per-level" adds to each KOTH tick when boots have Strategist.
+# - aureateburden: gap "sickness" cooldown is gap-sickness-cooldown-seconds + extra (see that block).
+#
+# Conflicts:
+# - conflicts-with is a list of enchant keys that cannot be applied together.
+# - Example: conflicts-with: ["blind", "slowness"]
+#
+# Safe tuning tips:
+# - Increase in small steps (1-3% chance or small numeric increments).
+# - Test one enchant at a time, then /greload cevalues and re-test.
+#
+settings:
+  version: 2
+  # Warm-up: first N hits (random between min and max, per attacker + target) do not roll
+  # custom enchant procs on the attacking weapon. Victim armor / defensive procs are unchanged.
+  weapon-proc-gate:
+    enabled: true
+    min-hits: 3
+    max-hits: 5
+
+  # Enchants in this list cannot be rolled from Mastery random books.
+  # They can still be obtained through direct sources (kits/gkits/loot etc).
+  mastery-book-disabled-enchants: []
+
+  # Charm upgrade system.
+  charm-upgrades:
+    shard-base-success: 70
+    dust-bonus-default: 5
+    # Book-consume (tinkering) reward roll when an enchantment book is used up.
+    tinkerer-roll-chance: 12
+    tinkerer-shard-weight: 40
+    tinkerer-dust-weight: 60
+    shard-success-min: 50
+    shard-success-max: 80
+    dust-bonus-min: 3
+    dust-bonus-max: 8
+
+enchants:
+  armored:
+    sword-damage-reduction-per-level: 0.75
+    max-level: 5
+    cooldown: 0
+    proc-luck:
+      enabled: false
+
+  lifesteal:
+    base-chance: 1
+    chance-by-level:
+      "1": 1
+      "2": 1
+      "3": 2
+      "4": 2
+      "5": 2
+    heal-by-level:
+      "1": 1.0
+      "2": 1.5
+      "3": 2.0
+      "4": 2.5
+      "5": 3.0
+    cooldown: 0
+    proc-luck:
+      enabled: true
+      luck-per-miss: 1
+      max-bonus: 1
+    conflicts-with: []
+
+  rage:
+    base-chance: 6
+    chance-by-level:
+      "1": 6
+      "2": 8
+      "3": 10
+      "4": 12
+      "5": 14
+    combo-reset-seconds: 4
+    cooldown: 0
+    proc-luck:
+      enabled: true
+      luck-per-miss: 1
+      max-bonus: 6
+    conflicts-with: []
+
+  execute:
+    base-chance: 20
+    chance-by-level:
+      "1": 4
+      "2": 5
+      "3": 6
+      "4": 7
+      "5": 8
+    cooldown: 0
+    proc-luck:
+      enabled: true
+      luck-per-miss: 2
+      max-bonus: 10
+    conflicts-with: []
+
+  vampire:
+    base-chance: 1
+    chance-by-level:
+      "1": 1
+      "2": 1
+      "3": 1
+    heal-min-by-level:
+      "1": 0.5
+      "2": 0.75
+      "3": 1.0
+    heal-max-by-level:
+      "1": 1.0
+      "2": 1.25
+      "3": 1.5
+    cooldown: 0
+    proc-luck:
+      enabled: true
+      luck-per-miss: 1
+      max-bonus: 1
+    conflicts-with: []
+
+  doublestrike:
+    base-chance: 3
+    chance-by-level:
+      "1": 8
+      "2": 13
+      "3": 19
+    cooldown: 0
+    proc-luck:
+      enabled: true
+      luck-per-miss: 2
+      max-bonus: 10
+    conflicts-with: []
+
+  slowness:
+    base-chance: 25
+    chance-by-level:
+      "1": 25
+      "2": 35
+      "3": 45
+    effect-duration-seconds-by-level:
+      "1": 2
+      "2": 3
+      "3": 4
+    cooldown: 1
+    proc-luck:
+      enabled: true
+      luck-per-miss: 2
+      max-bonus: 12
+    conflicts-with:
+      - "blind"
+
+  blind:
+    base-chance: 25
+    chance-by-level:
+      "1": 25
+      "2": 35
+      "3": 45
+    effect-duration-seconds-by-level:
+      "1": 60
+      "2": 80
+      "3": 100
+    effect-amplifier-by-level:
+      "1": 0
+      "2": 1
+      "3": 2
+    cooldown: 1
+    proc-luck:
+      enabled: true
+      luck-per-miss: 2
+      max-bonus: 12
+    conflicts-with:
+      - "slowness"
+
+  iceaspect:
+    chance-by-level:
+      "1": 10
+      "2": 12
+      "3": 14
+      "4": 16
+      "5": 18
+    freeze-duration-seconds-by-level:
+      "1": 1
+      "2": 2
+      "3": 2
+      "4": 3
+      "5": 3
+    slowness-amplifier: 6
+    cooldown: 3
+    proc-luck:
+      enabled: true
+      luck-per-miss: 2
+      max-bonus: 12
+    conflicts-with: []
+
+  disarmor:
+    chance-by-level:
+      "1": 4
+      "2": 6
+      "3": 8
+      "4": 10
+      "5": 12
+    cooldown: 12
+    proc-luck:
+      enabled: true
+      luck-per-miss: 2
+      max-bonus: 10
+    conflicts-with: []
+  brotherhood:
+    chance-by-level:
+      "1": 8
+      "2": 11
+      "3": 14
+      "4": 17
+      "5": 20
+    ally-radius: 3.0
+    cooldown: 0
+    proc-luck:
+      enabled: true
+      luck-per-miss: 1
+      max-bonus: 10
+    conflicts-with: []
+
+  vampiricdevour:
+    chance-by-level:
+      "1": 1
+    cooldown: 25
+    proc-luck:
+      enabled: true
+      luck-per-miss: 1
+      max-bonus: 1
+    conflicts-with: []
+
+  demonicfinisher:
+    trigger-health-threshold: 8.0
+    chance-by-level:
+      "1": 6
+      "2": 8
+      "3": 10
+      "4": 12
+      "5": 14
+    bonus-damage-by-level:
+      "1": 3.0
+      "2": 4.5
+      "3": 6.0
+      "4": 7.5
+      "5": 9.0
+    cooldown: 6
+    proc-luck:
+      enabled: true
+      luck-per-miss: 2
+      max-bonus: 12
+    conflicts-with: []
+
+  mirrored:
+    chance-by-level:
+      "1": 8
+      "2": 12
+      "3": 16
+    reflect-percent-by-level:
+      "1": 22.0
+      "2": 30.0
+      "3": 40.0
+    cooldown: 5
+    proc-luck:
+      enabled: true
+      luck-per-miss: 2
+      max-bonus: 10
+    conflicts-with: []
+
+  trapped:
+    chance-by-level:
+      "1": 8
+      "2": 11
+      "3": 14
+      "4": 17
+      "5": 20
+    root-duration-seconds-by-level:
+      "1": 1
+      "2": 2
+      "3": 3
+      "4": 4
+      "5": 5
+    slowness-amplifier: 6
+    cooldown: 7
+    proc-luck:
+      enabled: true
+      luck-per-miss: 2
+      max-bonus: 10
+    conflicts-with: []
+
+  ascended:
+    trigger-health-percent: 0.30
+    chance-by-level:
+      "1": 8
+      "2": 11
+      "3": 14
+      "4": 17
+      "5": 20
+    # ~peak blocks above your feet (computed launch Y velocity). Overrides launch-velocity when set.
+    target-peak-blocks: 100
+    launch-velocity: 4.35
+    fall-immunity-seconds: 35
+    cooldown: 10
+    proc-luck:
+      enabled: true
+      luck-per-miss: 2
+      max-bonus: 10
+    conflicts-with: []
+
+  redeemer:
+    chance-by-level:
+      "1": 9
+      "2": 12
+      "3": 15
+    buff-duration-seconds-by-level:
+      "1": 1
+      "2": 2
+      "3": 3
+    strength-amplifier-by-level:
+      "1": 0
+      "2": 0
+      "3": 1
+    cooldown: 9
+    proc-luck:
+      enabled: true
+      luck-per-miss: 2
+      max-bonus: 12
+    conflicts-with: []
+
+  satanstreat:
+    chance-by-level:
+      "1": 1
+      "2": 2
+      "3": 3
+      "4": 4
+      "5": 5
+    reward-item-id: "legendarybook"
+    cooldown: 0
+    proc-luck:
+      enabled: true
+      luck-per-miss: 1
+      max-bonus: 5
+    conflicts-with: []
+  watchmen:
+    chance-by-level:
+      "1": 6
+      "2": 9
+      "3": 12
+      "4": 15
+      "5": 18
+    golem-count-by-level:
+      "1": 1
+      "2": 1
+      "3": 2
+      "4": 2
+      "5": 3
+    golem-damage-by-level:
+      "1": 2.0
+      "2": 2.5
+      "3": 3.0
+      "4": 3.5
+      "5": 4.0
+    golem-health: 40
+    guardian-duration-seconds: 12
+    cooldown: 25
+    proc-luck:
+      enabled: true
+      luck-per-miss: 2
+      max-bonus: 12
+    conflicts-with: []
+
+  autosmelt:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  autoplanter:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  lucky:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  decapitation:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  insomnia:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  confusion:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  haste:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  aquatic:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  glowing:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  blazed:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  jellylegs:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  curse:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  featherweight:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  obsidiandestroyer:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  endershift:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  virus:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+    chance-by-level: { "1": 12, "2": 16, "3": 20, "4": 24 }
+    infection-seconds-by-level: { "1": 4, "2": 5, "3": 6, "4": 7 }
+    poison-seconds-by-level: { "1": 3, "2": 4, "3": 5, "4": 6 }
+    poison-amplifier-by-level: { "1": 0, "2": 0, "3": 1, "4": 1 }
+    damage-multiplier-by-level: { "1": 1.25, "2": 1.4, "3": 1.6, "4": 1.8 }
+    regeneration-strip-chance-by-level: { "1": 8, "2": 12, "3": 16, "4": 20 }
+  berserk:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  bounce:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  fear:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  frostbite:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  pummel:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  hardened:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  greatsword:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  trickster:
+    cooldown: 20
+    base-chance: 4
+    per-level-chance: 1
+    max-chance: 12
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  gears:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  diminish:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  cleave:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  clarity:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  lavabound:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  wellfed:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  holy:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  angelic:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  valor:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  dodge:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  enderwalker:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  implants:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  metaphysical:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  tank:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  reforged:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  bleed:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  silence:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  inquisitive:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  drunk:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  overload:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  heavy:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  bossslayer:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  bloodlust:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  deathbringer:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  enlighted:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  killaura:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  insanity:
+    damage-multiplier-by-level:
+      "1": 1.04
+      "2": 1.08
+      "3": 1.12
+      "4": 1.16
+      "5": 1.20
+      "6": 1.24
+      "7": 1.28
+      "8": 1.32
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  pulse:
+    chance-by-level:
+      "1": 1
+      "2": 2
+      "3": 3
+      "4": 4
+      "5": 5
+    knockback-strength: 0.95
+    cooldown: 0
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 5 }
+    conflicts-with: []
+  pellet:
+    chance-by-level:
+      "1": 1
+      "2": 2
+    bonus-damage: 4.0
+    knockback-strength: 1.1
+    cooldown: 0
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 4 }
+    conflicts-with: []
+  phantom:
+    chance-by-level:
+      "1": 1
+      "2": 2
+      "3": 3
+      "4": 4
+      "5": 5
+    night-damage-multiplier: 2.0
+    cooldown: 0
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
+    conflicts-with: []
+  mecha:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  flourish:
+    activation-chance: 3
+    duration-seconds: 6
+    cooldown: 0
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 4 }
+    conflicts-with: []
+  trickshot:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  plague:
+    chance-by-level:
+      "1": 1
+      "2": 2
+      "3": 3
+      "4": 4
+      "5": 5
+    radius: 5.0
+    duration-seconds: 4
+    cooldown: 0
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
+    conflicts-with: []
+  trixal:
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  kerbus:
+    chance-by-level:
+      "1": 40
+      "2": 70
+    cooldown: 0
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 8 }
+    conflicts-with: []
+  slingshot:
+    chance-by-level:
+      "1": 1
+      "2": 2
+      "3": 3
+      "4": 4
+      "5": 5
+    cooldown: 0
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
+    conflicts-with: []
+  jeopardy:
+    chance-by-level:
+      "1": 1
+      "2": 2
+      "3": 3
+      "4": 4
+      "5": 5
+    disable-seconds: 5
+    cooldown: 0
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
+    conflicts-with: []
+  static:
+    chance-by-level:
+      "1": 3
+      "2": 6
+      "3": 9
+    extra-gapple-cooldown-seconds: 3
+    cooldown: 0
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 8 }
+    conflicts-with: []
+  hexlock:
+    chance-by-level:
+      "1": 3
+      "2": 6
+      "3": 9
+    duration-seconds: 15
+    cooldown: 0
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 8 }
+    conflicts-with: []
+  siegebreaker:
+    activation-chance: 6
+    duration-seconds: 7
+    extra-durability-damage: 25
+    cooldown: 0
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
+    conflicts-with: []
+  thunderfamine:
+    chance-by-level:
+      "1": 5
+      "2": 9
+    strike-damage: 4.0
+    cooldown: 0
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 8 }
+    conflicts-with: []
+  bulwark:
+    chance-by-level:
+      "1": 7
+      "2": 12
+    immunity-seconds: 3
+    cooldown: 0
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 8 }
+    conflicts-with: []
+  muravieva:
+    chance-by-level:
+      "1": 2
+      "2": 4
+      "3": 6
+      "4": 8
+      "5": 10
+    x5-loot-duration-seconds: 30
+    cooldown: 0
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 8 }
+    conflicts-with: []
+  detonate:
+    chance-by-level:
+      "1": 5
+      "2": 9
+      "3": 13
+      "4": 17
+      "5": 21
+      "6": 25
+      "7": 29
+      "8": 33
+      "9": 37
+    radius: 1
+    cooldown: 0
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 10 }
+    conflicts-with: []
+
+  # --- Advanced / new-set enchants (see file header) ---
+  triadward:
+    max-level: 4
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  hearttide:
+    max-level: 6
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  furylash:
+    max-level: 10
+    cooldown: 0
+    # roll: base=min(100, level), miss luck 1, cap 6
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
+    conflicts-with: []
+  mirrorbrand:
+    max-level: 4
+    cooldown: 0
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
+    conflicts-with: []
+  glimmerfade:
+    max-level: 3
+    cooldown: 0
+    # roll: 2+2*L, miss luck 2, cap 6
+    proc-luck: { enabled: true, luck-per-miss: 2, max-bonus: 6 }
+    conflicts-with: []
+  forewarned:
+    max-level: 3
+    cooldown: 0
+    # roll: 4+3*L, 1, 5
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 5 }
+    conflicts-with: []
+  maliceward:
+    max-level: 5
+    cooldown: 0
+    # roll: 2+2*L, 1, 6
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
+    conflicts-with: []
+  blastward:
+    max-level: 2
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  vilewound:
+    max-level: 5
+    cooldown: 0
+    # roll: 2+2*L, 1, 5
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 5 }
+    conflicts-with: []
+  coupdegrace:
+    max-level: 1
+    cooldown: 0
+    # roll: 5, 1, 4
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 4 }
+    conflicts-with: []
+  harmonicsurge:
+    max-level: 3
+    cooldown: 0
+    # roll: L, 1, 3
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 3 }
+    conflicts-with: []
+  phalanx:
+    max-level: 2
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  stormrite:
+    max-level: 2
+    gapple-block-seconds: 5
+    cooldown: 0
+    # roll: 1+2*L, 1, 3
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 3 }
+    conflicts-with: []
+  aureateburden:
+    max-level: 8
+    # Total CD when 3/20s “sickness” trips: base + max(0, extra - min(level, cap))
+    gap-sickness-cooldown-seconds: 15
+    gap-cooldown-extra-seconds: 18
+    extra-reduction-level-cap: 8
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  netherwarden:
+    max-level: 2
+    # Spawn attempt chance % before miss-streak; default per level: 5 + 2*L
+    chance-by-level:
+      "1": 7
+      "2": 9
+    cooldown: 0
+    # roll: see chance-by-level, 2, 8
+    proc-luck: { enabled: true, luck-per-miss: 2, max-bonus: 8 }
+    conflicts-with: []
+  fetter:
+    max-level: 2
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  asceticaegis:
+    max-level: 5
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  strategist:
+    max-level: 1
+    koth-capture-bonus-per-level: 0.02
+    koth-bonus-level-cap: 8
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  auroraward:
+    max-level: 3
+    cooldown: 0
+    # roll: 3+2*L, 1, 4
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 4 }
+    conflicts-with: []
+  steadfastfury:
+    max-level: 1
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  primalpact:
+    max-level: 4
+    pact-active-seconds: 10
+    cooldown: 0
+    # roll: 3+2*L, 1, 5
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 5 }
+    conflicts-with: []
+  runeswell:
+    max-level: 2
+    axe-proc-bonus-per-level: 2
+    cooldown: 0
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 5 }
+    conflicts-with: []
+  discordverdict:
+    max-level: 1
+    cooldown: 0
+    # roll: 5, 1, 3
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 3 }
+    conflicts-with: []
+  alchemistedge:
+    max-level: 4
+    cooldown: 0
+    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
+    conflicts-with: []
+  supplyscour:
+    max-level: 7
+    cooldown: 0
+    # roll: 1+L, 1, 6
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
+    conflicts-with: []
+  trifoldrend:
+    max-level: 3
+    cooldown: 0
+    # second roll (third hit): 6+2*L, 1, 5
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 5 }
+    conflicts-with: []
+  ironmuzzle:
+    max-level: 1
+    muzzle-seconds: 3
+    cooldown: 0
+    # roll: 2, 1, 1
+    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 1 }
+    conflicts-with: []
+
+  heroicarmor:
+    # Heroic Upgrade Crystal success rate (%).
+    upgrade-success-chance: 65
+
+    # Independent "heroic armor" baseline (separate from full set bonuses).
+    # Weighted like vanilla slot scaling, tuned to be stronger than diamond.
+    helmet-reduction: 0.04
+    chestplate-reduction: 0.10
+    leggings-reduction: 0.08
+    boots-reduction: 0.06
+    total-reduction-cap: 0.32
+
+    # Virtual durability buffer consumed before real item durability.
+    # Effective durability = vanilla leather durability + heroic buffer.
+    helmet-buffer-max: 910
+    chestplate-buffer-max: 1000
+    leggings-buffer-max: 935
+    boots-buffer-max: 686
+
+    # PvP durability reinforcement chances (refund 1 durability on hit).
+    helmet-durability-refund-chance: 45
+    chestplate-durability-refund-chance: 65
+    leggings-durability-refund-chance: 55
+    boots-durability-refund-chance: 50

@@ -15,7 +15,9 @@ use ecstsy\Glacia\commands\sub\factions\BankSubCommand;
 use ecstsy\Glacia\commands\sub\factions\claim\ClaimSubCommand;
 use ecstsy\Glacia\commands\sub\factions\claim\UnClaimSubCommand;
 use ecstsy\Glacia\commands\sub\factions\CreateSubCommand;
+use ecstsy\Glacia\commands\sub\factions\ContributionSubCommand;
 use ecstsy\Glacia\commands\sub\factions\DemoteSubCommand;
+use ecstsy\Glacia\commands\sub\factions\FactionAuditSubCommand;
 use ecstsy\Glacia\commands\sub\factions\DescriptionSubCommand;
 use ecstsy\Glacia\commands\sub\factions\DisbandSubCommand;
 use ecstsy\Glacia\commands\sub\factions\HelpSubCommand;
@@ -62,11 +64,13 @@ final class FactionCommand extends BaseCommand {
         $this->registerSubCommand(new EnemySubCommand($plugin, "enemy", "Declare another faction as enemy", ["e"]));
         $this->registerSubCommand(new ChatSubCommand($plugin, "chat", "Toggle faction related chats", ["c"]));
         $this->registerSubCommand(new BankSubCommand($plugin, "bank", "Manage your faction bank"));
+        $this->registerSubCommand(new ContributionSubCommand($plugin, "contribute", "View or deposit faction contribution", ["contrib"]));
+        $this->registerSubCommand(new FactionAuditSubCommand($plugin, "audit", "View recent faction activity", ["log", "logs", "history"]));
         $this->registerSubCommand(new HelpSubCommand($plugin, "help", "Show list of faction commands"));
         $this->registerSubCommand(new DemoteSubCommand($plugin, "demote", "Demote a player in your faction"));
         $this->registerSubCommand(new PromoteSubCommand($plugin, "promote", "Promote a player in your faction"));
         $this->registerSubCommand(new KickSubCommand($plugin, "kick", "Kick a player from your faction"));
-        $this->registerSubCommand(new DescriptionSubCommand($plugin, "description", "Set your faction's description"));
+        $this->registerSubCommand(new DescriptionSubCommand($plugin, "description", "Set your faction's description", ["desc"]));
         $this->registerSubCommand(new RenameSubCommand($plugin, "rename", "Rename your faction"));
         $this->registerSubCommand(new TransferSubCommand($plugin, "transfer", "Transfer leadership of your faction"));
         $this->registerSubCommand(new TopSubCommand($plugin, "top", "View the top factions"));
@@ -86,7 +90,7 @@ final class FactionCommand extends BaseCommand {
         $session = Loader::getPlayerManager()->getSession($sender);
         $facName = $session?->getFaction()?->getName() ?? "GLACIA &fFACTIONS";
 
-        $header = C::colorize("&r&8&l-=-=-=&7&l-=-=-= &b{$facName} &7&l-=-=-=&8&l-=-=-=&r");
+        $header = C::colorize("&r&8-=-=-=&7-=-=-= &b{$facName} &7-=-=-=&8-=-=-=&r");
         $sender->sendMessage($header);
 
         $unique = [];

@@ -16,7 +16,9 @@ CREATE TABLE IF NOT EXISTS glacia_players (
     collection TEXT,
     kills INT default 0,
     deaths INT default 0,
-    slot_credits INT default 0
+    slot_credits INT default 0,
+    item_flip_credits INT default 0,
+    title TEXT DEFAULT NULL
 );
 -- # }
 
@@ -57,8 +59,10 @@ WHERE username IS NOT NULL AND username != '';
 -- #    :kills int
 -- #    :deaths int
 -- #    :slot_credits int
-INSERT OR REPLACE INTO glacia_players (uuid, username, balance, cooldowns, faction_id, faction_role, power, rank, settings, buffs, sell_multiplier, collection, kills, deaths, slot_credits)
-VALUES (:uuid, :username, :balance, :cooldowns, :faction_id, :faction_role, :power, :rank, :settings, :buffs, :sell_multiplier, :collection, :kills, :deaths, :slot_credits);
+-- #    :item_flip_credits int
+-- #    :title ?string
+INSERT OR IGNORE INTO glacia_players (uuid, username, balance, cooldowns, faction_id, faction_role, power, rank, settings, buffs, sell_multiplier, collection, kills, deaths, slot_credits, item_flip_credits, title)
+VALUES (:uuid, :username, :balance, :cooldowns, :faction_id, :faction_role, :power, :rank, :settings, :buffs, :sell_multiplier, :collection, :kills, :deaths, :slot_credits, :item_flip_credits, :title);
 -- # }
 
 -- # { update
@@ -77,6 +81,8 @@ VALUES (:uuid, :username, :balance, :cooldowns, :faction_id, :faction_role, :pow
 -- #   :kills int
 -- #   :deaths int
 -- #   :slot_credits int
+-- #   :item_flip_credits int
+-- #   :title ?string
 UPDATE glacia_players
 SET username = :username, 
     balance = :balance, 
@@ -91,7 +97,9 @@ SET username = :username,
     collection = :collection,
     kills = :kills,
     deaths = :deaths,
-    slot_credits = :slot_credits
+    slot_credits = :slot_credits,
+    item_flip_credits = :item_flip_credits,
+    title = :title
 WHERE uuid = :uuid;
 -- # }
 
@@ -100,6 +108,11 @@ WHERE uuid = :uuid;
 DELETE FROM glacia_players 
 WHERE uuid = :uuid;
 -- #  }
+
+-- # { username_by_uuid
+-- #    :uuid string
+SELECT username FROM glacia_players WHERE uuid = :uuid LIMIT 1;
+-- # }
 -- # }
 
 -- # { glacia_auction_house_listings
@@ -314,6 +327,7 @@ CREATE TABLE IF NOT EXISTS glacia_faction_roles (
     manage_warps  INTEGER DEFAULT 0,
     change_description  INTEGER DEFAULT 0,
     invite_players  INTEGER DEFAULT 0,
+    view_audit_log  INTEGER DEFAULT 0,
     PRIMARY KEY (faction_id, role_key)
 );
 -- # }
@@ -344,8 +358,9 @@ SELECT * FROM glacia_faction_roles;
 -- #    :manage_warps int
 -- #    :change_description int
 -- #    :invite_players int
-INSERT OR REPLACE INTO glacia_faction_roles (faction_id, role_key, kill_mobs, open_containers, interact_doors, pickup, break, place, use_buckets, change_permissions, demote_users, promote_users, kick_users, use_redstone, rename_faction, faction_home, break_spawners, change_settings, manage_warps, change_description, invite_players)
-VALUES (:faction_id, :role_key, :kill_mobs, :open_containers, :interact_doors, :pickup, :break, :place, :use_buckets, :change_permissions, :demote_users, :promote_users, :kick_users, :use_redstone, :rename_faction, :faction_home, :break_spawners, :change_settings, :manage_warps, :change_description, :invite_players);
+-- #    :view_audit_log int
+INSERT OR REPLACE INTO glacia_faction_roles (faction_id, role_key, kill_mobs, open_containers, interact_doors, pickup, break, place, use_buckets, change_permissions, demote_users, promote_users, kick_users, use_redstone, rename_faction, faction_home, break_spawners, change_settings, manage_warps, change_description, invite_players, view_audit_log)
+VALUES (:faction_id, :role_key, :kill_mobs, :open_containers, :interact_doors, :pickup, :break, :place, :use_buckets, :change_permissions, :demote_users, :promote_users, :kick_users, :use_redstone, :rename_faction, :faction_home, :break_spawners, :change_settings, :manage_warps, :change_description, :invite_players, :view_audit_log);
 -- # }
 
 -- # { update
@@ -370,6 +385,7 @@ VALUES (:faction_id, :role_key, :kill_mobs, :open_containers, :interact_doors, :
 -- #    :manage_warps int
 -- #    :change_description int
 -- #    :invite_players int
+-- #    :view_audit_log int
 UPDATE glacia_faction_roles
 SET kill_mobs = :kill_mobs,
     open_containers = :open_containers,
@@ -389,7 +405,8 @@ SET kill_mobs = :kill_mobs,
     change_settings = :change_settings,
     manage_warps = :manage_warps,
     change_description = :change_description,
-    invite_players = :invite_players
+    invite_players = :invite_players,
+    view_audit_log = :view_audit_log
 WHERE faction_id = :faction_id AND role_key = :role_key;
 -- # }
 

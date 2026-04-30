@@ -113,7 +113,6 @@ final class CollectScreen extends BaseScreen
                 $player->getInventory()->addItem($clickedItem);
                 $session->removeItemFromCollection($clickedItem);
                 $inventory->removeItem($clickedItem);
-                $player->removeCurrentWindow();
             } else {
                 $player->sendToastNotification(
                     C::colorize(Loader::SERVER_PREFIX),

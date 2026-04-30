@@ -149,7 +149,7 @@ final class GKitRepository
                 continue;
             }
 
-            $item = RewardResolver::resolveItem(self::applyLevelScaling($entry, $kit, $level));
+            $item = RewardResolver::resolveItem(self::applyKitItemDefaults(self::applyLevelScaling($entry, $kit, $level), $kit));
             if ($item !== null) {
                 $resolved[] = $item;
             }
@@ -163,7 +163,7 @@ final class GKitRepository
                 continue;
             }
 
-            $item = RewardResolver::resolveItem(self::applyLevelScaling($entry, $kit, $level));
+            $item = RewardResolver::resolveItem(self::applyKitItemDefaults(self::applyLevelScaling($entry, $kit, $level), $kit));
             if ($item !== null) {
                 $resolved[] = $item;
             }
@@ -211,6 +211,18 @@ final class GKitRepository
 
         $maxLevel = self::getMaxLevel($kit);
         $current = self::getLevel($session, $kitId);
+        if ($current >= $maxLevel) {
+            $warlord = WarlordRepository::getForKit($kit);
+            $display = (string) ($warlord["display"] ?? $kit["display"] ?? ucfirst($kitId));
+            $player->sendMessage(C::colorize(str_replace(
+                ["{display}", "{gkit}", "{level}"],
+                [$display, $display, (string) $maxLevel],
+                (string) ($warlord["gem-max-level-message"] ?? "&r&c{display} is already at max level (&f{level}&c).")
+            )));
+            PlayerUtils::playSound($player, "note.bass");
+            return false;
+        }
+
         $newLevel = min($maxLevel, $current + $amount);
         self::setLevel($session, $kitId, $newLevel);
 
@@ -333,17 +345,37 @@ final class GKitRepository
                 ? $levelConfig["enchantments"][$enchantKey]
                 : [];
 
-            $baseLevel = GeneralUtils::parseRandomNumber($mappedLevelData["minimum-level"] ?? $mappedLevelData["min-level"] ?? $enchantment["level"] ?? $enchantment["base-level"] ?? 1);
-            $maxLevel = GeneralUtils::parseRandomNumber($mappedLevelData["maximum-level"] ?? $mappedLevelData["max-level"] ?? $enchantment["max-level"] ?? $baseLevel);
-            $finalLevel = max(1, $baseLevel);
+            $baseLevel = max(1, (int) GeneralUtils::parseRandomNumber(
+                $mappedLevelData["minimum-level"]
+                ?? $mappedLevelData["min-level"]
+                ?? $mappedLevelData["minimum"]
+                ?? $mappedLevelData["min"]
+                ?? $enchantment["base-level"]
+                ?? $enchantment["minimum-level"]
+                ?? $enchantment["min-level"]
+                ?? $enchantment["level"]
+                ?? 1
+            ));
+            $maxLevel = max($baseLevel, (int) GeneralUtils::parseRandomNumber(
+                $mappedLevelData["maximum-level"]
+                ?? $mappedLevelData["max-level"]
+                ?? $mappedLevelData["maximum"]
+                ?? $mappedLevelData["max"]
+                ?? $enchantment["maximum-level"]
+                ?? $enchantment["max-level"]
+                ?? $enchantment["max"]
+                ?? $baseLevel
+            ));
 
-            if ($gkitLevel > 1 && $maxLevel > $baseLevel && $chancePerLevel > 0) {
-                for ($candidate = $baseLevel + 1; $candidate <= $maxLevel; $candidate++) {
-                    $stepChance = min(95, (($gkitLevel - 1) * $chancePerLevel) - (($candidate - $baseLevel - 1) * 10));
-                    if ($stepChance <= 0 || mt_rand(1, 100) > $stepChance) {
-                        break;
-                    }
-                    $finalLevel = $candidate;
+            // Respect configured min/max as an actual roll range instead of pinning at level 1.
+            $finalLevel = $maxLevel > $baseLevel ? mt_rand($baseLevel, $maxLevel) : $baseLevel;
+
+            // Optional "upgrade chance per level" can still add extra upward pressure at higher gkit levels.
+            if ($gkitLevel > 1 && $chancePerLevel > 0 && $finalLevel < $maxLevel) {
+                $extraChance = min(90, ($gkitLevel - 1) * $chancePerLevel);
+                while ($finalLevel < $maxLevel && mt_rand(1, 100) <= $extraChance) {
+                    $finalLevel++;
+                    $extraChance = max(5, $extraChance - 12);
                 }
             }
 
@@ -379,6 +411,33 @@ final class GKitRepository
     private static function getCooldownKey(string $kitId): string
     {
         return "gkit_" . strtolower($kitId);
+    }
+
+    /**
+     * Allow root-level gkit flags like "heroic: true" to apply to entries
+     * unless the entry explicitly overrides it.
+     *
+     * @param array<string, mixed> $entry
+     * @param array<string, mixed> $kit
+     * @return array<string, mixed>
+     */
+    private static function applyKitItemDefaults(array $entry, array $kit): array
+    {
+        foreach (["heroic", "is_heroic", "heroic_armor"] as $heroicKey) {
+            if (array_key_exists($heroicKey, $entry)) {
+                return $entry;
+            }
+        }
+
+        if (array_key_exists("heroic", $kit)) {
+            $entry["heroic"] = $kit["heroic"];
+        } elseif (array_key_exists("is_heroic", $kit)) {
+            $entry["heroic"] = $kit["is_heroic"];
+        } elseif (array_key_exists("heroic_armor", $kit)) {
+            $entry["heroic"] = $kit["heroic_armor"];
+        }
+
+        return $entry;
     }
 
     /**

@@ -1,0 +1,30 @@
+settings:
+  enabled: true
+  rotation-seconds: 86400
+  availability-seconds: 21600
+  start-immediately: true
+  send-to-collection-if-full: true
+  required-permission: ""
+  broadcasts:
+    new-listing: "&r&d&lAdmin Bazaar &8» &f{item} &7is now available for &f{price}&7 for &f{duration}&7. Use &f/ab&7!"
+    purchased: "&r&d&lAdmin Bazaar &8» &f{player} &7purchased &f{item}&7."
+admin-coins:
+  voucher:
+    material: "sunflower"
+    name: "&r&l&6Admin Coin Voucher"
+    lore:
+      - "&r&7Right-click to redeem this voucher"
+      - "&r&7for &f{amount} Admin Coins&7."
+listings:
+  aurora_admin_pick:
+    enabled: true
+    display-name: "&r&dAurora Admin Pick"
+    chance: 100
+    permission: ""
+    purchase-once: true
+    price:
+      currency: "money"
+      amount: 2500000
+    reward:
+      type: lootbox
+      id: "lootbox_aurora"

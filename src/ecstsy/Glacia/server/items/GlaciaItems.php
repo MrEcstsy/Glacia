@@ -34,6 +34,7 @@ final class GlaciaItems {
         self::initDisguiseItems();
         self::initRuneItems();
         self::initCategories();
+        CustomMobItemManager::loadFromConfig();
     }
 
     public static function getCategoryItems(string $category): array {
@@ -56,6 +57,17 @@ final class GlaciaItems {
         }
 
         return $displays;
+    }
+
+    /**
+     * @param string[] $items
+     */
+    public static function registerCategory(string $category, string $display, array $items): void
+    {
+        self::$categories[strtolower(trim($category))] = [
+            "display" => $display,
+            "items" => array_values(array_unique(array_filter($items, static fn(string $id): bool => $id !== ""))),
+        ];
     }
 
     private static function initCategories(): void {
@@ -88,6 +100,72 @@ final class GlaciaItems {
                     "tempest_gateway",
                 ],
             ],
+            "economy" => [
+                "display" => "Economy",
+                "items" => [
+                    "bank_note",
+                    "xpnote",
+                    "bloody_note",
+                    "admin_coin_note",
+                ],
+            ],
+            "enchants" => [
+                "display" => "Enchant Items",
+                "items" => [
+                    "enchantment_book",
+                    "orb",
+                    "whitescroll",
+                    "holy_whitescroll",
+                    "holy_water",
+                    "blackscroll",
+                    "renametag",
+                    "transmog_scroll",
+                    "transmog",
+                    "block_tracker",
+                    "kill_tracker",
+                    "mob_tracker",
+                    "xp_tracker",
+                    "random_book",
+                    "charm_shard",
+                    "charm_dust",
+                ],
+            ],
+            "crates" => [
+                "display" => "Crates & Chests",
+                "items" => [
+                    "ethereal_simple_chest",
+                    "ethereal_unique_chest",
+                    "ethereal_elite_chest",
+                    "ethereal_exotic_chest",
+                    "ethereal_legendary_chest",
+                    "ethereal_godly_chest",
+                    "mysterymobspawner",
+                    "heroicmysterymobspawner",
+                    "collection_chest",
+                ],
+            ],
+            "tools" => [
+                "display" => "Tools & Utilities",
+                "items" => [
+                    "max_home_increase",
+                    "slot_ticket",
+                    "heroic_slot_ticket",
+                    "item_flip_credit_voucher",
+                    "faction_xp_booster",
+                    "envoy_beacon",
+                    "chunk_buster",
+                    "ocean_buster",
+                ],
+            ],
+            "bosses" => [
+                "display" => "Boss & Events",
+                "items" => [
+                    "boss_astral_devourer",
+                    "boss_titan_knight",
+                    "boss_glacial_hydra",
+                    "rift_summoner",
+                ],
+            ],
             "disguises" => [
                 "display" => "Disguises",
                 "items" => array_map(
@@ -106,6 +184,22 @@ final class GlaciaItems {
                     "pet_duration_rune",
                     "scholar_rune",
                     "envoy_vacuum_rune",
+                    "raider_edge_rune",
+                    "null_field_rune",
+                    "echo_cache_rune",
+                    "hemoguard_rune",
+                    "chronoshift_rune",
+                    "merchant_sigil_rune",
+                    "tidehook_rune",
+                    "solitary_hunt_rune",
+                    "envoy_echo_rune",
+                    "swiftbane_rune",
+                    "sigil_of_surge_rune",
+                    "reaper_oath_rune",
+                    "bottomless_gullet_rune",
+                    "stormward_rune",
+                    "beastclock_rune",
+                    "harvester_mark_rune",
                     "rune_remover",
                 ],
             ],
@@ -249,6 +343,102 @@ final class GlaciaItems {
                     "rune_mode" => "passive",
                 ],
             ],
+            "raider_edge_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&6Raider's Edge Rune",
+                "lore" => ["&r&8Applied Rune","","&r&75% chance to duplicate zone mob drops.","&r&7Apply to weapons."],
+                "nbt" => ["glaciaItem" => "rune","rune_id" => "raider_edge","rune_mode" => "applied"],
+            ],
+            "null_field_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&5Null Field Rune",
+                "lore" => ["&r&8Applied Rune","","&r&71% chance to purge potion effects","&r&7from nearby enemies and deal x2 damage.","&r&7Apply to armor."],
+                "nbt" => ["glaciaItem" => "rune","rune_id" => "null_field","rune_mode" => "applied"],
+            ],
+            "echo_cache_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&dEcho Cache Rune",
+                "lore" => ["&r&8Passive Rune","","&r&71% chance to preserve configured consumables","&r&7such as lootboxes when used."],
+                "nbt" => ["glaciaItem" => "rune","rune_id" => "echo_cache","rune_mode" => "passive"],
+            ],
+            "hemoguard_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&cHemoguard Rune",
+                "lore" => ["&r&8Applied Rune","","&r&7Fully negates incoming lifesteal effects.","&r&7Apply to armor."],
+                "nbt" => ["glaciaItem" => "rune","rune_id" => "hemoguard","rune_mode" => "applied"],
+            ],
+            "chronoshift_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&bChronoshift Rune",
+                "lore" => ["&r&8Passive Rune","","&r&7Faction XP boosters gain +20% duration."],
+                "nbt" => ["glaciaItem" => "rune","rune_id" => "chronoshift","rune_mode" => "passive"],
+            ],
+            "merchant_sigil_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&eMerchant Sigil Rune",
+                "lore" => ["&r&8Passive Rune","","&r&7Doubles /sell payouts while in inventory."],
+                "nbt" => ["glaciaItem" => "rune","rune_id" => "merchant_sigil","rune_mode" => "passive"],
+            ],
+            "tidehook_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&3Tidehook Rune",
+                "lore" => ["&r&8Applied Rune","","&r&7Improves fishing spawn speed by x1.5.","&r&7Apply to rods."],
+                "nbt" => ["glaciaItem" => "rune","rune_id" => "tidehook","rune_mode" => "applied"],
+            ],
+            "solitary_hunt_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&aSolitary Hunt Rune",
+                "lore" => ["&r&8Applied Rune","","&r&7If alone in chunk: zone spawns x2 faster","&r&7and zone mob XP is multiplied by x1.5.","&r&7Apply to armor."],
+                "nbt" => ["glaciaItem" => "rune","rune_id" => "solitary_hunt","rune_mode" => "applied"],
+            ],
+            "envoy_echo_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&9Envoy Echo Rune",
+                "lore" => ["&r&8Passive Rune","","&r&72% chance for envoys to drop one extra reward."],
+                "nbt" => ["glaciaItem" => "rune","rune_id" => "envoy_echo","rune_mode" => "passive"],
+            ],
+            "swiftbane_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&fSwiftbane Rune",
+                "lore" => ["&r&8Applied Rune","","&r&7Immune to slowness.","&r&7Adds +3% custom enchant proc chance.","&r&7Apply to armor."],
+                "nbt" => ["glaciaItem" => "rune","rune_id" => "swiftbane","rune_mode" => "applied"],
+            ],
+            "sigil_of_surge_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&bSigil of Surge Rune",
+                "lore" => ["&r&8Applied Rune","","&r&7All custom enchant activations gain +1% chance.","&r&7Apply to armor."],
+                "nbt" => ["glaciaItem" => "rune","rune_id" => "sigil_of_surge","rune_mode" => "applied"],
+            ],
+            "reaper_oath_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&4Reaper's Oath Rune",
+                "lore" => ["&r&8Applied Rune","","&r&72% chance to execute a zone boss instantly.","&r&7Apply to weapons."],
+                "nbt" => ["glaciaItem" => "rune","rune_id" => "reaper_oath","rune_mode" => "applied"],
+            ],
+            "bottomless_gullet_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&2Bottomless Gullet Rune",
+                "lore" => ["&r&8Passive Rune","","&r&7Prevents hunger loss and reduces","&r&7auction listing tax by 20%."],
+                "nbt" => ["glaciaItem" => "rune","rune_id" => "bottomless_gullet","rune_mode" => "passive"],
+            ],
+            "stormward_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&7Stormward Rune",
+                "lore" => ["&r&8Applied Rune","","&r&7Immune to Stormcaller lightning ability.","&r&7Take 10% less combat damage.","&r&7Apply to armor."],
+                "nbt" => ["glaciaItem" => "rune","rune_id" => "stormward","rune_mode" => "applied"],
+            ],
+            "beastclock_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&6Beastclock Rune",
+                "lore" => ["&r&8Passive Rune","","&r&7All pet cooldowns are reduced by 10%."],
+                "nbt" => ["glaciaItem" => "rune","rune_id" => "beastclock","rune_mode" => "passive"],
+            ],
+            "harvester_mark_rune" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&dHarvester Mark Rune",
+                "lore" => ["&r&8Applied Rune","","&r&7Inquisitive V style rune.","&r&7Zone mob rewards are multiplied by x2.5","&r&7while using this weapon."],
+                "nbt" => ["glaciaItem" => "rune","rune_id" => "harvester_mark","rune_mode" => "applied"],
+            ],
             "rune_remover" => [
                 "material" => VanillaItems::GOLD_NUGGET(),         
                 "name" => "&r&l&fRune Scrubber",
@@ -341,6 +531,19 @@ final class GlaciaItems {
                 ],
                 'nbt' => ['glaciaItem' => 'bloodynote'],
             ],
+            'admin_coin_note' => [
+                'material' => StringToItemParser::getInstance()->parse("sunflower") ?? VanillaItems::PAPER(),
+                'name' => '&r&l&6Admin Coin Voucher &r&7(Right Click)',
+                'lore' => [
+                    '&r&8-----------------',
+                    '&r&fAdmin Coins: &6{amount}',
+                    '&r&fSigner: &e{signer}',
+                    '&r&8-----------------',
+                    '&r&7Redeem this voucher to receive',
+                    '&r&7Admin Coins for special deals.',
+                ],
+                'nbt' => ['glaciaItem' => 'admin_coin_note', 'amount' => '{rawAmount}', 'signer' => '{signer}'],
+            ],
         ];
     }
 
@@ -384,6 +587,31 @@ final class GlaciaItems {
                 ],
                 'nbt' => ["glaciaItem" => 'whitescroll'],
             ],
+            'holy_whitescroll' => [
+                'material' => StringToItemParser::getInstance()->parse("paper"),
+                'name' => '&r&f&lHoly White Scroll',
+                'lore' => [
+                    "&r&7Can only be applied to gear that",
+                    "&r&7already has a White Scroll.",
+                    "",
+                    "&r&7Protects the item on death and",
+                    "&r&7consumes 1 Holy life.",
+                    "",
+                    "&r&7Max Holy lives per item: &f3",
+                ],
+                'nbt' => ["glaciaItem" => 'holy_whitescroll'],
+            ],
+            'holy_water' => [
+                'material' => StringToItemParser::getInstance()->parse("water_bucket"),
+                'name' => '&r&b&lHoly Water',
+                'lore' => [
+                    "&r&7Revitalizes semi-corrupt gear by",
+                    "&r&7boosting Holy life cap from &f3 &r&7to &f4&7.",
+                    "",
+                    "&r&7Apply to eligible gear or weapons.",
+                ],
+                'nbt' => ["glaciaItem" => 'holy_water'],
+            ],
             'blackscroll' => [
                 'material' => VanillaItems::INK_SAC(),
                 'name' => '&r&f&lBlack Scroll',
@@ -424,6 +652,44 @@ final class GlaciaItems {
                     '&r&ePlace scroll on item to apply.',
                 ],
                 'nbt' => ['glaciaItem' => 'transmog'],
+            ],
+            'heroic_upgrade' => [
+                'material' => VanillaItems::NETHER_STAR(),
+                'name' => '&r&4&lHeroic Upgrade Crystal',
+                'lore' => [
+                    '&r&7Infuse an armor piece with heroic power.',
+                    '&r&7Applies a virtual durability buffer and',
+                    '&r&7heroic defense scaling separate from set bonuses.',
+                    '',
+                    '&r&c{success}% Success Rate',
+                    "&r&7Drag n' Drop onto armor to apply.",
+                ],
+                'nbt' => ['glaciaItem' => 'heroic_upgrade', 'success' => '{success}'],
+            ],
+            'charm_shard' => [
+                'material' => VanillaItems::AMETHYST_SHARD(),
+                'name' => '&r&d&lCharm Shard',
+                'lore' => [
+                    '&r&7Levels an enchantment book up by &f+1',
+                    '&r&7with a success-only roll.',
+                    '&r&7If it fails, the target book is destroyed.',
+                    '',
+                    '&r&d{effective_success}% Success Rate',
+                    "&r&7Drag n' Drop onto an enchantment book.",
+                ],
+                'nbt' => ['glaciaItem' => 'charm_shard', 'success' => '{success}', 'bonus_success' => '{bonus_success}'],
+            ],
+            'charm_dust' => [
+                'material' => VanillaItems::GLOWSTONE_DUST(),
+                'name' => '&r&e&lCharm Dust',
+                'lore' => [
+                    '&r&7Adds bonus success to a &dCharm Shard&7.',
+                    '&r&7Use to improve shard upgrade odds.',
+                    '',
+                    '&r&e+{bonus}% Shard Success',
+                    "&r&7Drag n' Drop onto a Charm Shard.",
+                ],
+                'nbt' => ['glaciaItem' => 'charm_dust', 'bonus' => '{bonus}'],
             ],
             'block_tracker' => [
                 'material' => VanillaItems::PAPER(),
@@ -487,13 +753,57 @@ final class GlaciaItems {
                 'material' => VanillaItems::NETHER_STAR(),
                 'name' => '&r&l&5Astral Devourer',
                 'lore' => [
-                    '&r&7&oA being born from vollapsed stars',
-                    "&r&7&oIt feeds on energy, time, and souls.",
+                    '&r&7A warzone entity classified as &cunstable&7.',
                     '',
-                    '&r&l&5DIFFICULTY',
-                    '&r&5» &fLEGENDARY'
+                    '&r&l&5THREAT PROFILE',
+                    '&r&7A remnant of a collapsed star, warped into existence.',
+                    '&r&7It feeds on energy, distorts time, and consumes',
+                    '&r&7anything caught within its reach.',
+                    '',
+                    '&r&7Each soul it devours strengthens its presence,',
+                    '&r&7pulling reality closer to its collapse',
+                    '',
+                    '&r&l&5STATUS',
+                    '&r&5&lLegendary'
                 ],
                 'nbt' => ["glaciaItem" => 'bossSpawn', "boss" => 'astral_devourer']
+            ],
+            "boss_titan_knight" => [
+                'material' => VanillaItems::NETHER_STAR(),
+                'name' => '&r&l&8Astral Sovereign',
+                'lore' => [
+                    '&r&7A fragmented cosmic warlord bound to a fractured sigil.',
+                    '',
+                    '&r&l&8THREAT PROFILE',
+                    '&r&7A hovering dark figure of broken armor and a',
+                    '&r&7violent astral core, capable of warping gravity',
+                    '&r&7and shattering the ground around it.',
+                    '',
+                    '&r&7Requires the server resource pack and Customies',
+                    '&r&7to render its custom boss model.',
+                    '',
+                    '&r&l&8STATUS',
+                    '&r&8&lLegendary'
+                ],
+                'nbt' => ["glaciaItem" => 'bossSpawn', "boss" => 'titan_knight']
+            ],
+            "boss_glacial_hydra" => [
+                'material' => VanillaItems::NETHER_STAR(),
+                'name' => '&r&l&bGlacial Hydra',
+                'lore' => [
+                    '&r&7An ancient hydra infused with void frost and rage.',
+                    '',
+                    '&r&l&bTHREAT PROFILE',
+                    '&r&7Three fractured heads. One relentless body.',
+                    '&r&7Frost slows, void pulls, and rage overwhelms.',
+                    '',
+                    '&r&7Uses the new multi-head hydra boss logic.',
+                    '&r&7A custom Bedrock model can be layered on later.',
+                    '',
+                    '&r&l&bSTATUS',
+                    '&r&b&lGodly'
+                ],
+                'nbt' => ["glaciaItem" => 'bossSpawn', "boss" => 'glacial_hydra']
             ],
             "rift_summoner" => [
                 'material' => VanillaItems::PHANTOM_MEMBRANE(),
@@ -771,6 +1081,16 @@ final class GlaciaItems {
                 ],
                 'nbt' => ['glaciaItem' => 'heroic_slot_ticket'],
             ],
+            "item_flip_credit_voucher" => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&l&6Item Flip Credit Voucher',
+                'lore' => [
+                    '&r&7Right-click to claim &f{credits} &7Item Flip credits.',
+                    '',
+                    '&r&eUse these in &f/icf &7matches.',
+                ],
+                'nbt' => ['glaciaItem' => 'item_flip_credit_voucher', 'credits' => '{credits}'],
+            ],
             "faction_xp_booster" => [
                  "material" => VanillaItems::EMERALD(), 
                  'name' => "&r&l&bFaction XP Booster &r&7(Right Click)",
@@ -816,6 +1136,22 @@ final class GlaciaItems {
                     "&r&ePlace to activate."
                 ],
                 "nbt" => ['glaciaItem' => 'chunk_buster'],
+            ],
+            "ocean_buster" => [
+                "material" => VanillaBlocks::SPONGE()->asItem(),
+                "name" => "&r&l&3Ocean Chunk Buster",
+                "lore" => [
+                    "&r&7Advanced trenching utility that",
+                    "&r&7drains all water in an entire chunk.",
+                    "",
+                    "&r&3Limitations",
+                    "&r&f * &r&7Overworld only.",
+                    "&r&f * &r&7Wilderness by default.",
+                    "&r&f * &r&7Requires Use Sponges permission in claims.",
+                    "",
+                    "&r&ePlace to activate."
+                ],
+                "nbt" => ['glaciaItem' => 'ocean_buster'],
             ],
             "collection_chest" => [
                 "material" => VanillaBlocks::CHEST()->asItem(),
@@ -1094,11 +1430,12 @@ final class GlaciaItems {
                     "material" => clone $materialData["material"],
                     "name" => "&r&l" . $materialData["display"] . " &fGen Bucket &r&7(" . $directionName . ")",
                     "lore" => [
-                        "&r&7Right-click a block to generate",
+                        "&r&7Sneak + right-click a block to generate",
                         "&r" . $materialData["display"] . " &r&7toward &f" . $directionName . "&7.",
-                        "&r&7It will continue until blocked.",
+                        "&r&7It keeps running until blocked, stopped,",
+                        "&r&7or until you run out of money.",
                         "",
-                        "&r&eOne use per activation.",
+                        "&r&eReusable item. Cost is charged per block placed.",
                     ],
                     "nbt" => [
                         "glaciaItem" => "gen_bucket",
@@ -1113,7 +1450,7 @@ final class GlaciaItems {
     private static function initCustomArmor(): void {
         GlaciaItemFactory::$definitions += [
             "phantom_helmet" => [
-                'material' => VanillaItems::DIAMOND_HELMET(),
+                'material' => VanillaItems::LEATHER_CAP(),
                 'name' => '&r&l&5Dreadveil Hood',
                 'lore' => [
                     '&r&5&oThe fabled hood of the Dreadveil.',
@@ -1130,7 +1467,7 @@ final class GlaciaItems {
                 ],
             ],
             "phantom_chestplate" => [
-                'material' => VanillaItems::DIAMOND_CHESTPLATE(),
+                'material' => VanillaItems::LEATHER_TUNIC(),
                 'name' => '&r&l&5Dreadveil Shroud',
                 'lore' => [
                     '&r&5&oThe legendary shroud of the Dreadveil.',
@@ -1147,7 +1484,7 @@ final class GlaciaItems {
                 ],
             ],
             'phantom_leggings' => [
-                'material' => VanillaItems::DIAMOND_LEGGINGS(),
+                'material' => VanillaItems::LEATHER_PANTS(),
                 'name' => '&r&l&5Dreadveil Legwraps',
                 'lore' => [
                     '&r&5&oThe shadowwoven legwraps of the Dreadveil.',
@@ -1164,7 +1501,7 @@ final class GlaciaItems {
                 ],
             ],
             'phantom_boots' => [
-                'material' => VanillaItems::DIAMOND_BOOTS(),
+                'material' => VanillaItems::LEATHER_BOOTS(),
                 'name' => '&r&l&5Dreadveil Treads',
                 'lore' => [
                     '&r&5&oThe silent treads of the Dreadveil.',
@@ -1199,7 +1536,7 @@ final class GlaciaItems {
                 ],
             ],
             "yeti_helmet" => [
-                'material' => VanillaItems::DIAMOND_HELMET(),
+                'material' => VanillaItems::LEATHER_CAP(),
                 'name' => '&r&l&bFrostbound Visage',
                 'lore' => [
                     '&r&b&oThe savage visage of the Frostbound.',
@@ -1217,7 +1554,7 @@ final class GlaciaItems {
                 ],
             ],
             "yeti_chestplate" => [
-                'material' => VanillaItems::DIAMOND_CHESTPLATE(),
+                'material' => VanillaItems::LEATHER_TUNIC(),
                 'name' => '&r&l&bFrostbound Carapace',
                 'lore' => [
                     '&r&b&oThe impermeable chestplate of the Frostbound.',
@@ -1235,7 +1572,7 @@ final class GlaciaItems {
                 ],
             ],
             'yeti_leggings' => [
-                'material' => VanillaItems::DIAMOND_LEGGINGS(),
+                'material' => VanillaItems::LEATHER_PANTS(),
                 'name' => '&r&l&bFrostbound Leggings',
                 'lore' => [
                     '&r&b&oThe frost-lined leggings of the Frostbound.',
@@ -1253,7 +1590,7 @@ final class GlaciaItems {
                 ],
             ],
             'yeti_boots' => [
-                'material' => VanillaItems::DIAMOND_BOOTS(),
+                'material' => VanillaItems::LEATHER_BOOTS(),
                 'name' => '&r&l&bFrostbound Greaves',
                 'lore' => [
                     '&r&b&oBoots hardened by the deepest frost.',
@@ -1288,7 +1625,7 @@ final class GlaciaItems {
                 ],
             ],
             "yijki_helmet" => [
-                'material' => VanillaItems::DIAMOND_HELMET(),
+                'material' => VanillaItems::LEATHER_CAP(),
                 'name' => '&r&l&3Stormcaller Mask',
                 'lore' => [
                     '&r&3&oThe thunderbound mask of the Stormcaller,',
@@ -1307,7 +1644,7 @@ final class GlaciaItems {
                 ],
             ],
             "yijki_chestplate" => [
-                'material' => VanillaItems::DIAMOND_CHESTPLATE(),
+                'material' => VanillaItems::LEATHER_TUNIC(),
                 'name' => '&r&l&3Stormcaller Mantle',
                 'lore' => [
                     '&r&3&oThe charged mantle of the Stormcaller,',
@@ -1326,7 +1663,7 @@ final class GlaciaItems {
                 ],
             ],
             'yijki_leggings' => [
-                'material' => VanillaItems::DIAMOND_LEGGINGS(),
+                'material' => VanillaItems::LEATHER_PANTS(),
                 'name' => '&r&l&3Stormcaller Vestments',
                 'lore' => [
                     '&r&3&oThe crackling vestments of the Stormcaller,',
@@ -1345,7 +1682,7 @@ final class GlaciaItems {
                 ],
             ],
             'yijki_boots' => [
-                'material' => VanillaItems::DIAMOND_BOOTS(),
+                'material' => VanillaItems::LEATHER_BOOTS(),
                 'name' => '&r&l&3Stormcaller Striders',
                 'lore' => [
                     '&r&3&oSwift as lightning, steady as thunder.',

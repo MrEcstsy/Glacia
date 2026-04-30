@@ -8,7 +8,6 @@ use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\utils\GlaciaUtils;
-use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
@@ -61,6 +60,12 @@ final class BankSubCommand extends BaseSubCommand
 
             $session->removeBalance($amount);
             $manager->deposit($faction, $amount);
+            GlaciaUtils::logFactionAudit("Bank Deposit", [
+                "player" => $sender->getName(),
+                "faction" => $faction->getName(),
+                "faction_id" => $faction->getFactionId(),
+                "amount" => $amount,
+            ]);
             $sender->sendMessage(C::colorize("&r&aDeposited &f$" . number_format($amount) . " &ainto the faction bank."));
             return;
         }
@@ -76,6 +81,12 @@ final class BankSubCommand extends BaseSubCommand
         }
 
         $session->addBalance($amount);
+        GlaciaUtils::logFactionAudit("Bank Withdraw", [
+            "player" => $sender->getName(),
+            "faction" => $faction->getName(),
+            "faction_id" => $faction->getFactionId(),
+            "amount" => $amount,
+        ]);
         $sender->sendMessage(C::colorize("&r&aWithdrawn &f$" . number_format($amount) . " &afrom the faction bank."));
     }
 
@@ -86,6 +97,6 @@ final class BankSubCommand extends BaseSubCommand
 
     private function parseAmount(string $input): int
     {
-        return GeneralUtils::parseShorthandNumber($input);
+        return GlaciaUtils::parseShorthandNumber($input);
     }
 }

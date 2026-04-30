@@ -9,6 +9,7 @@ use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\listeners\FactionListener;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\utils\QueryStmts;
+use ecstsy\Glacia\utils\StorageUtils;
 use ecstsy\MartianUtilities\utils\ItemUtils;
 use pocketmine\entity\Location;
 use pocketmine\item\Item;
@@ -57,8 +58,8 @@ final class CombatManagerInstance {
                     'expires' => (float)$row["expires"],
                     'expireSec' => (int)$row["expires"],
                     'npc' => null,
-                    'inventory' => $this->deserializeItems(json_decode($row["inventory"], true) ?? []),
-                    'armor' => $this->deserializeItems(json_decode($row["armor"], true) ?? []),
+                    'inventory' => $this->deserializeItems(StorageUtils::decodeJsonString((string) $row["inventory"], "combat logger inventory for {$lower}") ?? []),
+                    'armor' => $this->deserializeItems(StorageUtils::decodeJsonString((string) $row["armor"], "combat logger armor for {$lower}") ?? []),
                     'deadOnLogin' => (bool)$row["dead_on_login"],
                     'opponents' => [],
                     'xp' => (int)$row["xp"],
@@ -238,6 +239,13 @@ final class CombatManagerInstance {
 
         $remaining = max(1, (int) ceil(($this->combatPlayers[$lower]['expires'] ?? microtime(true)) - microtime(true)));
 
+        $inventoryPayload = StorageUtils::encodeJsonString($this->serializeItems($player->getInventory()->getContents()), "combat logger inventory for {$lower}");
+        $armorPayload = StorageUtils::encodeJsonString($this->serializeItems($player->getArmorInventory()->getContents()), "combat logger armor for {$lower}");
+        if ($inventoryPayload === null || $armorPayload === null) {
+            Loader::getInstance()->getLogger()->warning("Skipped saving combat logger for {$player->getName()} due to JSON encoding failure.");
+            return;
+        }
+
         Loader::getDatabase()->executeInsert(QueryStmts::COMBAT_LOGGER_CREATE, [
             "uuid" => $player->getUniqueId()->toString(),
             "username" => $player->getName(),
@@ -247,8 +255,8 @@ final class CombatManagerInstance {
             "z" => $player->getPosition()->getZ(),
             "yaw" => $player->getLocation()->getYaw(),
             "pitch" => $player->getLocation()->getPitch(),
-            "inventory" => json_encode($this->serializeItems($player->getInventory()->getContents())),
-            "armor" => json_encode($this->serializeItems($player->getArmorInventory()->getContents())),
+            "inventory" => $inventoryPayload,
+            "armor" => $armorPayload,
             "xp" => $player->getXpManager()->getCurrentTotalXp(),
             "health" => $player->getHealth(),
             "expires" => time() + $remaining
@@ -280,7 +288,16 @@ final class CombatManagerInstance {
         $items = [];
 
         foreach ($data as $slot => $encoded) {
-            $item = ItemUtils::decodeItem($encoded);
+            if (!is_string($encoded) || $encoded === "") {
+                continue;
+            }
+
+            try {
+                $item = ItemUtils::decodeItem($encoded);
+            } catch (\Throwable $e) {
+                Loader::getInstance()->getLogger()->warning("Skipped invalid combat logger item at slot {$slot}: " . $e->getMessage());
+                continue;
+            }
 
             if ($item instanceof Item && !$item->isNull()) {
                 $items[(int) $slot] = $item;

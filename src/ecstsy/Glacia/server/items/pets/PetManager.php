@@ -6,6 +6,7 @@ namespace ecstsy\Glacia\server\items\pets;
 
 use ecstsy\Glacia\Loader;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
+use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 
 final class PetManager
@@ -34,6 +35,12 @@ final class PetManager
         $config = GeneralUtils::getConfiguration(Loader::getInstance(), "pets.yml");
         $raw = $config?->getNested("pets.{$petKey}.cooldown", "{$fallback}s");
         return max(1, GeneralUtils::parseTimeString((string) $raw));
+    }
+
+    public static function getCooldownLabel(string $petKey, string $fallback): string
+    {
+        $config = GeneralUtils::getConfiguration(Loader::getInstance(), "pets.yml");
+        return (string) ($config?->getNested("pets.{$petKey}.cooldown", $fallback) ?? $fallback);
     }
 
     public static function getDuration(string $petKey, string $path, int $fallback): int
@@ -91,6 +98,26 @@ final class PetManager
     public static function isAegisActive(Player $player): bool
     {
         return self::isTimedStateActive(self::$aegisExpiries, $player);
+    }
+
+    public static function scaleBossMotion(Player $player, Vector3 $motion): Vector3
+    {
+        if (!self::isAegisActive($player)) {
+            return $motion;
+        }
+
+        $config = GeneralUtils::getConfiguration(Loader::getInstance(), "pets.yml");
+        $horizontal = (float) ($config?->getNested("pets.aegis_ram.boss-horizontal-multiplier", 0.0) ?? 0.0);
+        $vertical = (float) ($config?->getNested("pets.aegis_ram.boss-vertical-multiplier", 0.0) ?? 0.0);
+
+        $horizontal = max(0.0, min(1.0, $horizontal));
+        $vertical = max(0.0, min(1.0, $vertical));
+
+        return new Vector3(
+            $motion->x * $horizontal,
+            $motion->y * $vertical,
+            $motion->z * $horizontal
+        );
     }
 
     public static function blockPearls(Player $player, int $durationSeconds): void

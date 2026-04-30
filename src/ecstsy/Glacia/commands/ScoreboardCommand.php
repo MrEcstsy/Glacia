@@ -8,6 +8,8 @@ use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\scoreboard\ScoreboardHelper;
+use ecstsy\Glacia\utils\lang\MessageTemplates;
+use ecstsy\Glacia\utils\screens\scoreboard\ScoreboardScreen;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
@@ -32,27 +34,28 @@ final class ScoreboardCommand extends BaseCommand
         }
 
         $state = strtolower((string) ($args["state"] ?? ""));
-        if ($state === "") {
-            $enabled = $session->getSetting("scoreboard");
-            $enabled = $enabled === null ? true : (bool) $enabled;
-            $sender->sendMessage(C::colorize("&r&bScoreboard&7: " . ($enabled ? "&aON" : "&cOFF")));
-            $sender->sendMessage(C::colorize("&r&7Use &f/scoreboard on &7or &f/scoreboard off&7."));
-            return;
+        switch ($state) {
+            case "":
+                ScoreboardScreen::displayMain($sender);
+                return;
+            case "on":
+            case "off":
+                $visible = $state === "on";
+                $session->setSetting("scoreboard", $visible);
+                ScoreboardHelper::setVisible($sender, $visible);
+                $sender->sendMessage(C::colorize(MessageTemplates::render($visible ? "scoreboard.message.enabled" : "scoreboard.message.disabled")));
+                return;
+            case "edit":
+                ScoreboardScreen::displayCustomEditor($sender);
+                return;
+            case "profiles":
+            case "profile":
+                ScoreboardScreen::displayProfilePicker($sender);
+                return;
+            default:
+                $sender->sendMessage(C::colorize(MessageTemplates::render("scoreboard.usage")));
+                return;
         }
-
-        if ($state !== "on" && $state !== "off") {
-            $sender->sendMessage(C::colorize("&r&cUsage: /scoreboard <on|off>"));
-            return;
-        }
-
-        $visible = $state === "on";
-        $session->setSetting("scoreboard", $visible);
-        ScoreboardHelper::setVisible($sender, $visible);
-
-        $sender->sendMessage(C::colorize($visible
-            ? "&r&aScoreboard enabled."
-            : "&r&cScoreboard hidden."
-        ));
     }
 
     public function getPermission(): string

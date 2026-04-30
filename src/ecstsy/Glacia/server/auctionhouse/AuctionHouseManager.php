@@ -7,10 +7,12 @@ namespace ecstsy\Glacia\server\auctionhouse;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\player\GlaciaPlayer;
 use ecstsy\Glacia\utils\QueryStmts;
+use ecstsy\Glacia\utils\StorageUtils;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use ecstsy\MartianUtilities\utils\ItemUtils;
 use pocketmine\item\Item;
 use pocketmine\player\Player;
+use pocketmine\utils\TextFormat as C;
 use Ramsey\Uuid\Uuid;
 
 final class AuctionHouseManager {
@@ -20,10 +22,15 @@ final class AuctionHouseManager {
 
     /** @var array<string, array<string, mixed>> */
     private array $collection = [];
+    /** @var array<string, string[]> */
+    private array $watchlists = [];
+    private string $watchlistFile;
 
     public function __construct()
     {
+        $this->watchlistFile = Loader::getInstance()->getDataFolder() . "auction_watchlists.json";
         $this->load();
+        $this->loadWatchlists();
     }
 
     private function load(): void
@@ -80,6 +87,44 @@ final class AuctionHouseManager {
     public function getListing(string $listingId): ?array
     {
         return $this->listings[$listingId] ?? null;
+    }
+
+    public function searchListings(string $query = "", ?int $minPrice = null, ?int $maxPrice = null, string $sort = "newest"): array
+    {
+        $query = strtolower(trim($query));
+        $matches = array_filter($this->getListings(), static function(array $listing) use ($query, $minPrice, $maxPrice): bool{
+            $price = (int) ($listing["price"] ?? 0);
+            if ($minPrice !== null && $price < $minPrice) {
+                return false;
+            }
+            if ($maxPrice !== null && $price > $maxPrice) {
+                return false;
+            }
+            if ($query === "") {
+                return true;
+            }
+            $seller = strtolower((string) ($listing["seller_name"] ?? ""));
+            if (str_contains($seller, $query)) {
+                return true;
+            }
+            $item = ItemUtils::decodeItem((string) $listing["item_data"]);
+            if (str_contains(strtolower($item->getName()), $query)) {
+                return true;
+            }
+            $custom = strtolower($item->getCustomName());
+            return $custom !== "" && str_contains($custom, $query);
+        });
+
+        $matches = array_values($matches);
+        usort($matches, static function(array $a, array $b) use ($sort): int{
+            return match ($sort) {
+                "price_low" => ((int) $a["price"] <=> (int) $b["price"]) ?: ((int) $b["created_at"] <=> (int) $a["created_at"]),
+                "price_high" => ((int) $b["price"] <=> (int) $a["price"]) ?: ((int) $b["created_at"] <=> (int) $a["created_at"]),
+                "ending_soon" => ((int) $a["expires_at"] <=> (int) $b["expires_at"]) ?: ((int) $b["created_at"] <=> (int) $a["created_at"]),
+                default => ((int) $b["created_at"] <=> (int) $a["created_at"]) ?: strcmp((string) $a["listing_id"], (string) $b["listing_id"])
+            };
+        });
+        return $matches;
     }
 
     public function getListingDuration(): int
@@ -169,6 +214,7 @@ final class AuctionHouseManager {
         ];
 
         $this->listings[$listingId] = $listing;
+        $this->notifyWatchers($listing);
 
         Loader::getDatabase()->executeInsert(QueryStmts::AUCTION_HOUSE_LISTINGS_CREATE, $listing);
         return $listing;
@@ -290,6 +336,85 @@ final class AuctionHouseManager {
         return $removed;
     }
 
+    public function adminRemoveListing(string $listingId, bool $returnItem): string
+    {
+        $listing = $this->getListing($listingId);
+        if ($listing === null) {
+            return "That listing no longer exists.";
+        }
+        if ($returnItem) {
+            $this->addToCollection((string) $listing["seller_uuid"], $this->decodeStoredItem((string) $listing["item_data"]), "admin_refund");
+        }
+        $this->deleteListing($listingId);
+        return "";
+    }
+
+    public function relistCollectionEntry(Player $player, string $entryId, int $price): string
+    {
+        $entry = $this->collection[$entryId] ?? null;
+        if ($entry === null) {
+            return "That collection entry does not exist.";
+        }
+        if ($entry["owner_uuid"] !== $player->getUniqueId()->toString()) {
+            return "That collection entry does not belong to you.";
+        }
+        if ($price <= 0 || $price > $this->getMaxPrice()) {
+            return "Enter a valid relist price.";
+        }
+        if (!$this->canCreateListing($player)) {
+            return "You have reached your listing limit.";
+        }
+        $item = $this->decodeStoredItem((string) $entry["item_data"]);
+        $this->createListing($player, $item, $price);
+        $this->deleteCollectionEntry($entryId);
+        return "";
+    }
+
+    public function addWatchKeyword(Player $player, string $keyword): bool
+    {
+        $keyword = strtolower(trim($keyword));
+        if ($keyword === "") {
+            return false;
+        }
+        $uuid = $player->getUniqueId()->toString();
+        $existing = $this->watchlists[$uuid] ?? [];
+        if (in_array($keyword, $existing, true)) {
+            return false;
+        }
+        $existing[] = $keyword;
+        $this->watchlists[$uuid] = array_values(array_unique($existing));
+        $this->saveWatchlists();
+        return true;
+    }
+
+    public function removeWatchKeyword(Player $player, string $keyword): bool
+    {
+        $keyword = strtolower(trim($keyword));
+        $uuid = $player->getUniqueId()->toString();
+        $existing = $this->watchlists[$uuid] ?? [];
+        $filtered = array_values(array_filter($existing, static fn(string $row): bool => $row !== $keyword));
+        if (count($filtered) === count($existing)) {
+            return false;
+        }
+        $this->watchlists[$uuid] = $filtered;
+        $this->saveWatchlists();
+        return true;
+    }
+
+    public function clearWatchlist(Player $player): void
+    {
+        unset($this->watchlists[$player->getUniqueId()->toString()]);
+        $this->saveWatchlists();
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getWatchlist(Player $player): array
+    {
+        return $this->watchlists[$player->getUniqueId()->toString()] ?? [];
+    }
+
     public function tick(): void
     {
         $now = time();
@@ -327,5 +452,48 @@ final class AuctionHouseManager {
     private function decodeStoredItem(string $encoded): Item
     {
         return ItemUtils::decodeItem($encoded);
+    }
+
+    private function notifyWatchers(array $listing): void
+    {
+        $item = ItemUtils::decodeItem((string) $listing["item_data"]);
+        $needle = strtolower($item->getName() . " " . $item->getCustomName() . " " . ((string) ($listing["seller_name"] ?? "")));
+        $price = (int) ($listing["price"] ?? 0);
+        foreach (Loader::getInstance()->getServer()->getOnlinePlayers() as $online) {
+            $keywords = $this->watchlists[$online->getUniqueId()->toString()] ?? [];
+            foreach ($keywords as $keyword) {
+                if ($keyword !== "" && str_contains($needle, $keyword)) {
+                    $online->sendMessage(C::colorize(
+                        "&r&d[AH Watch] &fNew match for '&e{$keyword}&f': &b" . $item->getName() . " &7for &a$" . number_format($price)
+                    ));
+                    break;
+                }
+            }
+        }
+    }
+
+    private function loadWatchlists(): void
+    {
+        if (!file_exists($this->watchlistFile)) {
+            return;
+        }
+        $decoded = StorageUtils::readJsonFile($this->watchlistFile, "auction watchlists");
+        if (!is_array($decoded)) {
+            return;
+        }
+        $rows = (array) ($decoded["watchlists"] ?? []);
+        foreach ($rows as $uuid => $keywords) {
+            if (!is_array($keywords)) {
+                continue;
+            }
+            $this->watchlists[(string) $uuid] = array_values(array_filter(array_map("strval", $keywords), static fn(string $s): bool => trim($s) !== ""));
+        }
+    }
+
+    private function saveWatchlists(): void
+    {
+        StorageUtils::writeJsonFile($this->watchlistFile, [
+            "watchlists" => $this->watchlists
+        ], "auction watchlists");
     }
 }

@@ -7,7 +7,7 @@ namespace ecstsy\Glacia\commands\sub\exp;
 use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
-use ecstsy\MartianUtilities\utils\GeneralUtils;
+use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\MartianUtilities\utils\commands\arguments\PlayerArgument;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -27,7 +27,7 @@ final class AddExpSubCommand extends BaseSubCommand {
     {
         /** @var Player|null $player */
         $player = $args["player"];
-        $amount = GeneralUtils::parseShorthandNumber((string) ($args["amount"] ?? ""));
+        $amount = GlaciaUtils::parseShorthandNumber((string) ($args["amount"] ?? ""));
 
         if ($player === null || !$player instanceof Player) {
             $sender->sendMessage(C::colorize("&r&cError: &4Player not found."));

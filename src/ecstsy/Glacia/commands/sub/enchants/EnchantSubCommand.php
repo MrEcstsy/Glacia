@@ -28,7 +28,7 @@ final class EnchantSubCommand extends BaseSubCommand {
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void
     {
         if (!$sender instanceof Player) {
-            $sender->sendMessage(C::colorize("&r&7In-game only!"));
+            $sender->sendMessage(C::colorize("&r&cConsole cannot use held-item enchanting. Use &f/ge givebook &r&cor run this command in-game."));
             return;
         }
 

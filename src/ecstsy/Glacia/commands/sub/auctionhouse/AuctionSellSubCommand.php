@@ -7,6 +7,7 @@ namespace ecstsy\Glacia\commands\sub\auctionhouse;
 use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\Glacia\utils\screens\auctionhouse\AuctionHouseSellConfirmScreen;
 use ecstsy\MartianUtilities\utils\ItemUtils;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
@@ -65,7 +66,7 @@ final class AuctionSellSubCommand extends BaseSubCommand {
             return;
         }
 
-        $fee = $manager->calculateSellFee($price, $sender);
+        $fee = (int) ceil($manager->calculateSellFee($price, $sender) * RuneManager::getAuctionFeeMultiplier($sender));
         if ($session->getBalance() < $fee) {
             $sender->sendMessage(C::colorize("&r&cYou need &f$" . number_format($fee) . "&c to pay the listing fee."));
             return;

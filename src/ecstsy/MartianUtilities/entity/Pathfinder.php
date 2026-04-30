@@ -2,8 +2,14 @@
 
 namespace ecstsy\MartianUtilities\entity;
 
+use pocketmine\block\Cactus;
+use pocketmine\block\Fire;
+use pocketmine\block\Lava;
+use pocketmine\block\Magma;
 use pocketmine\block\Slab;
 use pocketmine\block\Stair;
+use pocketmine\block\SweetBerryBush;
+use pocketmine\block\Water;
 use pocketmine\math\Vector3;
 use pocketmine\world\World;
 
@@ -41,11 +47,19 @@ final class Pathfinder {
         $nodes = [$startKey => $startNode];
 
         $iterations = 0;
-        $maxIterations = 800;
+        $horizontalDist = (int) max(abs($goalNode->x - $startNode->x), abs($goalNode->z - $startNode->z));
+        $maxIterations = min(2200, 700 + ($horizontalDist * 45));
+        $closestKey = $startKey;
+        $closestHeuristic = $fScore[$startKey];
 
         while (!empty($open) && $iterations++ < $maxIterations) {
             $currentKey = $this->getLowestScoreKey($open, $fScore);
             $current = $nodes[$currentKey];
+            $currentHeuristic = $this->heuristic($current, $goalNode);
+            if ($currentHeuristic < $closestHeuristic) {
+                $closestHeuristic = $currentHeuristic;
+                $closestKey = $currentKey;
+            }
 
             if ($currentKey === $goalKey) {
                 return $this->reconstructPath($cameFrom, $nodes, $currentKey);
@@ -74,6 +88,12 @@ final class Pathfinder {
                     $open[$neighborKey] = true;
                 }
             }
+        }
+
+        // Fallback to the closest explored node so mobs still make progress when
+        // the exact goal is temporarily unreachable.
+        if (isset($nodes[$closestKey]) && $closestKey !== $startKey) {
+            return $this->reconstructPath($cameFrom, $nodes, $closestKey);
         }
 
         return null;
@@ -234,6 +254,21 @@ final class Pathfinder {
         $ground = $this->world->getBlockAt($x, $y - 1, $z);
 
         if ($feet->isSolid() || $head->isSolid()) {
+            return false;
+        }
+
+        // Prevent pathing into common damage / trap blocks.
+        if (
+            $feet instanceof Lava ||
+            $feet instanceof Water ||
+            $feet instanceof Fire ||
+            $feet instanceof Cactus ||
+            $feet instanceof Magma ||
+            $feet instanceof SweetBerryBush ||
+            $ground instanceof Lava ||
+            $ground instanceof Fire ||
+            $ground instanceof Cactus
+        ) {
             return false;
         }
 

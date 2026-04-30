@@ -25,6 +25,10 @@ final class FactionRoleManager {
             foreach($rows as $r) {
                 $perms = [];
                 foreach(FactionPermissions::getAllPermissions() as $perm) {
+                    if ($perm === FactionPermissions::VIEW_AUDIT_LOG) {
+                        $perms[$perm] = !empty((int) ($r["view_audit_log"] ?? 0));
+                        continue;
+                    }
                     $col = str_replace('-', '_', $perm);
                     $perms[$perm] = (bool)$r["can_{$col}"] ?? false;
                 }
@@ -66,6 +70,7 @@ final class FactionRoleManager {
             "manage_warps" => (int)($defaults[FactionPermissions::MANAGE_WARPS] ?? 0),
             "change_description" => (int)($defaults[FactionPermissions::EDIT_SIGNS] ?? 0),
             "invite_players" => (int)($defaults[FactionPermissions::INVITE_USERS] ?? 0),
+            "view_audit_log" => (int)($defaults[FactionPermissions::VIEW_AUDIT_LOG] ?? 0),
         ]);
 
         $role = new FactionRole($factionId, $roleKey, $defaults);

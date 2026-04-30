@@ -112,15 +112,15 @@ class SpawnerTile extends Spawnable
         }
 
         for ($i = 0; $i < $spawnCount; $i++) {
+            $nearest = $this->findNearestEntity($this->getEntityTypeId());
+            if ($nearest !== null) {
+                $nearest->setStack($nearest->getStack() + ($spawnCount - $i));
+                break;
+            }
+
             $spawnPos = $blockPos->getWorld()->getSafeSpawn(
                 $blockPos->add(mt_rand(-$range, $range), 0, mt_rand(-$range, $range))
             );
-
-            $nearest = $this->findNearestEntity($this->getEntityTypeId());
-            if ($nearest !== null) {
-                $nearest->setStack($nearest->getStack() + 1);
-                continue;
-            }
 
             $nbt = (new CompoundTag())->setInt("stack", 1);
             $entity = EntityManager::getInstance()->getEntityFor(
@@ -129,6 +129,7 @@ class SpawnerTile extends Spawnable
                 $nbt
             );
             $entity->spawnToAll();
+            break;
         }
 
         $blockPos->getWorld()->addParticle($blockPos, new MobSpawnParticle(2, 2));
@@ -158,6 +159,11 @@ class SpawnerTile extends Spawnable
         if ($this->isZoneSpawner()) {
             $this->stackCount = 1;
             $this->maxStack = 1;
+            if ($this->spawnDelay <= 0) {
+                $this->spawnDelay = max(1, ZoneMobManager::getSpawnIntervalSeconds());
+            }
+        } elseif ($this->spawnDelay <= 0) {
+            $this->spawnDelay = max(1, (int) ceil($this->minSpawnDelay / 20));
         }
 
         $world = $this->getPosition()->getWorld();

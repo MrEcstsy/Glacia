@@ -6,6 +6,7 @@ namespace ecstsy\Glacia\entity\boss\ability;
 
 use ecstsy\Glacia\entity\boss\BossAbility;
 use ecstsy\Glacia\entity\boss\BossEntity;
+use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\math\Vector3;
 use pocketmine\utils\TextFormat as C;
@@ -28,20 +29,24 @@ final class AstralPull extends BossAbility {
                 3 => 0.9,
             };
 
-            $player->setMotion(new Vector3(
+            $boss->applyBossMotion($player, new Vector3(
                 $dir->x * $force,
                 0.25,
                 $dir->z * $force
             ));
 
-            $player->attack(new EntityDamageEvent(
+            $player->attack(new EntityDamageByEntityEvent(
                 $boss,
+                $player,
                 EntityDamageEvent::CAUSE_MAGIC,
                 match ($boss->getPhase()) {
                     1 => 3.0,
                     2 => 5.0,
                     3 => 7.0,
-                }
+                },
+                [],
+                0.0,
+                0.0
             ));
 
             $boss->playAbilitySound("mob.endermen.portal", 1.2, 0.7);

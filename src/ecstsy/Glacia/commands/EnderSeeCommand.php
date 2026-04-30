@@ -7,10 +7,9 @@ namespace ecstsy\Glacia\commands;
 use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseCommand;
 use ecstsy\Glacia\utils\GlaciaUtils;
+use ecstsy\Glacia\utils\lang\MessageTemplates;
+use ecstsy\Glacia\utils\screens\enderchest\EnderChestScreen;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
-use muqsit\invmenu\InvMenu;
-use muqsit\invmenu\transaction\DeterministicInvMenuTransaction;
-use muqsit\invmenu\type\InvMenuTypeIds;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
@@ -32,15 +31,11 @@ final class EnderSeeCommand extends BaseCommand {
         $targetName = (string) ($args["player"] ?? "");
         $target = PlayerUtils::getPlayerByPrefix($targetName);
         if (!$target instanceof Player) {
-            $sender->sendMessage(C::colorize("&r&cThat player could not be found."));
+            $sender->sendMessage(C::colorize(MessageTemplates::render("enderchest.error.player_not_found")));
             return;
         }
 
-        $menu = InvMenu::create(InvMenuTypeIds::TYPE_CHEST, $target->getEnderInventory());
-        $menu->setName(C::colorize("&r&8" . $target->getName() . "'s Ender Chest"));
-        $menu->setListener(InvMenu::readonly(function(DeterministicInvMenuTransaction $transaction): void {
-        }));
-        $menu->send($sender);
+        EnderChestScreen::displayReadonly($sender, $target);
 
         GlaciaUtils::logAdminAction("EnderSee", [
             "admin" => $sender->getName(),

@@ -140,11 +140,6 @@ final class LootboxAnimationScreen extends BaseScreen {
             }
         }
 
-        $message = "&r&aLootbox opened! You received:";
-        foreach ($this->finalRewards as $reward) {
-            $message .= "\n&r&8- &r&ax" . $reward->getCount() . " " . $this->getRewardName($reward);
-        }
-        $this->viewer->sendMessage(C::colorize($message));
         RewardAnnouncer::announce(
             $this->viewer,
             "Lootbox",

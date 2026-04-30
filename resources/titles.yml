@@ -1,0 +1,23 @@
+settings:
+  # Placeholder for future toggles.
+  enabled: true
+
+# Each title generates:
+# - UI entry in /title
+# - a voucher item id: title_voucher_<id>
+# - permission grant on claim (default: glacia.title.<id>)
+titles:
+  vlone:
+    display: "&r&l&8[&r&cVlone&l&8]&r"
+    format: "&r&l&8[&r&cVlone&l&8]&r"
+    description: "&8Street legend."
+    voucher-material: paper
+    voucher-name: "&r&l&eTitle Voucher &8- &r&cVlone"
+    voucher-lore:
+      - "&r&8Unlock Voucher"
+      - ""
+      - "&r&8Claim to permanently unlock:"
+      - "&r{format}"
+      - ""
+      - "&r&8Status in /title:"
+      - "&r&8LOCKED / UNLOCKED"

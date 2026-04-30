@@ -30,11 +30,6 @@ final class GiveBookSubCommand extends BaseSubCommand {
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void
     {
-        if (!$sender instanceof Player) {
-            $sender->sendMessage(C::colorize("&r&7In-game only!"));
-            return;
-        }
-
         $player = isset($args["name"]) ? PlayerUtils::getPlayerByPrefix($args["name"]) : null;
         if ($player === null) {
             $sender->sendMessage(C::colorize("&r&cThat player is not online!"));
@@ -67,7 +62,9 @@ final class GiveBookSubCommand extends BaseSubCommand {
                 [$enchant, $level, $player->getName(), $amount],
                 "&aGave &2{player} {amount}x {enchant} {level} &abooks!"
             )));
-            PlayerUtils::playSound($sender, "random.orb");
+            if ($sender instanceof Player) {
+                PlayerUtils::playSound($sender, "random.orb");
+            }
         } else {
             $player->getWorld()->dropItem($player->getPosition()->asVector3(), $book);
             $sender->sendMessage(C::colorize("&r&e" . $player->getName() . "'s inventory was full, so the book was dropped at their feet."));

@@ -8,6 +8,7 @@ use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\blackmarket\BlackMarketAuctionManager;
 use ecstsy\Glacia\utils\QueryStmts;
+use ecstsy\Glacia\utils\StorageUtils;
 use ecstsy\MartianUtilities\utils\ItemUtils;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\item\Item;
@@ -47,8 +48,7 @@ final class BlackMarketAuctionInstance {
                         break;
 
                     case GlaciaServerKeys::BAH_HISTORY:
-                        $decoded = json_decode((string) $row['value'], true);
-                        $this->history = is_array($decoded) ? $decoded : [];
+                        $this->history = StorageUtils::decodeJsonString((string) $row['value'], "black market auction history") ?? [];
                         break;
                 }
             }
@@ -335,7 +335,10 @@ final class BlackMarketAuctionInstance {
 
     public function clearHistory(): void {
         $this->history = [];
-        $this->save(GlaciaServerKeys::BAH_HISTORY, json_encode([], JSON_THROW_ON_ERROR));
+        $payload = StorageUtils::encodeJsonString([], "black market auction history");
+        if ($payload !== null) {
+            $this->save(GlaciaServerKeys::BAH_HISTORY, $payload);
+        }
     }
 
     private function addHistoryEntry(string $listingName, ?Item $item, string $winner, int $finalBid, int $startingBid, bool $sold): void {
@@ -355,7 +358,10 @@ final class BlackMarketAuctionInstance {
             $this->history = array_slice($this->history, 0, $limit);
         }
 
-        $this->save(GlaciaServerKeys::BAH_HISTORY, json_encode($this->history, JSON_THROW_ON_ERROR));
+        $payload = StorageUtils::encodeJsonString($this->history, "black market auction history");
+        if ($payload !== null) {
+            $this->save(GlaciaServerKeys::BAH_HISTORY, $payload);
+        }
     }
 
     private static function sanitizeText(string $text): string

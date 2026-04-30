@@ -9,10 +9,13 @@ use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\args\TextArgument;
 use CortexPE\Commando\BaseCommand;
 use ecstsy\Glacia\commands\sub\items\ListGlaciaItemsSubCommand;
+use ecstsy\Glacia\commands\sub\items\GiveItemMenuSubCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
+use ecstsy\Glacia\server\etherealcrates\EtherealCrateRepository;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\server\lootboxes\LootboxRepository;
+use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -29,6 +32,7 @@ class GiveItemCommand extends BaseCommand {
         $this->registerArgument(4, new RawStringArgument("extra3", true));
 
         $this->registerSubCommand(new ListGlaciaItemsSubCommand(Loader::getInstance(), "list", "List all available Glacia items"));
+        $this->registerSubCommand(new GiveItemMenuSubCommand(Loader::getInstance(), "menu", "Open the give-item menu"));
     }
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args) : void{
@@ -69,6 +73,19 @@ class GiveItemCommand extends BaseCommand {
 
                     $signer = $this->resolveSigner($sender, $args['extra2'] ?? null);
                     $item = GlaciaItemFactory::xpNoteSigned($signer, $noteAmount);
+                    break;
+
+                case 'admin_coin_note':
+                case 'admincoins':
+                case 'admin_coin':
+                    $noteAmount = isset($args['extra1']) ? (int) GeneralUtils::parseRandomNumber((string) $args['extra1']) : 0;
+                    if ($noteAmount <= 0) {
+                        $sender->sendMessage(C::RED . "Usage: /giveitem {$itemName} <amount> <value> [signer|default]");
+                        return;
+                    }
+
+                    $signer = $this->resolveSigner($sender, $args['extra2'] ?? null);
+                    $item = GlaciaItemFactory::adminCoinNoteSigned($signer, $noteAmount);
                     break;
 
                 case 'enchantment_book':
@@ -157,7 +174,18 @@ class GiveItemCommand extends BaseCommand {
                         return;
                     }
 
-                    $item = GlaciaItemFactory::lootbox((string) $boxLookup);
+                    $item = GlaciaItemFactory::lootbox((string) $boxLookup, $sender);
+                    break;
+                case 'ethereal_crate':
+                case 'etherealcrate':
+                case 'ecrate':
+                    $crateLookup = $args['extra1'] ?? null;
+                    if ($crateLookup === null) {
+                        $sender->sendMessage(C::RED . "Usage: /giveitem {$itemName} <amount> <crate>");
+                        return;
+                    }
+
+                    $item = GlaciaItemFactory::etherealCrate((string) $crateLookup, $sender);
                     break;
                 case 'collection_chest':
                 case 'collectionchest':
@@ -171,6 +199,33 @@ class GiveItemCommand extends BaseCommand {
                 case 'heroicticket':
                 case 'hslot':
                     $item = GlaciaItemFactory::heroicSlotTicket();
+                    break;
+                case 'item_flip_credit_voucher':
+                case 'itemflipcreditvoucher':
+                case 'if_credit_voucher':
+                case 'icf_voucher':
+                    $credits = isset($args['extra1']) ? max(1, (int) GeneralUtils::parseRandomNumber((string) $args['extra1'])) : 10;
+                    $item = GlaciaItemFactory::itemFlipCreditVoucher($credits);
+                    break;
+                case 'holy_whitescroll':
+                case 'holy_white_scroll':
+                case 'holywhitescroll':
+                    $item = GlaciaItemFactory::create('holy_whitescroll');
+                    break;
+                case 'holy_water':
+                case 'holywater':
+                    $item = GlaciaItemFactory::create('holy_water');
+                    break;
+                case 'charm_shard':
+                case 'charmshard':
+                    $success = isset($args['extra1']) ? (int) $args['extra1'] : null;
+                    $bonus = isset($args['extra2']) ? max(0, (int) $args['extra2']) : 0;
+                    $item = GlaciaItemFactory::charmShard($success, $bonus);
+                    break;
+                case 'charm_dust':
+                case 'charmdust':
+                    $bonus = isset($args['extra1']) ? max(1, (int) $args['extra1']) : null;
+                    $item = GlaciaItemFactory::charmDust($bonus);
                     break;
 
                     case 'customarmor':
@@ -208,9 +263,14 @@ class GiveItemCommand extends BaseCommand {
                         break;
                 default:
                     if (LootboxRepository::getBoxByLookup($itemName) !== null) {
-                        $item = GlaciaItemFactory::lootbox($itemName);
-                    } else {
+                        $item = GlaciaItemFactory::lootbox($itemName, $sender);
+                    } elseif (EtherealCrateRepository::getCrateByLookup($itemName) !== null) {
+                        $item = GlaciaItemFactory::etherealCrate($itemName, $sender);
+                    } elseif (GlaciaItemFactory::hasDefinition($itemName)) {
                         $item = GlaciaItemFactory::create($itemName);
+                    } else {
+                        $sender->sendMessage(C::colorize("&r&cUnknown Glacia item &f" . $itemName . "&c. Use &f/gi list&c or &f/gi menu&c."));
+                        return;
                     }
                     break;
             }
@@ -221,6 +281,12 @@ class GiveItemCommand extends BaseCommand {
 
         if (!empty($items)) {
             $sender->getInventory()->addItem(...$items);
+            GlaciaUtils::logAdminAction("Give Item", [
+                "admin" => $sender->getName(),
+                "item_query" => $itemName,
+                "amount" => $amount,
+                "detail" => "multi_item",
+            ]);
             $sender->sendMessage(C::GREEN . "You have received the full armor set.");
             return;
         }
@@ -228,6 +294,11 @@ class GiveItemCommand extends BaseCommand {
         if ($item !== null) {
             $item->setCount($amount);
             $sender->getInventory()->addItem($item);
+            GlaciaUtils::logAdminAction("Give Item", [
+                "admin" => $sender->getName(),
+                "item_query" => $itemName,
+                "amount" => $amount,
+            ]);
             $sender->sendMessage(C::GREEN . "You have received " . $item->getName());
         } else {
             $sender->sendMessage(C::RED . "Could not create item: " . $itemName);

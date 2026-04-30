@@ -9,10 +9,23 @@ use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\enchants\all\ReforgedEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\all\ReforgedLogic;
+use ecstsy\Glacia\server\enchantments\enchants\armor\TricksterEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\helmet\ImplantsEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\RageEnchant;
+use ecstsy\Glacia\server\enchantments\manager\AngelicHealingManager;
+use ecstsy\Glacia\server\enchantments\manager\BleedManager;
 use ecstsy\Glacia\server\enchantments\manager\EnchantEffectManager;
 use ecstsy\Glacia\server\enchantments\manager\EnchantEventRegistry;
+use ecstsy\Glacia\server\enchantments\manager\EnchantCombatStateManager;
 use ecstsy\Glacia\server\enchantments\manager\EnchantmentEventRegistry;
+use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
+use ecstsy\Glacia\server\enchantments\manager\WeaponProcGate;
+use ecstsy\Glacia\server\enchantments\manager\SilenceManager;
+use ecstsy\Glacia\server\enchantments\manager\AdvancedEnchantState;
+use ecstsy\Glacia\server\enchantments\manager\MaliceWeaponRegistry;
+use ecstsy\Glacia\server\enchantments\manager\VirusManager;
+use ecstsy\Glacia\server\enchantments\advanced\AdvancedSetEnchants;
+use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\Glacia\server\items\pets\PetManager;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
@@ -28,6 +41,8 @@ use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\event\player\PlayerItemHeldEvent;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerMoveEvent;
+use pocketmine\event\player\PlayerQuitEvent;
+use pocketmine\entity\Entity;
 use pocketmine\entity\projectile\Projectile;
 use pocketmine\inventory\ArmorInventory;
 use pocketmine\inventory\CallbackInventoryListener;
@@ -37,6 +52,7 @@ use pocketmine\inventory\transaction\action\SlotChangeAction;
 use pocketmine\item\Durable;
 use pocketmine\item\Item;
 use pocketmine\player\Player;
+use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\scheduler\ClosureTask;
 
 final class EnchantmentListener implements Listener {
@@ -83,6 +99,22 @@ final class EnchantmentListener implements Listener {
         EnchantEffectManager::refreshArmorEffects($event->getPlayer());
     }
 
+    public function onPlayerQuit(PlayerQuitEvent $event): void
+    {
+        $player = $event->getPlayer();
+        ProcLuckManager::clearPlayer($player);
+        RageEnchant::clearPlayer($player);
+        EnchantEffectManager::clearPlayerState($player);
+        AngelicHealingManager::clearPlayer($player);
+        BleedManager::clearPlayer($player);
+        SilenceManager::clearPlayer($player);
+        TricksterEnchant::clearPlayer($player);
+        ImplantsEnchant::clearPlayer($player);
+        VirusManager::clearPlayer($player);
+        WeaponProcGate::clearAttacker($player);
+        AdvancedEnchantState::clearPlayer($player);
+    }
+
     /**
      * @priority HIGHEST
      */
@@ -126,21 +158,41 @@ final class EnchantmentListener implements Listener {
      */
     public function onEntityDamage(EntityDamageEvent $event): void {
         $entity = $event->getEntity();
+        if ($entity instanceof Player && AdvancedEnchantState::isCoupInvuln($entity)) {
+            $event->cancel();
+            return;
+        }
+        if ($event instanceof EntityDamageByEntityEvent) {
+            AdvancedSetEnchants::onPreProcessDamage($event);
+        }
+        if ($event->isCancelled()) {
+            return;
+        }
+
+        VirusManager::amplifyEffectDamage($event);
         if (!$entity instanceof Player && !$entity instanceof ForsakenChampion) return;
 
         $handlers = EnchantEventRegistry::getHandlers('entity_damage');
 
+        $highestLevels = [];
         foreach ($this->getArmorContents($entity) as $armor) {
             $enchants = CustomEnchantmentManager::getEnchantments($armor);
-
             foreach ($enchants as $enchantName => $level) {
-                if (isset($handlers[$enchantName])) {
-                    $enchObj = CustomEnchantmentManager::getEnchantment($enchantName);
-                    if ($enchObj !== null) {
-                        $handlers[$enchantName]($event, $enchObj, $level);
-                    }
+                if (!isset($handlers[$enchantName])) {
+                    continue;
+                }
+                if (!isset($highestLevels[$enchantName]) || $level > $highestLevels[$enchantName]) {
+                    $highestLevels[$enchantName] = $level;
                 }
             }
+        }
+
+        foreach ($highestLevels as $enchantName => $level) {
+            $enchObj = CustomEnchantmentManager::getEnchantment($enchantName);
+            if ($enchObj === null) {
+                continue;
+            }
+            $handlers[$enchantName]($event, $enchObj, $level);
         }
 
         $item = $this->getCombatItem($entity);
@@ -167,6 +219,10 @@ final class EnchantmentListener implements Listener {
         $victim = $event->getEntity();
         $damager = $event->getDamager();
 
+        if ($damager instanceof Player && EnchantCombatStateManager::isPlagueWeakened($damager)) {
+            $event->setBaseDamage($event->getBaseDamage() * 0.5);
+        }
+
         $weaponHolder = null;
         $weapon = null;
         if ($damager instanceof Player || $damager instanceof ForsakenChampion) {
@@ -182,13 +238,36 @@ final class EnchantmentListener implements Listener {
         if ($weaponHolder instanceof Player || $weaponHolder instanceof ForsakenChampion) {
             $weapon ??= $this->getCombatItem($weaponHolder);
             $enchants = CustomEnchantmentManager::getEnchantments($weapon);
+            $entityDamageHandlers = EnchantEventRegistry::getHandlers('entity_damage_by_entity');
+            $hasWeaponHitEnchant = false;
+            foreach (array_keys($enchants) as $enchantName) {
+                if (isset($entityDamageHandlers[$enchantName])) {
+                    $hasWeaponHitEnchant = true;
+                    break;
+                }
+            }
+            $allowWeaponProcs = !$hasWeaponHitEnchant
+                || WeaponProcGate::recordAndAllowWeaponProcs($weaponHolder, $victim);
 
-            foreach ($enchants as $enchantName => $level) {
-                $handlers = EnchantEventRegistry::getHandlers('entity_damage_by_entity');
-                if (isset($handlers[$enchantName])) {
-                    $enchantObj = CustomEnchantmentManager::getEnchantment($enchantName);
-                    if ($enchantObj !== null) {
-                        $handlers[$enchantName]($event, $enchantObj, $level);
+            if ($weaponHolder instanceof Player) {
+                if (AdvancedEnchantState::isGlimmerSuppressed($weaponHolder)) {
+                    $allowWeaponProcs = false;
+                }
+                if (AdvancedEnchantState::isCoupAttackerSilenced($weaponHolder)) {
+                    $allowWeaponProcs = false;
+                }
+            }
+
+            if ($allowWeaponProcs) {
+                foreach ($enchants as $enchantName => $level) {
+                    if ($victim instanceof Player && AdvancedEnchantState::isMalicewardImmune($victim) && MaliceWeaponRegistry::isNegativeWeaponEnchant($enchantName)) {
+                        continue;
+                    }
+                    if (isset($entityDamageHandlers[$enchantName])) {
+                        $enchantObj = CustomEnchantmentManager::getEnchantment($enchantName);
+                        if ($enchantObj !== null) {
+                            $entityDamageHandlers[$enchantName]($event, $enchantObj, $level);
+                        }
                     }
                 }
             }
@@ -196,19 +275,27 @@ final class EnchantmentListener implements Listener {
 
         if ($victim instanceof Player || $victim instanceof ForsakenChampion) {
             $armorContents = $this->getArmorContents($victim);
+            $handlers = EnchantEventRegistry::getHandlers('entity_damage_by_entity');
 
+            $highestLevels = [];
             foreach ($armorContents as $armorPiece) {
                 $enchants = CustomEnchantmentManager::getEnchantments($armorPiece);
-
                 foreach ($enchants as $enchantName => $level) {
-                    $handlers = EnchantEventRegistry::getHandlers('entity_damage_by_entity');
-                    if (isset($handlers[$enchantName])) {
-                        $enchantObj = CustomEnchantmentManager::getEnchantment($enchantName);
-                        if ($enchantObj !== null) {
-                            $handlers[$enchantName]($event, $enchantObj, $level);
-                        }
+                    if (!isset($handlers[$enchantName])) {
+                        continue;
+                    }
+                    if (!isset($highestLevels[$enchantName]) || $level > $highestLevels[$enchantName]) {
+                        $highestLevels[$enchantName] = $level;
                     }
                 }
+            }
+
+            foreach ($highestLevels as $enchantName => $level) {
+                $enchantObj = CustomEnchantmentManager::getEnchantment($enchantName);
+                if ($enchantObj === null) {
+                    continue;
+                }
+                $handlers[$enchantName]($event, $enchantObj, $level);
             }
         }
     }
@@ -241,6 +328,11 @@ final class EnchantmentListener implements Listener {
         $entity = $event->getEntity();
         if (!$entity instanceof Player) return;
 
+        if (RuneManager::hasSlownessImmunity($entity) && $event->getEffect()->getType() === VanillaEffects::SLOWNESS()) {
+            $event->cancel();
+            return;
+        }
+
         if (PetManager::isAegisActive($entity) && $event->getEffect()->getType()->isBad()) {
             $event->cancel();
             return;
@@ -248,20 +340,27 @@ final class EnchantmentListener implements Listener {
 
         $armorInv = $entity->getArmorInventory();
         $armorContents = $armorInv->getContents();
+        $handlers = EnchantEventRegistry::getHandlers('effect_add');
 
+        $highestLevels = [];
         foreach ($armorContents as $armorItem) {
             $enchantments = CustomEnchantmentManager::getEnchantments($armorItem);
-
             foreach ($enchantments as $enchantName => $level) {
-                $handlers = EnchantEventRegistry::getHandlers('effect_add');
-                if (isset($handlers[$enchantName])) {
-                    $enchantObj = CustomEnchantmentManager::getEnchantment($enchantName);
-
-                    if ($enchantObj !== null) {
-                        $handlers[$enchantName]($event, $enchantObj, $level);
-                    }
+                if (!isset($handlers[$enchantName])) {
+                    continue;
+                }
+                if (!isset($highestLevels[$enchantName]) || $level > $highestLevels[$enchantName]) {
+                    $highestLevels[$enchantName] = $level;
                 }
             }
+        }
+
+        foreach ($highestLevels as $enchantName => $level) {
+            $enchantObj = CustomEnchantmentManager::getEnchantment($enchantName);
+            if ($enchantObj === null) {
+                continue;
+            }
+            $handlers[$enchantName]($event, $enchantObj, $level);
         }
     }
 
@@ -338,22 +437,34 @@ final class EnchantmentListener implements Listener {
         $player = $event->getPlayer();
         if (!$player instanceof Player) return;
 
+        if (RuneManager::hasNoHungerPassive($player)) {
+            $event->cancel();
+            return;
+        }
+
         $armorInv = $player->getArmorInventory();
         $armorContents = $armorInv->getContents();
+        $handlers = EnchantEventRegistry::getHandlers('player_exhaust');
 
+        $highestLevels = [];
         foreach ($armorContents as $armorItem) {
             $enchantments = CustomEnchantmentManager::getEnchantments($armorItem);
-
             foreach ($enchantments as $enchantName => $level) {
-                $handlers = EnchantEventRegistry::getHandlers('player_exhaust');
-                if (isset($handlers[$enchantName])) {
-                    $enchantObj = CustomEnchantmentManager::getEnchantment($enchantName);
-
-                    if ($enchantObj !== null) {
-                        $handlers[$enchantName]($event, $enchantObj, $level);
-                    }
+                if (!isset($handlers[$enchantName])) {
+                    continue;
+                }
+                if (!isset($highestLevels[$enchantName]) || $level > $highestLevels[$enchantName]) {
+                    $highestLevels[$enchantName] = $level;
                 }
             }
+        }
+
+        foreach ($highestLevels as $enchantName => $level) {
+            $enchantObj = CustomEnchantmentManager::getEnchantment($enchantName);
+            if ($enchantObj === null) {
+                continue;
+            }
+            $handlers[$enchantName]($event, $enchantObj, $level);
         }
     }
 
@@ -363,23 +474,33 @@ final class EnchantmentListener implements Listener {
     public function onEntityDeath(EntityDeathEvent $event): void
     {
         $entity = $event->getEntity();
+        VirusManager::clearEntity($entity);
+        WeaponProcGate::clearForVictim($entity);
 
         // Handle victim armor enchants
         if ($entity instanceof Player || $entity instanceof ForsakenChampion) {
             $armorContents = $this->getArmorContents($entity);
+            $handlers = EnchantEventRegistry::getHandlers('entity_death');
 
+            $highestLevels = [];
             foreach ($armorContents as $armorItem) {
                 $enchantments = CustomEnchantmentManager::getEnchantments($armorItem);
-
                 foreach ($enchantments as $enchantName => $level) {
-                    $handlers = EnchantEventRegistry::getHandlers('entity_death');
-                    if (isset($handlers[$enchantName])) {
-                        $enchantObj = CustomEnchantmentManager::getEnchantment($enchantName);
-                        if ($enchantObj !== null) {
-                            $handlers[$enchantName]($event, $enchantObj, $level);
-                        }
+                    if (!isset($handlers[$enchantName])) {
+                        continue;
+                    }
+                    if (!isset($highestLevels[$enchantName]) || $level > $highestLevels[$enchantName]) {
+                        $highestLevels[$enchantName] = $level;
                     }
                 }
+            }
+
+            foreach ($highestLevels as $enchantName => $level) {
+                $enchantObj = CustomEnchantmentManager::getEnchantment($enchantName);
+                if ($enchantObj === null) {
+                    continue;
+                }
+                $handlers[$enchantName]($event, $enchantObj, $level);
             }
         }
 
@@ -463,7 +584,10 @@ final class EnchantmentListener implements Listener {
      */
     public function onDamageReset(EntityDamageByEntityEvent $event): void {
         $victim = $event->getEntity();
-        if($victim instanceof Player) {
+        if ($victim instanceof Player) {
+            if (AdvancedSetEnchants::hasSteadfastSword($victim)) {
+                return;
+            }
             RageEnchant::reset($victim->getName());
         }
     }

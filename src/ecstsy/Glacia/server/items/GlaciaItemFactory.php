@@ -9,13 +9,21 @@ use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
 use ecstsy\Glacia\server\enchantments\Groups;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use ecstsy\Glacia\server\disguises\DisguiseManager;
+use ecstsy\Glacia\server\etherealcrates\EtherealCrateRepository;
 use ecstsy\Glacia\server\enchantments\vanilla\ExtendedVanillaEnchantmentRegistry;
+use ecstsy\Glacia\server\items\armor\HeroicArmorDurabilityManager;
 use ecstsy\Glacia\server\items\runes\RuneManager;
+use ecstsy\Glacia\server\items\pets\PetManager;
 use ecstsy\Glacia\server\lootboxes\LootboxRepository;
 use ecstsy\Glacia\server\quests\QuestInstance;
 use ecstsy\Glacia\utils\GlaciaUtils;
+use ecstsy\Glacia\utils\StorageUtils;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
+use pocketmine\color\Color;
+use pocketmine\item\Armor;
+use pocketmine\item\Durable;
 use pocketmine\item\enchantment\Enchantment;
 use pocketmine\item\enchantment\EnchantmentInstance;
 use pocketmine\item\enchantment\StringToEnchantmentParser;
@@ -23,6 +31,7 @@ use pocketmine\item\enchantment\VanillaEnchantments;
 use pocketmine\item\Item;
 use pocketmine\item\StringToItemParser;
 use pocketmine\item\VanillaItems;
+use pocketmine\utils\TextFormat;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
@@ -30,6 +39,11 @@ use pocketmine\utils\TextFormat as C;
 final class GlaciaItemFactory {
 
     public static array $definitions = [];
+
+    public static function hasDefinition(string $key): bool {
+        $definitionKey = self::resolveDefinitionKey($key);
+        return isset(self::$definitions[$definitionKey]);
+    }
 
     public static function create(string $key, array $args = []): Item {
         $definitionKey = self::resolveDefinitionKey($key);
@@ -45,13 +59,20 @@ final class GlaciaItemFactory {
         $item->setCustomName(C::colorize(self::template($def['name'] ?? '', $args)));
         $loreLines = [];
         foreach ($def['lore'] ?? [] as $line) {
-            $resolved = self::template((string) $line, $args);
-            foreach (preg_split("/\r\n|\n|\r/", $resolved) ?: [$resolved] as $splitLine) {
-                $loreLines[] = C::colorize($splitLine);
+            $lineTemplate = (string) $line;
+            $resolved = self::template($lineTemplate, $args);
+            $splitLines = preg_split("/\r\n|\n|\r/", $resolved) ?: [$resolved];
+            $continuationPrefix = self::extractLeadingFormatPrefix($lineTemplate);
+
+            foreach ($splitLines as $index => $splitLine) {
+                $finalLine = ($index > 0 && $continuationPrefix !== "")
+                    ? $continuationPrefix . $splitLine
+                    : $splitLine;
+                $loreLines[] = C::colorize($finalLine);
             }
         }
         if ($loreLines) {
-            $item->setLore($loreLines);
+            $item->setLore(self::applyDynamicPetLore($definitionKey, $loreLines));
         }
 
         $root = $item->getNamedTag();
@@ -127,6 +148,21 @@ final class GlaciaItemFactory {
         ]);
     }
 
+    public static function adminCoinNote(?Player $player, int $amount): Item
+    {
+        $signer = $player?->getName() ?? 'Admin Bazaar';
+        return self::adminCoinNoteSigned($signer, $amount);
+    }
+
+    public static function adminCoinNoteSigned(string $signer, int $amount): Item
+    {
+        return self::create('admin_coin_note', [
+            'amount' => number_format($amount),
+            'rawAmount' => $amount,
+            'signer' => $signer,
+        ]);
+    }
+
     public static function boss(string $boss): Item {
         return self::create("boss_$boss", ['boss' => strtolower($boss)]);
     }
@@ -144,7 +180,7 @@ final class GlaciaItemFactory {
             'roman-level' => GeneralUtils::getRomanNumeral($level),
             'success' => $success,
             'destroy' => $destroy,
-            'description' => $enchantment->getDescription(),
+            'description' => self::formatBookDescription($enchantment->getDescription()),
             'group-color' => C::colorize(Groups::translateGroupToColor($enchantment->getRarity())),
             'applies-to' => implode(", ", $appliesTo),
             'book-type' => 'custom',
@@ -170,7 +206,7 @@ final class GlaciaItemFactory {
             'roman-level' => GeneralUtils::getRomanNumeral($level),
             'success' => $success,
             'destroy' => $destroy,
-            'description' => self::getVanillaEnchantmentDescription($normalized),
+            'description' => self::formatBookDescription(self::getVanillaEnchantmentDescription($normalized)),
             'group-color' => '&7',
             'applies-to' => self::getVanillaAppliesToText($enchantment),
             'book-type' => 'vanilla',
@@ -265,7 +301,43 @@ final class GlaciaItemFactory {
         return self::create('mysterydust');
     } 
 
-    public static function lootbox(string $lookup): Item {
+    public static function heroicUpgrade(?int $success = null): Item
+    {
+        $success = $success ?? EnchantTuningManager::getInt("heroicarmor", "upgrade-success-chance", 65);
+        $success = max(1, min(100, $success));
+        return self::create('heroic_upgrade', [
+            'success' => $success
+        ]);
+    }
+
+    public static function charmShard(?int $success = null, int $bonusSuccess = 0): Item
+    {
+        $settings = EnchantTuningManager::getSettingsArray("charm-upgrades");
+        $success = $success ?? (int) ($settings["shard-base-success"] ?? 70);
+        $success = max(1, min(100, $success));
+        $bonusSuccess = max(0, $bonusSuccess);
+        $effectiveSuccess = max(1, min(100, $success + $bonusSuccess));
+
+        return self::create('charm_shard', [
+            'success' => $success,
+            'base_success' => $success,
+            'bonus_success' => $bonusSuccess,
+            'effective_success' => $effectiveSuccess
+        ]);
+    }
+
+    public static function charmDust(?int $bonus = null): Item
+    {
+        $settings = EnchantTuningManager::getSettingsArray("charm-upgrades");
+        $bonus = $bonus ?? (int) ($settings["dust-bonus-default"] ?? 5);
+        $bonus = max(1, $bonus);
+
+        return self::create('charm_dust', [
+            'bonus' => $bonus
+        ]);
+    }
+
+    public static function lootbox(string $lookup, ?Player $player = null): Item {
         $box = LootboxRepository::getBoxByLookup($lookup);
         if ($box === null) {
             throw new \InvalidArgumentException("Unknown lootbox: {$lookup}");
@@ -280,7 +352,7 @@ final class GlaciaItemFactory {
             "&r&7Contains randomized rewards."
         ];
         if (is_array($lore)) {
-            $item->setLore(array_map(static fn(string $line): string => C::colorize($line), $lore));
+            $item->setLore(self::resolveRecipientLore($lore, $player));
         }
 
         if ((bool) ($box["glow"] ?? false)) {
@@ -293,6 +365,41 @@ final class GlaciaItemFactory {
         $tag = new CompoundTag();
         $tag->setString("glaciaItem", "lootbox");
         $tag->setString("lootbox", (string) $box["id"]);
+        $root->setTag("Glacia", $tag);
+        $item->setNamedTag($root);
+
+        return $item;
+    }
+
+    public static function etherealCrate(string $lookup, ?Player $player = null): Item
+    {
+        $crate = EtherealCrateRepository::getCrateByLookup($lookup);
+        if ($crate === null) {
+            throw new \InvalidArgumentException("Unknown ethereal crate: {$lookup}");
+        }
+
+        $icon = StringToItemParser::getInstance()->parse((string) ($crate["icon"] ?? "ender_chest")) ?? StringToItemParser::getInstance()->parse("ender_chest") ?? StringToItemParser::getInstance()->parse("chest");
+        $item = clone $icon;
+        $item->setCustomName(C::colorize((string) ($crate["item-name"] ?? $crate["name"] ?? "&r&l&dEthereal Crate")));
+
+        $lore = $crate["item-lore"] ?? [
+            "&r&7Right-click to open this ethereal crate.",
+            "&r&7Contains randomized themed rewards."
+        ];
+        if (is_array($lore)) {
+            $item->setLore(self::resolveRecipientLore($lore, $player));
+        }
+
+        if ((bool) ($crate["glow"] ?? true)) {
+            GlaciaUtils::applyDisplayEnchant($item);
+        } else {
+            GlaciaUtils::removeDisplayEnchant($item);
+        }
+
+        $root = $item->getNamedTag();
+        $tag = new CompoundTag();
+        $tag->setString("glaciaItem", "ethereal_crate");
+        $tag->setString("ethereal_crate", (string) ($crate["id"] ?? $lookup));
         $root->setTag("Glacia", $tag);
         $item->setNamedTag($root);
 
@@ -351,6 +458,57 @@ final class GlaciaItemFactory {
     private static function normalizeDefinitionKey(string $key): string
     {
         return strtolower(str_replace(["_", "-", " "], "", $key));
+    }
+
+    /**
+     * @param string[] $lore
+     * @return string[]
+     */
+    private static function applyDynamicPetLore(string $definitionKey, array $lore): array
+    {
+        if (!self::isPetDefinition($definitionKey)) {
+            return $lore;
+        }
+
+        $fallback = "10s";
+        foreach ($lore as $line) {
+            $clean = C::clean($line);
+            if (str_contains($clean, "Cooldown:")) {
+                $parts = explode("Cooldown:", $clean, 2);
+                $candidate = trim($parts[1] ?? "");
+                if ($candidate !== "") {
+                    $fallback = $candidate;
+                }
+                break;
+            }
+        }
+
+        $cooldown = PetManager::getCooldownLabel($definitionKey, $fallback);
+        foreach ($lore as $idx => $line) {
+            if (str_contains(C::clean($line), "Cooldown:")) {
+                $lore[$idx] = C::colorize("&r&7Cooldown: &f" . $cooldown);
+            }
+        }
+
+        return $lore;
+    }
+
+    private static function isPetDefinition(string $definitionKey): bool
+    {
+        return in_array($definitionKey, [
+            "purity_wisp",
+            "gale_fox",
+            "shatterfang",
+            "hearthbloom",
+            "ironclad_wyrm",
+            "aegis_ram",
+            "rift_viper",
+            "sunscorch_jackal",
+            "runesage_owl",
+            "stormcore_behemoth",
+            "veilmoth",
+            "blastforge_hound",
+        ], true);
     }
 
     private static function formatVanillaEnchantmentName(string $enchantName): string
@@ -538,14 +696,57 @@ final class GlaciaItemFactory {
             'type' => $identifier
         ]);
 
+        self::applyCustomArmorColor($item, $set);
         self::addArmorBaseEnchantments($item);
+        self::appendCustomArmorStrengthLore($item);
+        if ($item instanceof Durable) {
+            HeroicArmorDurabilityManager::initializeItem($item);
+        }
 
         return $item;
     }
 
+    private static function applyCustomArmorColor(Item $item, string $set): void
+    {
+        if (!$item instanceof Armor) {
+            return;
+        }
+
+        $color = match (strtolower($set)) {
+            // &5-like purple tint for Dreadveil/Phantom set.
+            "phantom" => new Color(170, 0, 170),
+            // Frostbound/Yeti: cool blue, slightly muted (not neon bright).
+            "yeti" => new Color(60, 125, 195),
+            // Stormcaller/Yijki: deeper &3-like cyan/blue.
+            "yijki" => new Color(0, 105, 120),
+            default => null,
+        };
+
+        if ($color !== null) {
+            $item->setCustomColor($color);
+        }
+    }
+
     private static function addArmorBaseEnchantments(Item $item): void {
-        $item->addEnchantment(new EnchantmentInstance(VanillaEnchantments::PROTECTION(), 4));
-        $item->addEnchantment(new EnchantmentInstance(VanillaEnchantments::UNBREAKING(), 3));
+        // Leather base for dyeing, then boosted to outperform diamond durability.
+        $item->addEnchantment(new EnchantmentInstance(VanillaEnchantments::PROTECTION(), 5));
+        $item->addEnchantment(new EnchantmentInstance(VanillaEnchantments::UNBREAKING(), 6));
+    }
+
+    private static function appendCustomArmorStrengthLore(Item $item): void
+    {
+        $line = C::colorize("&r&cThis item is stronger than diamond!");
+        $lore = $item->getLore();
+
+        foreach ($lore as $existing) {
+            if (TextFormat::clean((string) $existing) === TextFormat::clean($line)) {
+                return;
+            }
+        }
+
+        $lore[] = "";
+        $lore[] = $line;
+        $item->setLore($lore);
     }
 
     public static function customWeapon(string $set, string $type = "sword"): Item {
@@ -624,7 +825,13 @@ final class GlaciaItemFactory {
         $nbt->setString("glacia_quest_tier", $tier);
         $nbt->setInt("glacia_quest_index", $questIndex);
         $nbt->setString("glacia_quest_type", $quest["type"]);
-        $nbt->setString("glacia_quest_progress", json_encode(array_fill(0, count($quest["objectives"]), 0)));
+        $nbt->setString(
+            "glacia_quest_progress",
+            StorageUtils::encodeJsonString(
+                array_fill(0, count($quest["objectives"]), 0),
+                "quest item progress seed"
+            ) ?? "[]"
+        );
         $item->setNamedTag($nbt);
 
         QuestInstance::updateQuestLore($item);
@@ -638,6 +845,13 @@ final class GlaciaItemFactory {
 
     public static function heroicSlotTicket(): Item {
         return self::create("heroic_slot_ticket");
+    }
+
+    public static function itemFlipCreditVoucher(int $credits = 10): Item
+    {
+        return self::create("item_flip_credit_voucher", [
+            "credits" => max(1, $credits)
+        ]);
     }
 
     public static function collectionChest(): Item
@@ -764,6 +978,20 @@ final class GlaciaItemFactory {
         return str_replace('\n', "\n", $template);
     }
 
+    private static function formatBookDescription(string $description): string
+    {
+        return str_replace(["\r\n", "\r"], "\n", $description);
+    }
+
+    private static function extractLeadingFormatPrefix(string $line): string
+    {
+        if (preg_match('/^((?:&[0-9A-FK-OR])+)/i', $line, $matches) === 1) {
+            return $matches[1];
+        }
+
+        return "";
+    }
+
     /**
      * @param list<string> $lore
      * @return list<string>
@@ -809,5 +1037,32 @@ final class GlaciaItemFactory {
         $lore[] = C::colorize($detailLine);
         $item->setLore($lore);
         return $item;
+    }
+
+    /**
+     * @param mixed[] $lore
+     * @return string[]
+     */
+    private static function resolveRecipientLore(array $lore, ?Player $player): array
+    {
+        $resolved = [];
+        $recipient = $player?->getName();
+        foreach ($lore as $line) {
+            if (!is_string($line)) {
+                continue;
+            }
+
+            $text = $line;
+            if (str_contains($text, "{player}")) {
+                if ($recipient === null || trim($recipient) === "") {
+                    continue;
+                }
+                $text = str_replace("{player}", $recipient, $text);
+            }
+
+            $resolved[] = C::colorize($text);
+        }
+
+        return $resolved;
     }
 }

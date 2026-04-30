@@ -10,7 +10,6 @@ use ecstsy\Glacia\commands\sub\exp\XpBottleAllSubCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\utils\GlaciaUtils;
-use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\color\Color;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -32,7 +31,7 @@ final class XpBottleCommand extends BaseCommand {
             return;
         }
 
-        $amount = GeneralUtils::parseShorthandNumber((string) ($args["amount"] ?? ""));
+        $amount = GlaciaUtils::parseShorthandNumber((string) ($args["amount"] ?? ""));
 
         if ($amount <= 0) {
             $sender->sendMessage(C::colorize("&r&cError: &4Amount must be greater than 0."));

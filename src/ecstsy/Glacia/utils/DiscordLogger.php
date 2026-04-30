@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\utils;
 
-use bbo51dog\pmdiscord\connection\Webhook;
-use bbo51dog\pmdiscord\element\Content;
+use ecstsy\Glacia\Loader;
+use ecstsy\MartianUtilities\utils\GeneralUtils;
 use fenomeno\libWebhook\builder\EmbedBuilder;
 use fenomeno\libWebhook\builder\WebhookMessageBuilder;
 use fenomeno\libWebhook\WebhookPool;
@@ -13,10 +13,19 @@ use SOFe\AwaitGenerator\Await;
 
 final class DiscordLogger {
 
-    // "https://discord.com/api/webhooks/1495596161950552091/t_aDEVX3LMjFs0Cexzibz2AfvuVEpF3hapjfEFl0Qfud-y5ATqeGZbLrqTvt2qYQ9Sqq"
-
     public static function send(string $message, ?string $username = "Ethereal Hub"): void {
-        Await::f2c(function() use($message, $username) {
+        $loader = Loader::getInstance();
+        $config = GeneralUtils::getConfiguration($loader, "config.yml");
+        $enabled = (bool) ($config?->getNested("audit-log.staff-discord-enabled", false) ?? false);
+        if (!$enabled) {
+            return;
+        }
+        $webhookUrl = trim((string) ($config?->getNested("audit-log.staff-discord-webhook", "") ?? ""));
+        if ($webhookUrl === "") {
+            return;
+        }
+
+        Await::f2c(function() use($loader, $message, $username, $webhookUrl) {
             $embed = EmbedBuilder::create()
                 ->title("Glacia Factions")
                 ->description($message)
@@ -30,13 +39,12 @@ final class DiscordLogger {
                 ->build();
 
             try {
-                $result = yield from WebhookPool::getInstance()->asyncSubmit(
-                    "https://discord.com/api/webhooks/1495596161950552091/t_aDEVX3LMjFs0Cexzibz2AfvuVEpF3hapjfEFl0Qfud-y5ATqeGZbLrqTvt2qYQ9Sqq",
-                    $messageEmbed
-                );
-                echo "Sent with status {$result->status}\n";
+                $result = yield from WebhookPool::getInstance()->asyncSubmit($webhookUrl, $messageEmbed);
+                if (!$result->ok) {
+                    $loader->getLogger()->debug("Discord webhook returned non-OK status: " . $result->status);
+                }
             } catch (\Throwable $e) {
-                echo "Failed to send webhook: {$e->getMessage()}\n";
+                $loader->getLogger()->warning("Failed to send Discord webhook: " . $e->getMessage());
             }
         });
     }

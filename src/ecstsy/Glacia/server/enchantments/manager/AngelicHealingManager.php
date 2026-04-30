@@ -84,4 +84,11 @@ final class AngelicHealingManager {
             unset(self::$active[$id]);
         }
     }
+
+    public static function clearPlayer(Player $player): void
+    {
+        $id = $player->getId();
+        self::clear($player);
+        unset(self::$cooldowns[$id]);
+    }
 }

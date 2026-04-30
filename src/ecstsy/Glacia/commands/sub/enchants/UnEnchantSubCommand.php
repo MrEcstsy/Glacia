@@ -24,7 +24,7 @@ final class UnEnchantSubCommand extends BaseSubCommand {
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void
     {
         if (!$sender instanceof Player) {
-            $sender->sendMessage(C::colorize("&r&7In-game command!"));
+            $sender->sendMessage(C::colorize("&r&cConsole cannot remove enchants from a held item. Run this command in-game."));
             return;
         }
 

@@ -1,0 +1,15 @@
+# Optional admin-side overrides for Glacia item definitions.
+# This changes newly created items only (existing items are untouched).
+#
+# Format:
+# items:
+#   <definition_id>:
+#     name: "&r&l&aCustom Name"
+#     lore:
+#       - "&r&7Line 1"
+#       - "&r&7Line 2"
+#     nbt:
+#       custom_key: "value"
+
+items: {}
+

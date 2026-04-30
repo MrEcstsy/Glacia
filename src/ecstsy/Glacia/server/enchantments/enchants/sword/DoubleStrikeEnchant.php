@@ -9,6 +9,7 @@ use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\entity\Living;
@@ -39,8 +40,9 @@ final class DoubleStrikeEnchant implements EntityDamageByEntityEnchantmentHandle
             3 => 19,
             default => 8,
         };
+        $chance = EnchantTuningManager::getLevelInt("doublestrike", "chance-by-level", $level, $chance);
 
-        $cooldown = 6;
+        $cooldown = max(0, EnchantTuningManager::getInt("doublestrike", "cooldown", 6));
 
         if (!ProcLuckManager::roll($damager, "doublestrike", $chance, 2, 10)) return;
         if ($session !== null && $session->isOnCooldown("doublestrike")) return;

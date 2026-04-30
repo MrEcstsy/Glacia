@@ -151,7 +151,9 @@ final class GlaciaSpawnerItem {
         $display = $display !== null && $display !== "" ? $display : ucwords(str_replace("_", " ", $zoneId));
 
         $item = clone self::MONSTER_SPAWNER()->asItem();
-        $item = self::setSpawnerEntityId($item, 32);
+        // Leave the legacy entity id empty so the tile cannot briefly behave
+        // like a normal zombie spawner before zone mode is applied.
+        $item = self::setSpawnerEntityId($item, 0);
         $item->setCount(1);
         $item->setCustomName(C::colorize("&r&d&lZone Spawner &8(&f{$display}&8)"));
         $item->setLore([

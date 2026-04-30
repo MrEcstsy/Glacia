@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\capture;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use ecstsy\Glacia\server\factions\Faction;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\player\Player;
@@ -24,7 +26,7 @@ final class CaptureManager {
 
     private ?string $activeKothId = null;
     private ?string $activeKothFactionId = null;
-    private int $activeKothProgress = 0;
+    private float $activeKothProgress = 0.0;
     private int $lastKothAnnounce = 0;
 
     /** @var array<string, string|null> */
@@ -41,7 +43,7 @@ final class CaptureManager {
         $this->koths = [];
         $this->activeKothId = null;
         $this->activeKothFactionId = null;
-        $this->activeKothProgress = 0;
+        $this->activeKothProgress = 0.0;
 
         foreach ((array) ($this->config?->get("outposts", []) ?? []) as $id => $data) {
             if (is_array($data)) {
@@ -247,7 +249,7 @@ final class CaptureManager {
 
         $this->activeKothId = $id;
         $this->activeKothFactionId = null;
-        $this->activeKothProgress = 0;
+        $this->activeKothProgress = 0.0;
         $this->lastKothAnnounce = 0;
 
         Server::getInstance()->broadcastMessage(C::colorize(
@@ -262,7 +264,7 @@ final class CaptureManager {
         $display = $active !== null ? (string) ($this->koths[$active]["display"] ?? ucfirst($active)) : "KOTH";
         $this->activeKothId = null;
         $this->activeKothFactionId = null;
-        $this->activeKothProgress = 0;
+        $this->activeKothProgress = 0.0;
         $this->lastKothAnnounce = 0;
 
         if ($broadcast) {
@@ -359,14 +361,20 @@ final class CaptureManager {
         $factionId = $faction->getFactionId();
         if ($this->activeKothFactionId !== $factionId) {
             $this->activeKothFactionId = $factionId;
-            $this->activeKothProgress = 0;
+            $this->activeKothProgress = 0.0;
 
             Server::getInstance()->broadcastMessage(C::colorize(
                 "&r&6KOTH &8| &r&f" . $faction->getName() . " &7is now capturing &f" . (string) $definition["display"] . "&7."
             ));
         }
 
-        $this->activeKothProgress++;
+        $strategistBonus = $this->getStrategistKothProgressBonus(
+            $world,
+            (array) $definition["pos1"],
+            (array) $definition["pos2"],
+            $factionId
+        );
+        $this->activeKothProgress += 1.0 + $strategistBonus;
         $captureTime = max(10, (int) ($definition["capture-time"] ?? 180));
         $percent = min(100, (int) round(($this->activeKothProgress / $captureTime) * 100));
 
@@ -458,6 +466,38 @@ final class CaptureManager {
         }
 
         return $factions;
+    }
+
+    private function getStrategistKothProgressBonus(World $world, array $pos1, array $pos2, string $capturingFactionId) : float
+    {
+        $minX = min((int) $pos1["x"], (int) $pos2["x"]);
+        $maxX = max((int) $pos1["x"], (int) $pos2["x"]);
+        $minY = min((int) $pos1["y"], (int) $pos2["y"]);
+        $maxY = max((int) $pos1["y"], (int) $pos2["y"]);
+        $minZ = min((int) $pos1["z"], (int) $pos2["z"]);
+        $maxZ = max((int) $pos1["z"], (int) $pos2["z"]);
+
+        $cap = max(1, EnchantTuningManager::getInt("strategist", "koth-bonus-level-cap", 8));
+        $per = max(0.0, EnchantTuningManager::getFloat("strategist", "koth-capture-bonus-per-level", 0.02));
+        $best = 0.0;
+        foreach ($world->getPlayers() as $player) {
+            $pos = $player->getPosition();
+            if (
+                $pos->getFloorX() < $minX || $pos->getFloorX() > $maxX
+                || $pos->getFloorY() < $minY || $pos->getFloorY() > $maxY
+                || $pos->getFloorZ() < $minZ || $pos->getFloorZ() > $maxZ
+            ) {
+                continue;
+            }
+            if (Loader::getPlayerManager()->getSession($player)?->getFactionId() !== $capturingFactionId) {
+                continue;
+            }
+            $lv = CustomEnchantmentManager::getLevel($player->getArmorInventory()->getBoots(), "strategist");
+            if ($lv > 0) {
+                $best = max($best, $per * min($cap, $lv));
+            }
+        }
+        return $best;
     }
 
     /**

@@ -23,10 +23,17 @@ final class WildCommand extends BaseCommand {
 
     private const DEFAULT_MIN_RADIUS = 6000;
     private const DEFAULT_MAX_RADIUS = 7000;
-    private const DEFAULT_ATTEMPTS = 28;
+    private const DEFAULT_ATTEMPTS = 120;
+    private const DEFAULT_COOLDOWN = 20;
     private const HARD_MAX_RADIUS = 7000;
     private const NEARBY_LAND_SEARCH_RADIUS = 8;
     private const POPULATION_RETRY_DELAY = 40;
+    private const POPULATION_RETRY_ATTEMPTS = 3;
+
+    /** @var array<string, int> */
+    private static array $cooldowns = [];
+    /** @var array<string, int> */
+    private static array $pendingCooldownSeconds = [];
 
     /** @var int[] */
     private const UNSAFE_FOOTING = [
@@ -62,25 +69,40 @@ final class WildCommand extends BaseCommand {
         $configuredMaxRadius = (int) ($config?->get("wild-max-radius", self::DEFAULT_MAX_RADIUS) ?? self::DEFAULT_MAX_RADIUS);
         $maxRadius = max($minRadius, min(self::HARD_MAX_RADIUS, $configuredMaxRadius));
         $attempts = max(1, (int) ($config?->get("wild-attempts", self::DEFAULT_ATTEMPTS) ?? self::DEFAULT_ATTEMPTS));
+        $cooldown = max(0, (int) ($config?->get("wild-cooldown-seconds", self::DEFAULT_COOLDOWN) ?? self::DEFAULT_COOLDOWN));
 
-        $sender->sendMessage(C::colorize("&r&bSearching the wilderness for a safe location..."));
-        self::searchAndTeleport($sender, $world, $minRadius, $maxRadius, $attempts);
-    }
-
-    public static function searchAndTeleport(Player $player, World $world, int $minRadius, int $maxRadius, int $attempts): void
-    {
-        if (!$player->isConnected()) {
-            return;
+        $key = strtolower($sender->getName());
+        if ($cooldown > 0) {
+            $remaining = (self::$cooldowns[$key] ?? 0) - time();
+            if ($remaining > 0) {
+                $sender->sendMessage(C::colorize("&r&cYou must wait &f{$remaining}s &cbefore using &f/wild &cagain."));
+                return;
+            }
+            self::$pendingCooldownSeconds[$key] = $cooldown;
         }
 
-        for ($attempt = 0; $attempt < $attempts; $attempt++) {
+        $sender->sendMessage(C::colorize("&r&bSearching the wilderness for a safe location&7..."));
+        if (!self::searchAndTeleport($sender, $world, $minRadius, $maxRadius, $attempts)) {
+            unset(self::$pendingCooldownSeconds[$key]);
+        }
+    }
+
+    public static function searchAndTeleport(Player $player, World $world, int $minRadius, int $maxRadius, int $attempts): bool
+    {
+        if (!$player->isConnected()) {
+            return false;
+        }
+
+        $totalAttempts = max(1, $attempts) * 2;
+        for ($attempt = 0; $attempt < $totalAttempts; $attempt++) {
             [$x, $z, $distance] = self::pickCandidate($world, $minRadius, $maxRadius);
             if (self::teleportAtCandidate($player, $world, $minRadius, $x, $z, $distance, true)) {
-                return;
+                return true;
             }
         }
 
         $player->sendMessage(C::colorize("&r&cFailed to find a safe wilderness location. Try again."));
+        return false;
     }
 
     public static function teleportAtCandidate(Player $player, World $world, int $minRadius, int $x, int $z, int $distance, bool $allowPopulateRetry): bool
@@ -106,11 +128,36 @@ final class WildCommand extends BaseCommand {
                         private int $minRadius,
                         private int $x,
                         private int $z,
-                        private int $distance
+                        private int $distance,
+                        private int $remainingRetries = 3
                     ) {}
 
                     public function onRun(): void
                     {
+                        if (!$this->player->isConnected()) {
+                            return;
+                        }
+
+                        $chunkX = $this->x >> 4;
+                        $chunkZ = $this->z >> 4;
+                        if (!$this->world->isChunkLoaded($chunkX, $chunkZ) && $this->remainingRetries > 0) {
+                            $this->remainingRetries--;
+                            $this->world->orderChunkPopulation($chunkX, $chunkZ, null);
+                            Loader::getInstance()->getScheduler()->scheduleDelayedTask(
+                                new self(
+                                    $this->player,
+                                    $this->world,
+                                    $this->minRadius,
+                                    $this->x,
+                                    $this->z,
+                                    $this->distance,
+                                    $this->remainingRetries
+                                ),
+                                40
+                            );
+                            return;
+                        }
+
                         if (
                             !WildCommand::teleportAtCandidate($this->player, $this->world, $this->minRadius, $this->x, $this->z, $this->distance, false) &&
                             $this->player->isConnected()
@@ -127,6 +174,13 @@ final class WildCommand extends BaseCommand {
         $safe = self::resolveSafeSpawn($world, $x, $z, $minRadius);
         if ($safe === null) {
             return false;
+        }
+
+        $key = strtolower($player->getName());
+        $cooldownSeconds = self::$pendingCooldownSeconds[$key] ?? 0;
+        if ($cooldownSeconds > 0) {
+            self::$cooldowns[$key] = time() + $cooldownSeconds;
+            unset(self::$pendingCooldownSeconds[$key]);
         }
 
         GlaciaUtils::timedTeleport($player, $safe->asVector3(), 5);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\factions;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\player\Player;
 use pocketmine\utils\SingletonTrait;
@@ -29,6 +30,7 @@ final class FactionXpBoosterManager {
 
     public function activate(Faction $faction, float $multiplier, int $durationSeconds, Player $activatedBy): void
     {
+        $durationSeconds = max(1, (int) ceil($durationSeconds * RuneManager::getFactionBoosterDurationMultiplier($activatedBy)));
         $startedAt = time();
         $expiresAt = time() + $durationSeconds;
         $this->boosters[$faction->getFactionId()] = [

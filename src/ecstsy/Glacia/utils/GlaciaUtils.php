@@ -7,6 +7,8 @@ namespace ecstsy\Glacia\utils;
 use CortexPE\Commando\PacketHooker;
 use ecstsy\Glacia\blocks\tiles\SpawnerTile;
 use ecstsy\Glacia\commands\AdminModeCommand;
+use ecstsy\Glacia\commands\GlaciaListCommand;
+use ecstsy\Glacia\commands\GlaciaHealthCommand;
 use ecstsy\Glacia\commands\AuctionHouseCommand;
 use ecstsy\Glacia\commands\BackCommand;
 use ecstsy\Glacia\commands\SellCommand;
@@ -16,8 +18,10 @@ use ecstsy\Glacia\commands\BountyCommand;
 use ecstsy\Glacia\commands\BanCommand;
 use ecstsy\Glacia\commands\BlackMarketCommand;
 use ecstsy\Glacia\commands\CreateHomeCommand;
+use ecstsy\Glacia\commands\CraftCommand;
 use ecstsy\Glacia\commands\CreateWarpCommand;
 use ecstsy\Glacia\commands\DisguiseCommand;
+use ecstsy\Glacia\commands\DiscordCommand;
 use ecstsy\Glacia\commands\EcoCommand;
 use ecstsy\Glacia\commands\EnchanterCommand;
 use ecstsy\Glacia\commands\EnderChestCommand;
@@ -42,7 +46,9 @@ use ecstsy\Glacia\commands\KothCommand;
 use ecstsy\Glacia\commands\OutpostCommand;
 use ecstsy\Glacia\commands\PayCommand;
 use ecstsy\Glacia\commands\NearCommand;
+use ecstsy\Glacia\commands\NickCommand;
 use ecstsy\Glacia\commands\NetherCommand;
+use ecstsy\Glacia\commands\WorldCommand;
 use ecstsy\Glacia\commands\PlayerVaultCommand;
 use ecstsy\Glacia\commands\RankCommand;
 use ecstsy\Glacia\commands\RemoveHomeCommand;
@@ -55,6 +61,9 @@ use ecstsy\Glacia\commands\TPACommand;
 use ecstsy\Glacia\commands\TPADenyCommand;
 use ecstsy\Glacia\commands\TPAHereCommand;
 use ecstsy\Glacia\commands\TrashCommand;
+use ecstsy\Glacia\commands\TradeCommand;
+use ecstsy\Glacia\commands\TopCommand;
+use ecstsy\Glacia\commands\SuicideCommand;
 use ecstsy\Glacia\commands\UndisguiseCommand;
 use ecstsy\Glacia\commands\ReapplyCommand;
 use ecstsy\Glacia\commands\WithdrawCommand;
@@ -64,14 +73,20 @@ use ecstsy\Glacia\commands\ZonesCommand;
 use ecstsy\Glacia\commands\XpBottleCommand;
 use ecstsy\Glacia\commands\BlessCommand;
 use ecstsy\Glacia\commands\CoinFlipCommand;
+use ecstsy\Glacia\commands\CondenseCommand;
+use ecstsy\Glacia\commands\ChunkBordersCommand;
 use ecstsy\Glacia\commands\CollectCommand;
 use ecstsy\Glacia\commands\BroadcastCommand;
 use ecstsy\Glacia\commands\DupeCommand;
+use ecstsy\Glacia\commands\DeathInventoryLogCommand;
+use ecstsy\Glacia\commands\ChallengesCommand;
 use ecstsy\Glacia\commands\ClearChatCommand;
 use ecstsy\Glacia\commands\ClearInventoryCommand;
+use ecstsy\Glacia\commands\FastChestCommand;
 use ecstsy\Glacia\commands\FeedCommand;
 use ecstsy\Glacia\commands\FundCommand;
 use ecstsy\Glacia\commands\FlyCommand;
+use ecstsy\Glacia\commands\NightVisionCommand;
 use ecstsy\Glacia\commands\GamemodeCommand;
 use ecstsy\Glacia\commands\GKitCommand;
 use ecstsy\Glacia\commands\HatCommand;
@@ -79,16 +94,25 @@ use ecstsy\Glacia\commands\HealCommand;
 use ecstsy\Glacia\commands\JackpotCommand;
 use ecstsy\Glacia\commands\MoreCommand;
 use ecstsy\Glacia\commands\PingCommand;
+use ecstsy\Glacia\commands\PTimeCommand;
 use ecstsy\Glacia\commands\SeeBragCommand;
 use ecstsy\Glacia\commands\SeeItemCommand;
 use ecstsy\Glacia\commands\ScoreboardCommand;
 use ecstsy\Glacia\commands\SettingsCommand;
 use ecstsy\Glacia\commands\ShopCommand;
 use ecstsy\Glacia\commands\SlotbotCommand;
+use ecstsy\Glacia\commands\TebexCommand;
 use ecstsy\Glacia\commands\GlaciaReloadCommand;
+use ecstsy\Glacia\commands\ItemFlipCommand;
 use ecstsy\Glacia\commands\KitCommand;
 use ecstsy\Glacia\commands\LevelCommand;
+use ecstsy\Glacia\commands\SetTitleCommand;
+use ecstsy\Glacia\commands\TitlesCommand;
+use ecstsy\Glacia\commands\VoteCommand;
 use ecstsy\Glacia\entity\boss\bosses\AstralDevourer;
+use ecstsy\Glacia\entity\boss\bosses\GlacialHydra;
+use ecstsy\Glacia\entity\boss\bosses\TitanKnight;
+use ecstsy\Glacia\entity\boss\projectile\HydraRiftFireball;
 use ecstsy\Glacia\entity\CombatLoggerEntity;
 use ecstsy\Glacia\entity\envoys\EnvoyBabyZombie;
 use ecstsy\Glacia\entity\envoys\EnvoyBlaze;
@@ -102,13 +126,13 @@ use ecstsy\Glacia\entity\gkits\ForsakenChampion;
 use ecstsy\Glacia\entity\GlaciaExplosiveCreeper;
 use ecstsy\Glacia\entity\mobs\GlaciaLightningStrike;
 use ecstsy\Glacia\entity\GlaciaPrimedTNT;
-use ecstsy\Glacia\entity\GlaciaSplashPotion;
 use ecstsy\Glacia\entity\RiftEntity;
 use ecstsy\Glacia\entity\RiftWalkerEntity;
 use ecstsy\Glacia\entity\zones\ZoneMob;
 use ecstsy\Glacia\entity\zones\ZoneMobBlaze;
 use ecstsy\Glacia\entity\zones\ZoneMobCreeper;
 use ecstsy\Glacia\entity\zones\ZoneMobEnderman;
+use ecstsy\Glacia\entity\zones\ZoneMobHusk;
 use ecstsy\Glacia\entity\zones\ZoneMobIronGolem;
 use ecstsy\Glacia\entity\zones\ZoneMobMagmaCube;
 use ecstsy\Glacia\entity\zones\ZoneMobPigman;
@@ -122,22 +146,32 @@ use ecstsy\Glacia\listeners\CustomTNTListener;
 use ecstsy\Glacia\listeners\EnchantmentListener;
 use ecstsy\Glacia\listeners\EnvoyListener;
 use ecstsy\Glacia\listeners\FactionListener;
+use ecstsy\Glacia\listeners\FishingListener;
 use ecstsy\Glacia\listeners\GlaciaListener;
+use ecstsy\Glacia\listeners\DeathInventoryLogListener;
+use ecstsy\Glacia\listeners\ChallengeListener;
+use ecstsy\Glacia\listeners\StaffModeListener;
 use ecstsy\Glacia\listeners\HealingPotionListener;
 use ecstsy\Glacia\listeners\ItemListener;
 use ecstsy\Glacia\listeners\LevelListener;
 use ecstsy\Glacia\listeners\QuestListener;
 use ecstsy\Glacia\listeners\RegionListener;
 use ecstsy\Glacia\listeners\VanillaEnchantmentSyncListener;
+use ecstsy\Glacia\listeners\VoteListener;
 use ecstsy\Glacia\listeners\WorldBorderListener;
 use ecstsy\Glacia\listeners\ZoneListener;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\combat\potions\HealingPotionSettings;
 use ecstsy\Glacia\server\economy\SellHandler;
+use ecstsy\Glacia\server\factions\audit\FactionAuditFeed;
 use ecstsy\Glacia\server\disguises\DisguiseManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
 use ecstsy\Glacia\server\enchantments\manager\EnchantEffectManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
+use ecstsy\Glacia\network\PersonaTolerantSkinAdapter;
+use ecstsy\Glacia\server\fishing\FishingManager;
+use ecstsy\Glacia\server\fishing\GlaciaFishingHook;
 use ecstsy\Glacia\server\enchantments\enchants\armor\AngelicEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\armor\ArmoredEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\armor\CurseEnchant;
@@ -151,7 +185,12 @@ use ecstsy\Glacia\server\enchantments\enchants\armor\StickyEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\armor\TankEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\armor\TricksterEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\armor\ValorEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\armor\WatchmenEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\armor\BulwarkEnchant;
+use ecstsy\Glacia\server\enchantments\advanced\AdvancedSetEnchants;
+use ecstsy\Glacia\server\enchantments\enchants\chestplate\BlastwardEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\axe\BerserkEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\axe\DemonicFinisherEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\helmet\WellFedEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\axe\BleedEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\axe\BossSlayerEnchant;
@@ -159,45 +198,77 @@ use ecstsy\Glacia\server\enchantments\enchants\axe\CleaveEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\axe\ConfusionEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\axe\FearEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\axe\HolyEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\axe\InsanityEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\axe\JeopardyEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\axe\PhantomEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\axe\PummelEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\axe\ThunderfamineEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\boots\EnderWalkerEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\boots\AscendedEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\boots\MetaphysicalEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\bow\VirusEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\bow\PelletEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\bow\SiegebreakerEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\bow\SlingshotEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\bow\TrickshotEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\chestplate\BlazedEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\chestplate\BloodLustEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\chestplate\FlourishEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\chestplate\KerbusEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\chestplate\MirroredEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\chestplate\PlagueEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\chestplate\PulseEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\helmet\ClarityEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\helmet\EndershiftEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\helmet\HeavyEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\helmet\ImplantsEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\helmet\TrappedEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\hoe\AutoPlanterEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\leggings\JellyLegsEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\leggings\RedeemerEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\leggings\StaticEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\pickaxe\AutoSmeltEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\pickaxe\DetonateEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\pickaxe\LuckyEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\pickaxe\MechaEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\pickaxe\ObsidianDestroyerEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\pickaxe\SatansTreatEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\pickaxe\TrixalEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\BlindEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\sword\BrotherhoodEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\sword\DisarmorEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\DoubleStrikeEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\ExecuteEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\FeatherweightEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\GreatswordEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\sword\IceAspectEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\InquisitiveEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\InsomniaEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\KillAuraEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\LifestealEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\sword\HexlockEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\sword\MuravievaEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\RageEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\SilenceEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\SlownessEnchant;
+use ecstsy\Glacia\server\enchantments\enchants\sword\VampiricDevourEnchant;
 use ecstsy\Glacia\server\enchantments\enchants\sword\VampireEnchant;
 use ecstsy\Glacia\server\enchantments\manager\EnchantEventRegistry;
 use ecstsy\Glacia\server\enchantments\vanilla\ExtendedVanillaEnchantmentRegistry;
+use ecstsy\Glacia\server\factions\FactionNameBlocklist;
+use ecstsy\Glacia\server\staff\StaffModeManager;
 use ecstsy\Glacia\server\factions\claims\FactionClaim;
 use ecstsy\Glacia\server\factions\relations\RelationManager;
 use ecstsy\Glacia\server\FloatingTextInstance;
+use ecstsy\Glacia\server\items\armor\HeroicArmorDurabilityManager;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
+use ecstsy\Glacia\server\items\ItemDefinitionOverrideManager;
 use ecstsy\Glacia\server\items\GlaciaItems;
 use ecstsy\Glacia\server\items\GlaciaSpawnerItem;
 use ecstsy\Glacia\server\items\genbuckets\GenBucketManager;
 use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\Glacia\server\lootboxes\LootboxRepository;
+use ecstsy\Glacia\server\etherealcrates\EtherealCrateRepository;
 use ecstsy\Glacia\server\levels\PlayerLevelManager;
 use ecstsy\Glacia\server\quests\QuestInstance;
 use ecstsy\Glacia\server\ranks\RankManager;
@@ -207,15 +278,16 @@ use ecstsy\Glacia\server\regions\RegionPermissions;
 use ecstsy\Glacia\server\scoreboard\ScoreboardHelper;
 use ecstsy\Glacia\server\spawners\SpawnerWorthManager;
 use ecstsy\Glacia\server\worldborder\WorldBorderManager;
+use ecstsy\Glacia\server\world\theme\DimensionThemeManager;
 use ecstsy\Glacia\server\zones\ZoneManager;
 use ecstsy\Glacia\server\zones\ZoneMobManager;
+use ecstsy\Glacia\server\titles\TitleManager;
+use ecstsy\Glacia\server\scoreboard\ScoreboardProfileManager;
 use ecstsy\Glacia\tasks\AutoPlanterTask;
 use ecstsy\Glacia\tasks\BlackMarketAuctionTickTask;
 use ecstsy\Glacia\tasks\CombatTickTask;
 use ecstsy\Glacia\utils\lang\MessageTemplates;
-use fenomeno\libWebhook\dto\WebhookJobResult;
-use fenomeno\libWebhook\exceptions\WebhookPoolException;
-use fenomeno\libWebhook\model\WebhookMessage;
+use ecstsy\MartianUtilities\utils\GeneralUtils;
 use fenomeno\libWebhook\WebhookPool;
 use muqsit\invmenu\InvMenuHandler;
 use muqsit\invmenu\type\util\InvMenuTypeBuilders;
@@ -233,6 +305,7 @@ use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\entity\Entity;
 use pocketmine\entity\EntityDataHelper;
 use pocketmine\entity\EntityFactory;
+use pocketmine\network\mcpe\convert\TypeConverter;
 use pocketmine\entity\Location;
 use pocketmine\inventory\Inventory;
 use pocketmine\item\Durable;
@@ -241,9 +314,14 @@ use pocketmine\item\Item;
 use pocketmine\item\StringToItemParser;
 use pocketmine\math\Vector3;
 use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\network\mcpe\protocol\SetActorDataPacket;
+use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataProperties;
+use pocketmine\network\mcpe\protocol\types\entity\PropertySyncData;
+use pocketmine\network\mcpe\protocol\types\entity\StringMetadataProperty;
 use pocketmine\network\mcpe\protocol\types\inventory\WindowTypes;
 use pocketmine\player\Player;
 use pocketmine\plugin\PluginBase;
+use pocketmine\scheduler\ClosureTask;
 use pocketmine\scheduler\Task;
 use pocketmine\Server;
 use pocketmine\utils\TextFormat as C;
@@ -251,7 +329,6 @@ use pocketmine\world\format\io\GlobalItemDataHandlers;
 use pocketmine\world\particle\PortalParticle;
 use pocketmine\world\sound\EndermanTeleportSound;
 use pocketmine\world\World;
-use SOFe\AwaitGenerator\Await;
 use ecstsy\Glacia\utils\screens\disguises\DisguiseScreen;
 
 final class GlaciaUtils
@@ -260,25 +337,61 @@ final class GlaciaUtils
     public const FAKE_ENCH_ID = -1;
     private array $itemSerializers = [];
     public const TYPE_DISPENSER = 'glacia:dispenser';
+    /** @var array<string, int> */
+    private static array $timedTeleportTokens = [];
+
+    public static function getTimedTeleportToken(string $uuid): int
+    {
+        return self::$timedTeleportTokens[$uuid] ?? 0;
+    }
+
+    public static function clearTimedTeleportToken(string $uuid, int $token): void
+    {
+        if ((self::$timedTeleportTokens[$uuid] ?? 0) === $token) {
+            unset(self::$timedTeleportTokens[$uuid]);
+        }
+    }
 
     public static function initAll(Loader $loader): void
     {
         ExtendedVanillaEnchantmentRegistry::registerDefaults();
         self::ensureRanks();
         MessageTemplates::load();
-        self::initDiscordWebhooks($loader);
-        GlaciaItems::init();
-
-        $files = array_merge(
-            ["dps/Simple.yml", "dps/Unique.yml", "dps/Elite.yml", "dps/Exotic.yml", "dps/Legendary.yml", "dps/Godly.yml", "items.yml", "blackmarket.yml", "shop.yml", "sell.yml", "kits.yml", "warlords.yml", "slotbot.yml", "enchanter.yml", "auctionhouse.yml", "quests.yml", "spawners.yml", "misc.yml", "messages.yml", "announcer.yml", "zone_mobs.yml", "faction_upgrades.yml", "pets.yml", "runes.yml", "fund.yml", "envoy.yml", "genbuckets.yml", "levels.yml", "zones.yml", "capturepoints.yml", "combat.yml"],
-            LootboxRepository::getBundledResourceFiles()
-        );
+        $files = ConfigResourceCatalog::getBundledConfigFiles();
 
         foreach ($files as $file) {
-            $loader->saveResource($file);
+            GeneralUtils::syncResourceFile($loader, $file, false);
         }
 
+        self::initDiscordWebhooks($loader);
+
+        GlaciaItems::init();
         RuneManager::loadFromConfig();
+        EnchantTuningManager::loadFromConfig();
+        TitleManager::loadFromConfig();
+        FactionNameBlocklist::load();
+        ItemDefinitionOverrideManager::apply();
+        FishingManager::boot();
+        StaffModeManager::loadFromConfig();
+        \ecstsy\Glacia\server\staff\ModerationManager::getInstance()->loadFromConfig();
+        Loader::getTebexManager()->loadFromConfig();
+        Loader::getVoteManager()->loadFromConfig();
+        Loader::getDeathInventoryLogManager()->loadFromConfig();
+        AuditFileLogger::loadFromConfig();
+        Loader::getChallengeManager()->loadFromConfig();
+        \ecstsy\Glacia\server\adminbazaar\AdminBazaarManager::loadFromConfig();
+        \ecstsy\Glacia\server\lootboxes\CcProgressManager::loadFromConfig();
+        \ecstsy\Glacia\server\enchantments\essence\EnchantEssenceManager::loadFromConfig();
+        \ecstsy\Glacia\server\fragments\FragmentManager::loadFromConfig();
+        \ecstsy\Glacia\server\lootboxes\CcProgressManager::registerItemDefinitions();
+        \ecstsy\Glacia\server\enchantments\essence\EnchantEssenceManager::registerItemDefinitions();
+        \ecstsy\Glacia\server\fragments\FragmentManager::registerItemDefinitions();
+        ItemDefinitionOverrideManager::apply();
+
+        $miscCfg = GeneralUtils::getConfiguration($loader, "misc.yml");
+        if ((bool) ($miscCfg?->get("persona-friendly-skins", true))) {
+            TypeConverter::getInstance()->setSkinAdapter(new PersonaTolerantSkinAdapter());
+        }
 
         $regions = [
             new Region("Spawn", new Vector3(385, 0, 114), new Vector3(114, 204, 385), new RegionPermissions(false, false, true, false, false, false, false), "world"),
@@ -289,10 +402,13 @@ final class GlaciaUtils
             $loader->getRegionManager()->addRegion($region);
         }
 
-        $unregisterCommands = ["ban", "kick", "xp", "gamemode"];
+        $unregisterCommands = ["ban", "kick", "xp", "gamemode", "list", "kill"];
 
         foreach ($unregisterCommands as $command) {
-            $loader->getServer()->getCommandMap()->unregister($loader->getServer()->getCommandMap()->getCommand($command));
+            $cmd = $loader->getServer()->getCommandMap()->getCommand($command);
+            if ($cmd !== null) {
+                $loader->getServer()->getCommandMap()->unregister($cmd);
+            }
         }
 
         $loader->getServer()->getCommandMap()->registerAll("Glacia", [
@@ -312,8 +428,18 @@ final class GlaciaUtils
             new WithdrawCommand($loader, "withdraw", "Withdraw money into a bank note", ["wd"]),
             new BackCommand($loader, "back", "Teleport to your previous location"),
             new NearCommand($loader, "near", "View nearby players"),
+            new NickCommand($loader, "nick", "Set your nickname", ["nickname"]),
+            new PTimeCommand($loader, "ptime", "Set your personal time", ["playertime"]),
+            new DiscordCommand($loader, "discord", "Link your Discord account", ["dclink"]),
+            new DiscordCommand($loader, "discordlink", "Discord bridge command"),
+            new VoteCommand($loader, "vote", "Vote rewards and claim commands", ["votereward"]),
+            new TebexCommand($loader, "tebex", "Tebex queue sync controls"),
+            new DeathInventoryLogCommand($loader, "deathinvlog", "Death inventory logging commands", ["dil"]),
+            new ChallengesCommand($loader, "challenges", "Daily challenge tracker and rewards"),
+            new FastChestCommand($loader, "fastchest", "FasterChest helper bridge", ["fchest"]),
             new ZonesCommand($loader, "zones", "Open the zones menu", ["zone"]),
             new NetherCommand($loader, "nether", "Teleport to the nether zone shortcut"),
+            new WorldCommand($loader, "world", "World management commands", ["wm"]),
             new WildCommand($loader, "wild", "Teleport to a random wilderness location"),
             new EnderChestCommand($loader, "enderchest", "Open your ender chest", ["ec"]),
             new EnderSeeCommand($loader, "endersee", "View another player's ender chest", ["ecsee"]),
@@ -324,18 +450,28 @@ final class GlaciaUtils
             new HomeCommand($loader, "home", "Home commands"),
             new HomesCommand($loader, "homes", "List your homes"),
             new CreateHomeCommand($loader, "createhome", "Create a new home", ["sethome"]),
+            new CraftCommand($loader, "workbench", "Open a portable crafting table", ["craft", "wb"]),
             new CreateWarpCommand($loader, "createwarp", "Create a new warp", ["setwarp"]),
             new ListWarpsCommand($loader, "listwarps", "List all warps"),
             new RemoveWarpCommand($loader, "removewarp", "Remove a warp", ["delwarp"]),
             new RemoveHomeCommand($loader, "removehome", "Remove a home", ["delhome"]), 
             new WarpCommand($loader, "warp", "Warp to a location"),
             new TPACommand($loader, "tpa", "Teleport to another player"),
+            new TradeCommand($loader, "trade", "Trade items with another player"),
             new TPAAcceptCommand($loader, "tpaccept", "Accept a teleport request"),
             new TPAHereCommand($loader, "tpahere", "Request another player to teleport to you"),
             new TPADenyCommand($loader, "tpadeny", "Deny a teleport request"),
-            new AdminModeCommand($loader, "adminmode", "Toggle admin mode"),
+            new AdminModeCommand($loader, "adminmode", "Toggle staff mode (stealth, tools, punish)", ["staffmode", "staff"]),
+            new GlaciaListCommand($loader, "list", "Lists online players"),
+            new GlaciaHealthCommand($loader, "ghealth", "View live Glacia service health", ["glaciahealth"]),
             new KickCommand($loader, "kick", "Kick a player from the server"),
             new BanCommand($loader, "ban", "Ban a player from the server"),
+            new \ecstsy\Glacia\commands\WarnCommand($loader, "warn", "Warn a player with escalation support"),
+            new \ecstsy\Glacia\commands\FreezeCommand($loader, "freeze", "Freeze or unfreeze an online player"),
+            new \ecstsy\Glacia\commands\UnfreezeCommand($loader, "unfreeze", "Explicitly unfreeze an online player", ["thaw"]),
+            new \ecstsy\Glacia\commands\StaffHistoryCommand($loader, "staffhistory", "View moderation history for a player", ["shistory"]),
+            new \ecstsy\Glacia\commands\ReportCommand($loader, "report", "Report a player to online staff"),
+            new \ecstsy\Glacia\commands\ReportsCommand($loader, "reports", "View and manage open player reports"),
             new GraceCommand($loader, "grace", "Grace commands"),
             new GiveItemCommand($loader, "giveitem", "Give yourself a Glacia item", ["gi"]),
             new ItemCategoryCommand($loader, "pets", "View registered pet items", "pets"),
@@ -353,16 +489,22 @@ final class GlaciaUtils
             new ReapplyCommand($loader, "reapply", "Reapply equipped item effects"),
             new BlessCommand($loader, "bless", "Remove all negative effects"),
             new CoinFlipCommand($loader, "coinflip", "Flip a coin against another player", ["cf"]),
+            new ItemFlipCommand($loader, "icf", "Start or accept an item flip", ["if", "itemflip"]),
             new JackpotCommand($loader, "jackpot", "Jackpot commands", ["jp"]),
+            new CondenseCommand($loader, "condense", "Condense resources into blocks", ["compress"]),
+            new ChunkBordersCommand($loader, "chunkborders", "Toggle chunk border particles", ["chunkborder", "cb"]),
             new SeeBragCommand($loader, "seebrag", "View the brag screen of a player", ["cbrag"]),
             new SeeItemCommand($loader, "seeitem", "View the recent item of a player", ["citem"]),
             new SettingsCommand($loader, "settings", "Toggle various settings", ["glaciasettings"]),
             new HealCommand($loader, "heal", "Heal yourself or another player"),
             new DupeCommand($loader, "dupe", "Duplicate the item in your hand"),
             new FlyCommand($loader, "fly", "Toggle flight"),
+            new NightVisionCommand($loader, "nv", "Toggle night vision", ["nightvision"]),
             new GamemodeCommand($loader, "gamemode", "Change your gamemode", ["gm", "gms", "gmc", "gma", "gmsp"]),
             new FeedCommand($loader, "feed", "Feed yourself or another player"),
             new PingCommand($loader, "ping", "View your ping or another player's ping"),
+            new TopCommand($loader, "top", "Teleport to the top at your position"),
+            new SuicideCommand($loader, "suicide", "Kill yourself safely", ["kill"]),
             new ScoreboardCommand($loader, "scoreboard", "Toggle your scoreboard", ["sb"]),
             new HatCommand($loader, "hat", "Wear the item in your hand as a hat"),
             new DisguiseCommand($loader, "disguise", "Disguise as an unlocked mob", ["disguises"]),
@@ -371,6 +513,7 @@ final class GlaciaUtils
             new BroadcastCommand($loader, "broadcast", "Broadcast a message", ["bc"]),
             new ClearChatCommand($loader, "clearchat", "Clear the chat", ["cc"]),
             new ClearInventoryCommand($loader, "clearinventory", "Clear a player's inventory", ["ci", "clearinv"]),
+            new \ecstsy\Glacia\commands\AdminBazaarCommand($loader, "adminbazaar", "Admin Bazaar commands", ["ab"]),
             new BlackMarketCommand($loader, "blackmarket", "Black market commands", ["bah"]),
             new AuctionHouseCommand($loader, "auctionhouse", "Auction house commands", ["ah"]),
             new CollectCommand($loader, "collect", "Collect items"),
@@ -381,17 +524,24 @@ final class GlaciaUtils
             new GlaciaReloadCommand($loader, "greload", "Reload Glacia configs"),
             new KitCommand($loader, "kit", "Open the kit screen"),
             new GKitCommand($loader, "gkits", "Open the GKit screen", ["gkit"]),
+            new SetTitleCommand($loader, "settitle", "Set your title", ["title"]),
+            new TitlesCommand($loader, "titles", "Open the titles selector"),
         ]);
 
         $healingPotionSettings = new HealingPotionSettings();
 
         $listeners = [ 
+            new StaffModeListener(),
+            new \ecstsy\Glacia\listeners\ModerationListener(),
+            new DeathInventoryLogListener(),
+            new ChallengeListener(),
             new GlaciaListener(),
             new FactionListener(),
             new RegionListener($loader->getRegionManager()),
             new WorldBorderListener(),
             new ZoneListener(),
             new ItemListener(),
+            new FishingListener(),
             new LevelListener(),
             new QuestListener(),
             new EnchantmentListener(),
@@ -401,11 +551,16 @@ final class GlaciaUtils
             new CustomTNTListener(),
             new CustomArmorListener(),
             new HealingPotionListener($healingPotionSettings),
+            new VoteListener(),
         ];
 
         foreach ($listeners as $listener) {
             $loader->getServer()->getPluginManager()->registerEvents($listener, $loader);
         }
+
+        $loader->getScheduler()->scheduleRepeatingTask(new ClosureTask(static function(): void {
+            Loader::getChallengeManager()->tick();
+        }), 20 * 30);
 
         $entitites = [
             CombatLoggerEntity::class,
@@ -413,6 +568,7 @@ final class GlaciaUtils
             RiftWalkerEntity::class,
             FloatingTextEntity::class,
             AstralDevourer::class,
+            GlacialHydra::class,
             GlaciaPrimedTNT::class,
             GlaciaExplosiveCreeper::class,
             GlaciaLightningStrike::class,
@@ -425,16 +581,17 @@ final class GlaciaUtils
             EnvoyGhast::class,
             ForsakenChampion::class,
             ZoneMob::class,
-            ZoneMobSkeleton::class,
-            ZoneMobSpider::class,
-            ZoneMobCreeper::class,
             ZoneMobBlaze::class,
+            ZoneMobCreeper::class,
             ZoneMobEnderman::class,
-            ZoneMobPigman::class,
-            ZoneMobSlime::class,
-            ZoneMobMagmaCube::class,
+            ZoneMobHusk::class,
             ZoneMobIronGolem::class,
-            ZoneMobSnowGolem::class
+            ZoneMobMagmaCube::class,
+            ZoneMobPigman::class,
+            ZoneMobSkeleton::class,
+            ZoneMobSlime::class,
+            ZoneMobSnowGolem::class,
+            ZoneMobSpider::class,
         ];
 
         foreach ($entitites as $entity) {
@@ -442,6 +599,30 @@ final class GlaciaUtils
                 return new $entity(EntityDataHelper::parseLocation($nbt, $world), $nbt);
             }, [$entity::getNetworkTypeId()]);
         }
+
+        if (class_exists(\customiesdevs\customies\entity\CustomiesEntityFactory::class)) {
+            \customiesdevs\customies\entity\CustomiesEntityFactory::getInstance()->registerEntity(
+                TitanKnight::class,
+                TitanKnight::getNetworkTypeId(),
+                static fn(World $world, CompoundTag $nbt): Entity => new TitanKnight(EntityDataHelper::parseLocation($nbt, $world), $nbt),
+                "minecraft:iron_golem"
+            );
+            \customiesdevs\customies\entity\CustomiesEntityFactory::getInstance()->registerEntity(
+                GlacialHydra::class,
+                GlacialHydra::getNetworkTypeId(),
+                static fn(World $world, CompoundTag $nbt): Entity => new GlacialHydra(EntityDataHelper::parseLocation($nbt, $world), $nbt),
+                "minecraft:iron_golem"
+            );
+        } else {
+            $loader->getLogger()->warning("Customies was not found; custom boss entities like Titan Knight and Glacial Hydra were not registered.");
+        }
+
+        EntityFactory::getInstance()->register(GlaciaFishingHook::class, static function(World $world, CompoundTag $nbt): Entity{
+            return new GlaciaFishingHook(EntityDataHelper::parseLocation($nbt, $world), null, $nbt);
+        }, [GlaciaFishingHook::getNetworkTypeId()]);
+        EntityFactory::getInstance()->register(HydraRiftFireball::class, static function(World $world, CompoundTag $nbt): Entity{
+            return new HydraRiftFireball(EntityDataHelper::parseLocation($nbt, $world), null, $nbt);
+        }, ["glacia:hydra_rift_fireball"]);
 
         $loader->getScheduler()->scheduleRepeatingTask(new CombatTickTask(), 20);
         $loader->getScheduler()->scheduleRepeatingTask(new class extends Task {
@@ -453,13 +634,23 @@ final class GlaciaUtils
                 Loader::getEnvoyManager()->tick();
                 Loader::getCaptureManager()->tick();
                 Announcer::tick();
+                $tick = Server::getInstance()->getTick();
                 foreach (Server::getInstance()->getOnlinePlayers() as $player) {
                     RankProgressionManager::tickPlayer($player);
                     ScoreboardHelper::refreshScoreboard($player);
+                    DimensionThemeManager::tickPlayer($player, $tick);
                     RuneManager::tryBoostNearbyCrops($player);
+                    EnchantEffectManager::syncArmorEffects($player);
                 }
             }
         }, 20);
+
+        // Keep locked personal time stable against world-time packet updates.
+        $loader->getScheduler()->scheduleRepeatingTask(new ClosureTask(static function(): void {
+            foreach (Server::getInstance()->getOnlinePlayers() as $player) {
+                GlaciaUtils::applyPersonalTimePreference($player);
+            }
+        }), 4);
 
         GlaciaSpawnerItem::getAll();
         GlaciaSpawnerItem::initHack();
@@ -556,6 +747,7 @@ final class GlaciaUtils
             'autoplanter' => ['handler' => fn(...$args) => AutoPlanterEnchant::handle(...$args), 'event' => 'block_break'],
             'bleed' => ['handler' => fn(...$args) => BleedEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'blazed' => ['handler' => fn(...$args) => BlazedEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'pulse' => ['handler' => fn(...$args) => PulseEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'blind' => ['handler' => fn(...$args) => BlindEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'berserk' => ['handler' => fn(...$args) => BerserkEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'bossslayer' => ['handler' => fn(...$args) => BossSlayerEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
@@ -572,6 +764,9 @@ final class GlaciaUtils
             'enlighted' => ['handler' => fn(...$args) => EnlightedEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'enderwalker' => ['handler' => fn(...$args) => EnderWalkerEnchant::handle(...$args), 'event' => 'entity_damage'],
             'fear' => ['handler' => fn(...$args) => FearEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'phantom' => ['handler' => fn(...$args) => PhantomEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'trickshot' => ['handler' => fn(...$args) => TrickshotEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'pellet' => ['handler' => fn(...$args) => PelletEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'featherweight' => ['handler' => fn(...$args) => FeatherweightEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'frostbite' => ['handler' => fn(...$args) => FrostbiteEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'greatsword' => ['handler' => fn(...$args) => GreatswordEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
@@ -579,11 +774,15 @@ final class GlaciaUtils
             'heavy' => ['handler' => fn(...$args) => HeavyEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'holy' => ['handler' => fn(...$args) => HolyEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'insomnia' => ['handler' => fn(...$args) => InsomniaEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'insanity' => ['handler' => fn(...$args) => InsanityEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'inquisitive' => ['handler' => fn(...$args) => InquisitiveEnchant::handle(...$args), 'event' => 'entity_death'],
             'killaura' => ['handler' => fn(...$args) => KillAuraEnchant::handle(...$args), 'event' => 'entity_death'],
             'jellylegs' => ['handler' => fn(...$args) => JellyLegsEnchant::handle(...$args), 'event' => 'entity_damage'],
             'lifesteal' => ['handler' => fn(...$args) => LifestealEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'lucky' => ['handler' => fn(...$args) => LuckyEnchant::handle(...$args), 'event' => 'block_break'],
+            'mecha' => ['handler' => fn(...$args) => MechaEnchant::handle(...$args), 'event' => 'block_break'],
+            'detonate' => ['handler' => fn(...$args) => DetonateEnchant::handle(...$args), 'event' => 'block_break'],
+            'trixal' => ['handler' => fn(...$args) => TrixalEnchant::handle(...$args), 'event' => 'block_break'],
             'metaphysical' => ['handler' => fn(...$args) => MetaphysicalEnchant::handle(...$args), 'event' => 'effect_add'],
             'obsidiandestroyer' => ['handler' => fn(...$args) => ObsidianDestroyerEnchant::handle(...$args), 'event' => 'interact'],
             'pummel' => ['handler' => fn(...$args) => PummelEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
@@ -591,11 +790,53 @@ final class GlaciaUtils
             'silence' => ['handler' => fn(...$args) => SilenceEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'slowness' => ['handler' => fn(...$args) => SlownessEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'tank' => ['handler' => fn(...$args) => TankEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'flourish' => ['handler' => fn(...$args) => FlourishEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'trickster' => ['handler' => fn(...$args) => TricksterEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'valor' => ['handler' => fn(...$args) => ValorEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'vampire' => ['handler' => fn(...$args) => VampireEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'virus' => ['handler' => fn(...$args) => VirusEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'slingshot' => ['handler' => fn(...$args) => SlingshotEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'jeopardy' => ['handler' => fn(...$args) => JeopardyEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'static' => ['handler' => fn(...$args) => StaticEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
             'wellfed' => ['handler' => fn(...$args) => WellFedEnchant::handle(...$args), 'event' => 'player_exhaust'],
+            'iceaspect' => ['handler' => fn(...$args) => IceAspectEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'disarmor' => ['handler' => fn(...$args) => DisarmorEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'brotherhood' => ['handler' => fn(...$args) => BrotherhoodEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'hexlock' => ['handler' => fn(...$args) => HexlockEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'siegebreaker' => ['handler' => fn(...$args) => SiegebreakerEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'vampiricdevour' => ['handler' => fn(...$args) => VampiricDevourEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'demonicfinisher' => ['handler' => fn(...$args) => DemonicFinisherEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'thunderfamine' => ['handler' => fn(...$args) => ThunderfamineEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'mirrored' => ['handler' => fn(...$args) => MirroredEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'trapped' => ['handler' => fn(...$args) => TrappedEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'ascended' => ['handler' => fn(...$args) => AscendedEnchant::handle(...$args), 'event' => 'entity_damage'],
+            'redeemer' => ['handler' => fn(...$args) => RedeemerEnchant::handle(...$args), 'event' => 'entity_damage'],
+            'satanstreat' => ['handler' => fn(...$args) => SatansTreatEnchant::handle(...$args), 'event' => 'block_break'],
+            'watchmen' => ['handler' => fn(...$args) => WatchmenEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'plague' => ['handler' => fn(...$args) => PlagueEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'kerbus' => ['handler' => fn(...$args) => KerbusEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'bulwark' => ['handler' => fn(...$args) => BulwarkEnchant::handle(...$args), 'event' => 'entity_damage_by_entity'],
+            'muravieva' => ['handler' => fn(...$args) => MuravievaEnchant::handle(...$args), 'event' => 'entity_death'],
+
+            'blastward' => ['handler' => fn(...$args) => BlastwardEnchant::handle(...$args), 'event' => 'entity_damage'],
+
+            'furylash' => ['handler' => fn($e, $en, $lv) => AdvancedSetEnchants::route('furylash', $e, $en, $lv), 'event' => 'entity_damage_by_entity'],
+            'glimmerfade' => ['handler' => fn($e, $en, $lv) => AdvancedSetEnchants::route('glimmerfade', $e, $en, $lv), 'event' => 'entity_damage_by_entity'],
+            'forewarned' => ['handler' => fn($e, $en, $lv) => AdvancedSetEnchants::route('forewarned', $e, $en, $lv), 'event' => 'entity_damage_by_entity'],
+            'maliceward' => ['handler' => fn($e, $en, $lv) => AdvancedSetEnchants::route('maliceward', $e, $en, $lv), 'event' => 'entity_damage_by_entity'],
+            'vilewound' => ['handler' => fn($e, $en, $lv) => AdvancedSetEnchants::route('vilewound', $e, $en, $lv), 'event' => 'entity_damage_by_entity'],
+            'coupdegrace' => ['handler' => fn($e, $en, $lv) => AdvancedSetEnchants::route('coupdegrace', $e, $en, $lv), 'event' => 'entity_damage_by_entity'],
+            'harmonicsurge' => ['handler' => fn($e, $en, $lv) => AdvancedSetEnchants::route('harmonicsurge', $e, $en, $lv), 'event' => 'entity_damage_by_entity'],
+            'phalanx' => ['handler' => fn($e, $en, $lv) => AdvancedSetEnchants::route('phalanx', $e, $en, $lv), 'event' => 'entity_damage_by_entity'],
+            'stormrite' => ['handler' => fn($e, $en, $lv) => AdvancedSetEnchants::route('stormrite', $e, $en, $lv), 'event' => 'entity_damage_by_entity'],
+            'netherwarden' => ['handler' => fn($e, $en, $lv) => AdvancedSetEnchants::route('netherwarden', $e, $en, $lv), 'event' => 'entity_damage_by_entity'],
+            'auroraward' => ['handler' => fn($e, $en, $lv) => AdvancedSetEnchants::route('auroraward', $e, $en, $lv), 'event' => 'entity_damage_by_entity'],
+            'primalpact' => ['handler' => fn($e, $en, $lv) => AdvancedSetEnchants::route('primalpact', $e, $en, $lv), 'event' => 'entity_damage_by_entity'],
+            'discordverdict' => ['handler' => fn($e, $en, $lv) => AdvancedSetEnchants::route('discordverdict', $e, $en, $lv), 'event' => 'entity_damage_by_entity'],
+            'alchemistedge' => ['handler' => fn($e, $en, $lv) => AdvancedSetEnchants::route('alchemistedge', $e, $en, $lv), 'event' => 'entity_damage_by_entity'],
+            'supplyscour' => ['handler' => fn($e, $en, $lv) => AdvancedSetEnchants::route('supplyscour', $e, $en, $lv), 'event' => 'entity_damage_by_entity'],
+            'trifoldrend' => ['handler' => fn($e, $en, $lv) => AdvancedSetEnchants::route('trifoldrend', $e, $en, $lv), 'event' => 'entity_damage_by_entity'],
+            'ironmuzzle' => ['handler' => fn($e, $en, $lv) => AdvancedSetEnchants::route('ironmuzzle', $e, $en, $lv), 'event' => 'entity_damage_by_entity'],
         ];
 
         foreach ($enchantments as $name => $data) {
@@ -608,6 +849,7 @@ final class GlaciaUtils
 
         QuestInstance::loadFromConfig();
         LootboxRepository::reload();
+        EtherealCrateRepository::reload();
 
         SellHandler::registerDefaults();
         SpawnerWorthManager::loadFromConfig();
@@ -615,7 +857,9 @@ final class GlaciaUtils
         WorldBorderManager::loadFromConfig();
         PlayerLevelManager::loadFromConfig();
         ZoneManager::loadFromConfig();
+        DimensionThemeManager::loadFromConfig();
         ZoneMobManager::loadFromConfig();
+        ScoreboardProfileManager::loadFromConfig();
         Loader::getCaptureManager()->load();
 
         Loader::getInstance()->getScheduler()->scheduleDelayedTask(new class extends Task {
@@ -626,6 +870,9 @@ final class GlaciaUtils
         }, 40);
 
         Loader::getInstance()->getScheduler()->scheduleRepeatingTask(new BlackMarketAuctionTickTask(), 20);
+        Loader::getInstance()->getScheduler()->scheduleRepeatingTask(new ClosureTask(static function() : void {
+            \ecstsy\Glacia\server\adminbazaar\AdminBazaarManager::tick();
+        }), 20);
     }
 
     public static function bless(Player $player): array {
@@ -686,24 +933,21 @@ final class GlaciaUtils
         $item->removeEnchantment(EnchantmentIdMap::getInstance()->fromId(self::FAKE_ENCH_ID));
     }
 
+    /**
+     * Ampersand tokens for use with TextFormat::colorize().
+     * (Do not return raw § here — mixed §/& pipelines break when only & is expanded.)
+     */
     public static function getRelationColor(string $relation): string
     {
-        switch (strtolower($relation)) {
-            case "neutral":
-                return C::WHITE;    
-            case "warzone":
-                return C::DARK_RED;
-            case "safezone":
-                return C::GREEN;
-            case "ally":
-                return C::LIGHT_PURPLE;
-            case "enemy":
-                return C::RED;
-            case "own":
-                return C::GREEN;
-            default:
-                return C::GRAY;
-        }
+        return match (strtolower($relation)) {
+            "neutral" => "&f",
+            "warzone" => "&4",
+            "safezone" => "&a",
+            "ally" => "&d",
+            "enemy" => "&c",
+            "own" => "&a",
+            default => "&7",
+        };
     }
 
     public static function handleClaimTitle(Player $player, ?FactionClaim $claim): void
@@ -789,45 +1033,63 @@ final class GlaciaUtils
             "frostborn" => [
                 "display" => "Frostborn",
                 "parent" => null,
-                "format" => "&r{fac_relation}{fac_rank}{fac_name}&7<&8Frostborn&7> &8{name}&f: &7{message}",
-                "nametag" => "&r&7<&8Frostborn&7>\n&r{fac_relation}{fac_rank}{fac_name} &r&8{name}"
+                "format" => "&r{fac_relation}{fac_rank}{fac_name}&7<&8Frostborn&7>&r{title} &8{name}&f: &7{message}",
+                "nametag" => "&r{fac_relation}{fac_rank}{fac_name} &r&8{name}"
             ],
             "cryoshield" => [
                 "display" => "Cryoshield",
                 "parent" => "frostborn",
-                "format" => "&r{fac_relation}{fac_rank}{fac_name}&f<&3Cryoshield&f> &3{name}&f: {message}",
-                "nametag" => "&f<&3Cryoshield&f>\n&r{fac_relation}{fac_rank}{fac_name} &r&3{name}"
+                "format" => "&r{fac_relation}{fac_rank}{fac_name}&f<&3Cryoshield&f>&r {title} &3{name}&f: {message}",
+                "nametag" => "&r{fac_relation}{fac_rank}{fac_name} &r&3{name}"
             ],
             "winterborn" => [
                 "display" => "Winterborn",
                 "parent"  => "cryoshield",
-                "format" => "&r{fac_relation}{fac_rank}{fac_name}&f<&bWinterborn&f> &b{name}&f: {message}",
-                "nametag" => "&r&f<&bWinterborn&f>\n&r{fac_relation}{fac_rank}{fac_name} &r&b{name}"
+                "format" => "&r{fac_relation}{fac_rank}{fac_name}&f<&bWinterborn&f>&r {title} &b{name}&f: {message}",
+                "nametag" => "&r{fac_relation}{fac_rank}{fac_name} &r&b{name}"
             ],
             "glacian" => [
                 "display" => "Glacian",
                 "parent" => "winterborn",
-                "format" => "&r{fac_relation}{fac_rank}{fac_name}&f<&aGlacian&f> &a{name}&f: {message}",
-                "nametag" => "&r&f<&aGlacian&f>\n&r{fac_relation}{fac_rank}{fac_name} &r&a{name}"
+                "format" => "&r{fac_relation}{fac_rank}{fac_name}&f<&aGlacian&f>&r {title} &a{name}&f: {message}",
+                "nametag" => "&r{fac_relation}{fac_rank}{fac_name} &r&a{name}"
             ],
             "iceheart" => [
                 "display" => "Iceheart",
                 "parent" => "glacian",
-                "format" => "&r{fac_relation}{fac_rank}{fac_name}&f&l<&9Iceheart&f> &r&9{name}&f: {message}",
-                "nametag" => "&r&f&l<&9Iceheart&f>\n&r{fac_relation}{fac_rank}{fac_name} &r&9{name}"
+                "format" => "&r{fac_relation}{fac_rank}{fac_name}&f&l<&9Iceheart&f>&r {title} &r&9{name}&f: {message}",
+                "nametag" => "&r{fac_relation}{fac_rank}{fac_name} &r&9{name}"
             ],
             "frostlord" => [
                 "display" => "Frostlord",
                 "parent" => "iceheart",
-                "format" => "&r{fac_relation}{fac_rank}{fac_name}&f&l<&dFrostlord&f> &r&d{name}&f: {message}",
-                "nametag" => "&r&f&l<&dFrostlord&f>\n&r{fac_relation}{fac_rank}{fac_name} &r&d{name}"
+                "format" => "&r{fac_relation}{fac_rank}{fac_name}&f&l<&dFrostlord&f>&r {title} &r&d{name}&f: {message}",
+                "nametag" => "&r{fac_relation}{fac_rank}{fac_name} &r&d{name}"
             ],
             "admin" => [
                 "display" => "Admin",
                 "parent" => "frostlord",
-                "format" => "&r{fac_relation}{fac_rank}{fac_name}&f&l<&cAdmin&f> &r&c{name}&f: &c{message}",
-                "nametag" => "&r&f&l<&cAdmin&f>\n&r{fac_relation}{fac_rank}{fac_name} &r&c{name}"
-            ]
+                "format" => "&r{fac_relation}{fac_rank}{fac_name}&f&l<&cAdmin&f>&r {title} &r&c{name}&f: &c{message}",
+                "nametag" => "&r{fac_relation}{fac_rank}{fac_name} &r&c{name}"
+            ],
+            'builder' => [
+                "display" => "Builder",
+                "parent" => "frostlord",
+                "format" => "&r{fac_relation}{fac_rank}{fac_name}&f&l<&hBuilder&f>&r {title} &r&h{name}&f: &h{message}",
+                "nametag" => "&r{fac_relation}{fac_rank}{fac_name} &r&h{name}"
+            ],
+            'helper' => [
+                "display" => "Helper",
+                "parent" => "frostlord",
+                "format" => "&r{fac_relation}{fac_rank}{fac_name}&f&l<&uHelper&f>&r {title} &u{name}&f: &u{message}",
+                "nametag" => "&r{fac_relation}{fac_rank}{fac_name} &r&u{name}"
+            ],
+            'moderator' => [
+                "display" => "Moderator",
+                "parent" => "helper",
+                "format" => "&r{fac_relation}{fac_rank}{fac_name}&f&l<&sModerator&f>&r {title} &r&s{name}&f: &s{message}",
+                "nametag" => "&r{fac_relation}{fac_rank}{fac_name} &r&s{name}"
+            ],
         ];
 
         foreach ($defaults as $key => $config) {
@@ -840,10 +1102,9 @@ final class GlaciaUtils
     /**
      * Validate a faction name for create/rename.
      *
-     * @param string $name
-     * @return string|null  Returns an error message, or null if okay.
+     * @return array{0: string, 1: string}|null  [sanitizedName, error], or null if okay.
      */
-    public static function validateName(string $name, bool $sanitize = true): ?array
+    public static function validateName(string $name, bool $sanitize = true, ?string $excludeFactionId = null): ?array
     {
         $original = $name;
 
@@ -851,21 +1112,9 @@ final class GlaciaUtils
             $name = preg_replace("/[^A-Za-z0-9]/", "", $name);
         }
 
-        $blacklist = [
-            "nazi",
-            "kkk",
-            "terror",
-            "nigger",
-            "fag",
-            "faggot",
-            "fagot",
-            "fags"
-        ];
-
-        foreach ($blacklist as $word) {
-            if (stripos($original, $word) !== false || stripos($name, $word) !== false) {
-                return [$name, "That name contains a forbidden word."];
-            }
+        $blocked = FactionNameBlocklist::firstFactionNameViolation($original, $name);
+        if ($blocked !== null) {
+            return [$name, $blocked];
         }
 
         if (!preg_match("/^[A-Za-z0-9]{3,16}$/", $name)) {
@@ -877,6 +1126,10 @@ final class GlaciaUtils
         }
 
         foreach (Loader::getFactionManager()->getAllFactions() as $faction) {
+            if ($excludeFactionId !== null && $faction->getFactionId() === $excludeFactionId) {
+                continue;
+            }
+
             if (strcasecmp($faction->getName(), $name) === 0) {
                 return [$name, "A faction named '{$name}' already exists!"];
             }
@@ -885,11 +1138,15 @@ final class GlaciaUtils
         return null;
     }
 
+    public static function validateFactionDescription(string $text): ?string
+    {
+        return FactionNameBlocklist::firstDescriptionViolation($text);
+    }
+
     public static function updatePlayerNametag(Player $target, Player $viewer): void
     {
         if (Loader::getDisguiseManager()->isDisguised($target) && $viewer->getId() !== $target->getId()) {
-            $target->setNameTag("");
-            $target->setNameTagAlwaysVisible(false);
+            self::sendViewerNametag($target, $viewer, "", false);
             return;
         }
 
@@ -899,7 +1156,7 @@ final class GlaciaUtils
 
         $rankObj = $targetSession->getRankObject();
         if ($rankObj === null) {
-            $target->setNameTag(C::colorize($targetSession->getUsername()));
+            self::sendViewerNametag($target, $viewer, C::colorize($targetSession->getUsername()));
             return;
         }
 
@@ -907,23 +1164,19 @@ final class GlaciaUtils
 
         $targetFaction = $targetSession->getFaction();
         $viewerFaction = $viewerSession->getFaction();
-
-        $facRelation = 'neutral';
-
-        if ($targetFaction !== null && $viewerFaction !== null) {
-            if ($targetFaction->getFactionId() === $viewerFaction->getFactionId()) {
-                $facRelation = 'own';
-            } else {
-                $facRelation = RelationManager::getInstance()->getRelation($viewerFaction->getFactionId(), $targetFaction->getFactionId());
-            }
-        } else {
-            $facRelation = 'neutral';
+        $facRelation = "neutral";
+        if ($viewer->getId() === $target->getId()) {
+            $facRelation = $targetFaction !== null ? "own" : "neutral";
+        } elseif ($targetFaction !== null && $viewerFaction !== null) {
+            $facRelation = $targetFaction->getFactionId() === $viewerFaction->getFactionId()
+                ? "own"
+                : RelationManager::getInstance()->getRelation($viewerFaction->getFactionId(), $targetFaction->getFactionId());
         }
 
         $formatted = str_replace(
             ['{name}', '{fac_relation}', '{fac_rank}', '{fac_name}'],
             [
-                $targetSession->getUsername(),
+                (string) ($targetSession->getSetting("nickname") ?? $targetSession->getUsername()),
                 GlaciaUtils::getRelationColor($facRelation),
                 self::getFactionRoleSymbol($targetSession->getFactionRole() ?? ''),
                 $targetFaction?->getName() ?? ''
@@ -931,8 +1184,22 @@ final class GlaciaUtils
             $format
         );
 
-        $target->setNameTag(C::colorize($formatted));
-        $target->setNameTagAlwaysVisible();
+        self::sendViewerNametag($target, $viewer, C::colorize($formatted));
+    }
+
+    private static function sendViewerNametag(Player $target, Player $viewer, string $nametag, bool $visible = true): void
+    {
+        if ($viewer->getId() === $target->getId()) {
+            $target->setNameTag($nametag);
+            $target->setNameTagAlwaysVisible($visible);
+        }
+
+        $viewer->getNetworkSession()->sendDataPacket(SetActorDataPacket::create(
+            $target->getId(),
+            [EntityMetadataProperties::NAMETAG => new StringMetadataProperty($nametag)],
+            new PropertySyncData([], []),
+            0
+        ));
     }
 
     public static function refreshNametagsForTarget(Player $target): void
@@ -943,6 +1210,17 @@ final class GlaciaUtils
             if ($viewer !== null && $viewer->isOnline()) {
                 self::updatePlayerNametag($target, $viewer);
                 self::updatePlayerNametag($viewer, $target);
+            }
+        }
+    }
+
+    public static function refreshAllOnlineNametags(): void
+    {
+        $pm = Loader::getPlayerManager();
+        foreach ($pm->getSessions() as $session) {
+            $player = $session->getPlayer();
+            if ($player !== null && $player->isOnline()) {
+                self::refreshNametagsForTarget($player);
             }
         }
     }
@@ -965,18 +1243,22 @@ final class GlaciaUtils
         return C::colorize(EmojiManager::replaceTokens(($prefixes[$prefix] ?? "") . $template));
     }
 
-    public static function timedTeleport(Player $player, Vector3 $target, ?int $seconds = 8, ?callable $onCancel = null): void
+    public static function timedTeleport(Player $player, Vector3 $target, ?int $seconds = 8, ?callable $onCancel = null, ?callable $onComplete = null): void
     {
         $xp = $player->getXpManager()->getCurrentTotalXp();
         $delay = max(1, $seconds - (int)($xp / 100));
+        $delayTicks = $delay * 20;
+        $uuid = $player->getUniqueId()->toString();
+        $token = (self::$timedTeleportTokens[$uuid] ?? 0) + 1;
+        self::$timedTeleportTokens[$uuid] = $token;
 
-        $msg = C::colorize("&r&e&oTeleporting in {$delay}s...");
+        $msg = C::colorize("&r&eTeleporting in &f{$delay}s&r&e. Don't move.");
         $player->sendActionBarMessage($msg);
 
         $effectManager = $player->getEffects();
         $nausea = VanillaEffects::NAUSEA();
         $blindness = VanillaEffects::BLINDNESS();
-        $duration = $delay * 20;
+        $duration = $delayTicks;
         $effectManager->add(new EffectInstance($nausea, $duration));
         $effectManager->add(new EffectInstance($blindness, $duration));
 
@@ -991,35 +1273,79 @@ final class GlaciaUtils
 
         $startPos = $player->getPosition();
 
-        $task = new class($player, $target, $startPos, $onCancel) extends Task {
+        $task = new class($player, $target, $startPos, $delayTicks, $token, $onCancel, $onComplete) extends Task {
             private $player;
             private $target;
             private $startPos;
+            private int $remainingTicks;
+            private string $uuid;
+            private int $token;
             private $onCancel;
+            private $onComplete;
             private $cancelled = false;
-            public function __construct($player, $target, $startPos, $onCancel)
+            public function __construct($player, $target, $startPos, int $remainingTicks, int $token, $onCancel, $onComplete)
             {
                 $this->player = $player;
                 $this->target = $target;
                 $this->startPos = $startPos;
+                $this->remainingTicks = $remainingTicks;
+                $this->uuid = $player->getUniqueId()->toString();
+                $this->token = $token;
                 $this->onCancel = $onCancel;
+                $this->onComplete = $onComplete;
             }
             public function onRun(): void
             {
-                if ($this->cancelled) return;
+                if ($this->cancelled) {
+                    $this->getHandler()?->cancel();
+                    return;
+                }
+
+                if (GlaciaUtils::getTimedTeleportToken($this->uuid) !== $this->token) {
+                    $this->getHandler()?->cancel();
+                    return;
+                }
+
+                if (!$this->player->isConnected() || !$this->player->isAlive()) {
+                    GlaciaUtils::clearTimedTeleportToken($this->uuid, $this->token);
+                    $this->getHandler()?->cancel();
+                    return;
+                }
+
                 $current = $this->player->getPosition();
+                // Allow slight repositioning while channeling the teleport,
+                // but cancel if the player meaningfully changes position.
                 if ($current->distanceSquared($this->startPos) > 0.25) {
                     $this->cancelled = true;
-                    $this->player->sendMessage(C::RED . "Teleportation cancelled: You moved.");
+                    GlaciaUtils::clearTimedTeleportToken($this->uuid, $this->token);
+                    $this->player->sendMessage(C::colorize("&r&cTeleport cancelled: you moved."));
                     if (is_callable($this->onCancel)) {
                         ($this->onCancel)($this->player);
                     }
+                    $this->getHandler()?->cancel();
                     return;
                 }
+
+                if ($this->remainingTicks % 20 === 0) {
+                    $secondsLeft = max(1, (int) ceil($this->remainingTicks / 20));
+                    $this->player->sendActionBarMessage(C::colorize("&r&eTeleporting in &f{$secondsLeft}s&r&e..."));
+                }
+
+                $this->remainingTicks--;
+                if ($this->remainingTicks > 0) {
+                    return;
+                }
+
+                GlaciaUtils::clearTimedTeleportToken($this->uuid, $this->token);
+                if (is_callable($this->onComplete)) {
+                    ($this->onComplete)($this->player);
+                }
                 $this->player->teleport($this->target);
+                $this->player->sendActionBarMessage(C::colorize("&r&aTeleported."));
+                $this->getHandler()?->cancel();
             }
         };
-        Loader::getInstance()->getScheduler()->scheduleDelayedTask($task, $delay * 20);
+        Loader::getInstance()->getScheduler()->scheduleRepeatingTask($task, 1);
     }
 
     public static function updateScoreTag(Player $player): void
@@ -1058,22 +1384,7 @@ final class GlaciaUtils
 
     public static function initDiscordWebhooks(PluginBase $plugin): void
     {
-        $webhook = new WebhookPool($plugin);
-
-        Await::g2c(
-            $webhook->asyncSubmit(
-                "https://discord.com/api/webhooks/1495596161950552091/t_aDEVX3LMjFs0Cexzibz2AfvuVEpF3hapjfEFl0Qfud-y5ATqeGZbLrqTvt2qYQ9Sqq",
-                new WebhookMessage("Webhook Connected!")
-            ),
-            function (WebhookJobResult $r) {
-                if ($r->ok) {
-                    var_dump("sent");
-                } else {
-                    var_dump($r->error);
-                }
-            },
-            fn(WebhookPoolException $e) => var_dump("error: " . $e->getMessage())
-        );
+        new WebhookPool($plugin);
     }
 
     public static function formatAdminLog(string $action, array $data): string
@@ -1117,7 +1428,20 @@ final class GlaciaUtils
 
     public static function logAdminAction(string $action, array $data): void
     {
-        DiscordLogger::send(self::formatAdminLog($action, $data));
+        AuditFileLogger::staff($action, $data);
+        if (AuditFileLogger::shouldSendStaffDiscord($action)) {
+            DiscordLogger::send(self::formatAdminLog($action, $data));
+        }
+    }
+
+    /** Player faction mutations (persisted locally; optional Discord later). */
+    public static function logFactionAudit(string $action, array $data): void
+    {
+        AuditFileLogger::faction($action, $data);
+        $fid = isset($data["faction_id"]) ? trim((string) $data["faction_id"]) : "";
+        if ($fid !== "") {
+            FactionAuditFeed::append($fid, $action, $data);
+        }
     }
 
     /**
@@ -1230,6 +1554,38 @@ final class GlaciaUtils
         return str_repeat("&a■", $filledBars) . str_repeat("&7■", $emptyBars);
     }
 
+    public static function parseShorthandNumber(int|float|string $input): int
+    {
+        if (is_int($input)) {
+            return $input;
+        }
+
+        if (is_float($input)) {
+            return (int) round($input);
+        }
+
+        $normalized = strtolower(trim(str_replace([",", "$", "_", " "], "", $input)));
+        if ($normalized === "") {
+            return 0;
+        }
+
+        if (preg_match('/^(\d+(?:\.\d+)?)([kmbt])?$/', $normalized, $matches) !== 1) {
+            return is_numeric($normalized) ? (int) round((float) $normalized) : 0;
+        }
+
+        $value = (float) $matches[1];
+        $suffix = $matches[2] ?? "";
+        $multiplier = match ($suffix) {
+            "k" => 1_000,
+            "m" => 1_000_000,
+            "b" => 1_000_000_000,
+            "t" => 1_000_000_000_000,
+            default => 1,
+        };
+
+        return (int) round($value * $multiplier);
+    }
+
     public static function isFullyGrownCrop(Block $block): bool {
         if ($block instanceof Wheat) {
             return $block->getAge() >= $block::MAX_AGE;
@@ -1257,11 +1613,20 @@ final class GlaciaUtils
     public static function consumeWhiteScroll(Item $itemClicked, Player $player, Inventory $inv, int $slot): Item {
         $tag = $itemClicked->getNamedTag()->getCompoundTag("Glacia") ?? new CompoundTag();
         $tag->removeTag("protected");
+        $tag->removeTag("holy_white_used");
+        $tag->removeTag("holy_white_max");
+        $tag->removeTag("holy_white_active");
+        $tag->removeTag("holy_white_corrupted");
         $itemClicked->getNamedTag()->setTag("Glacia", $tag);
 
         $newLore = [];
         foreach($itemClicked->getLore() as $line){
-            if(strpos(C::clean($line), "PROTECTED") === false){
+            $clean = C::clean($line);
+            if (
+                strpos($clean, "PROTECTED") === false &&
+                !str_starts_with($clean, "Holy Lives:") &&
+                $clean !== "CORRUPTED"
+            ) {
                 $newLore[] = $line;
             }
         }
@@ -1276,9 +1641,15 @@ final class GlaciaUtils
     public static function toggleFlight(Player $player, bool $force = false): void
     {
         $session = Loader::getPlayerManager()->getSession($player);
+        $zone = ZoneManager::getZoneAt($player->getPosition());
 
         if ($force) {
             self::disableFlightForCombat($player);
+            return;
+        }
+
+        if ($player->isSurvival() && $zone !== null && !ZoneManager::allowsFlight($zone) && !$player->hasPermission("glacia.staff")) {
+            $player->sendMessage(C::colorize(Loader::SERVER_PREFIX . "&cFlight is disabled in " . (string) ($zone["display"] ?? "this zone") . "&c."));
             return;
         }
 
@@ -1324,6 +1695,40 @@ final class GlaciaUtils
         }
     }
 
+    public static function isValidPersonalTimeMode(string $mode): bool
+    {
+        return in_array($mode, ["sync", "day", "night", "sunrise", "sunset", "noon", "midnight"], true);
+    }
+
+    public static function applyPersonalTimePreference(Player $player): void
+    {
+        $session = Loader::getPlayerManager()->getSession($player);
+        if ($session === null) {
+            return;
+        }
+
+        $locked = (bool) ($session->getSetting("ptime_lock") ?? false);
+        $mode = strtolower((string) ($session->getSetting("ptime_mode") ?? "sync"));
+        if (!$locked || $mode === "sync" || !self::isValidPersonalTimeMode($mode)) {
+            $player->getNetworkSession()->syncWorldTime($player->getWorld()->getTime());
+            return;
+        }
+
+        $time = match ($mode) {
+            "day" => 1000,
+            "noon" => 6000,
+            "sunset" => 12000,
+            "night" => 14000,
+            "midnight" => 18000,
+            "sunrise" => 23000,
+            default => null,
+        };
+
+        if ($time !== null) {
+            $player->getNetworkSession()->syncWorldTime($time);
+        }
+    }
+
     public static function openDisguiseScreen(Player $player): void
     {
         DisguiseScreen::display($player);
@@ -1340,7 +1745,9 @@ final class GlaciaUtils
             return false;
         }
 
+        $oldDamage = $item->getDamage();
         $item->setDamage(0);
+        HeroicArmorDurabilityManager::syncAfterRepair($item, $oldDamage, 0);
         $player->getInventory()->setItemInHand($item);
 
         return true;
@@ -1352,7 +1759,9 @@ final class GlaciaUtils
         $inventory = $player->getInventory();
         foreach ($inventory->getContents() as $slot => $item) {
             if ($item instanceof Durable && $item->getDamage() > 0) {
+                $oldDamage = $item->getDamage();
                 $item->setDamage(0);
+                HeroicArmorDurabilityManager::syncAfterRepair($item, $oldDamage, 0);
                 $inventory->setItem($slot, $item);
                 $repaired++;
             }
@@ -1361,7 +1770,9 @@ final class GlaciaUtils
         $armor = $player->getArmorInventory();
         foreach ($armor->getContents() as $slot => $item) {
             if ($item instanceof Durable && $item->getDamage() > 0) {
+                $oldDamage = $item->getDamage();
                 $item->setDamage(0);
+                HeroicArmorDurabilityManager::syncAfterRepair($item, $oldDamage, 0);
                 $armor->setItem($slot, $item);
                 $repaired++;
             }

@@ -7,6 +7,7 @@ namespace ecstsy\Glacia\server\collectionchests;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\economy\SellHandler;
 use ecstsy\Glacia\server\quests\QuestInstance;
+use ecstsy\Glacia\utils\StorageUtils;
 use ecstsy\Glacia\utils\screens\collectionchests\CollectionChestScreen;
 use ecstsy\MartianUtilities\utils\ItemUtils;
 use pocketmine\block\Chest as ChestBlock;
@@ -73,6 +74,28 @@ final class CollectionChestManager {
         CollectionChestScreen::refreshFor($position);
 
         return $entry;
+    }
+
+    public function removeAllForFaction(string $factionId): void
+    {
+        $factionId = trim($factionId);
+        if ($factionId === "") {
+            return;
+        }
+
+        $changed = false;
+        foreach ($this->entries as $positionKey => $entry) {
+            if ((string) ($entry["faction_id"] ?? "") !== $factionId) {
+                continue;
+            }
+
+            unset($this->chunkIndex[$this->chunkKeyFromEntry($entry)], $this->entries[$positionKey]);
+            $changed = true;
+        }
+
+        if ($changed) {
+            $this->persist();
+        }
     }
 
     public function getChestAt(Position $position): ?array
@@ -362,8 +385,7 @@ final class CollectionChestManager {
             return false;
         }
 
-        $claim = Loader::getFactionManager()->getFactionById((string) $entry["faction_id"]);
-        return $claim !== null;
+        return true;
     }
 
     private function cleanupEntry(array $entry): void
@@ -379,8 +401,7 @@ final class CollectionChestManager {
             return;
         }
 
-        $raw = file_get_contents($this->file);
-        $decoded = is_string($raw) ? json_decode($raw, true) : null;
+        $decoded = StorageUtils::readJsonFile($this->file, "collection chest state");
         if (!is_array($decoded)) {
             return;
         }
@@ -406,8 +427,9 @@ final class CollectionChestManager {
 
     private function persist(): void
     {
-        @file_put_contents($this->file, json_encode(array_values($this->entries), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-        $this->dirty = false;
+        if (StorageUtils::writeJsonFile($this->file, array_values($this->entries), "collection chest state")) {
+            $this->dirty = false;
+        }
     }
 
     private function syncIfDirty(Position $position): void

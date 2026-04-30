@@ -74,16 +74,30 @@ final class CustomEnchantmentManager
     public static function hasEnchantment(Item $item, string $enchantName): bool {
         $root = $item->getNamedTag();
         $tag = $root->getCompoundTag("GlaciaCES");
-        return $tag !== null && $tag->getTag($enchantName) !== null;
+        if ($tag === null) {
+            return false;
+        }
+        if ($tag->getTag($enchantName) !== null) {
+            return true;
+        }
+        $legacy = CustomEnchantments::getLegacyIdForName($enchantName);
+        return $legacy !== null && $tag->getTag($legacy) !== null;
     }
     
     public static function getLevel(Item $item, string $enchantName): int {
         $root = $item->getNamedTag();
         $tag = $root->getCompoundTag("GlaciaCES");
-        if ($tag === null || !$tag->getTag($enchantName)) {
+        if ($tag === null) {
             return 0;
         }
-        return $tag->getInt($enchantName);
+        if ($tag->getTag($enchantName) !== null) {
+            return $tag->getInt($enchantName);
+        }
+        $legacy = CustomEnchantments::getLegacyIdForName($enchantName);
+        if ($legacy !== null && $tag->getTag($legacy) !== null) {
+            return $tag->getInt($legacy);
+        }
+        return 0;
     }
 
     // hmmm.... ._.

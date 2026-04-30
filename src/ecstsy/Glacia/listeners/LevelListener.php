@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\listeners;
 
+use ecstsy\Glacia\server\factions\contribution\FactionContributionManager;
 use ecstsy\Glacia\server\levels\PlayerLevelManager;
 use pocketmine\entity\Living;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
@@ -35,6 +36,9 @@ final class LevelListener implements Listener {
             return;
         }
 
-        PlayerLevelManager::addXp($damager, $xp, "mob_kill");
+        $xpMult = FactionContributionManager::getBuffMultiplierForPlayer($damager, "xp-gain-multiplier", 1.0);
+        $finalXp = max(1, (int) ceil($xp * $xpMult));
+        PlayerLevelManager::addXp($damager, $finalXp, "mob_kill");
+        FactionContributionManager::addMobKillContribution($damager, "default");
     }
 }

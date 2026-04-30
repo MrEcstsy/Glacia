@@ -7,6 +7,7 @@ namespace ecstsy\Glacia\server\quests;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\utils\RewardResolver;
+use ecstsy\Glacia\utils\StorageUtils;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\item\Item;
 use pocketmine\item\StringToItemParser;
@@ -273,7 +274,10 @@ final class QuestInstance {
         $nbt->setString("glacia_quest_tier", $tier);
         $nbt->setInt("glacia_quest_index", $questIndex);
         $nbt->setString("glacia_quest_type", (string) $quest["type"]);
-        $nbt->setString("glacia_quest_progress", json_encode(array_fill(0, count($quest["objectives"]), 0)));
+        $nbt->setString(
+            "glacia_quest_progress",
+            self::encodeProgressData(array_fill(0, count($quest["objectives"]), 0), "quest {$tier}:{$questIndex} initial progress")
+        );
         $item->setNamedTag($nbt);
 
         self::updateQuestLore($item);
@@ -383,7 +387,10 @@ final class QuestInstance {
                 continue;
             }
 
-            $nbt->setString("glacia_quest_progress", json_encode($progressData));
+            $nbt->setString(
+                "glacia_quest_progress",
+                self::encodeProgressData($progressData, "quest {$tier}:{$index} progress")
+            );
             $item->setNamedTag($nbt);
             self::updateQuestLore($item);
             $inventory->setItem($slot, $item);
@@ -606,10 +613,7 @@ final class QuestInstance {
      */
     private static function decodeProgressData(CompoundTag $nbt): array
     {
-        $progressData = json_decode($nbt->getString("glacia_quest_progress", "[]"), true);
-        if (!is_array($progressData)) {
-            return [];
-        }
+        $progressData = StorageUtils::decodeJsonString($nbt->getString("glacia_quest_progress", "[]"), "quest progress tag") ?? [];
 
         $normalized = [];
         foreach ($progressData as $index => $value) {
@@ -617,6 +621,19 @@ final class QuestInstance {
         }
 
         return $normalized;
+    }
+
+    /**
+     * @param array<int, int> $progressData
+     */
+    private static function encodeProgressData(array $progressData, string $context): string
+    {
+        $normalized = [];
+        foreach ($progressData as $index => $value) {
+            $normalized[(int) $index] = max(0, (int) $value);
+        }
+
+        return StorageUtils::encodeJsonString($normalized, $context) ?? "[]";
     }
 
     private static function sendQuestMessage(Player $player, string $message): void

@@ -43,7 +43,9 @@ use function array_unique;
 use function array_unshift;
 use function count;
 use function dechex;
+use function preg_replace;
 use function str_replace;
+use function trim;
 
 abstract class BaseCommand extends Command implements IArgumentable, IRunnable, PluginOwned {
 	use ArgumentableTrait;
@@ -146,7 +148,12 @@ abstract class BaseCommand extends Command implements IArgumentable, IRunnable, 
 	abstract public function onRun(CommandSender $sender, string $aliasUsed, array $args): void;
 
 	protected function sendUsage(): void {
-		$this->currentSender->sendMessage(TextFormat::RED . "Usage: " . $this->getUsage());
+		$usage = $this->getUsage();
+		$usage = str_replace("BaseSubCommand.php", "", $usage);
+		$usage = (string) preg_replace('/:([a-zA-Z_\\\\][^>\s]*)/', '', $usage);
+		$usage = (string) preg_replace('/\s*:\s.*$/', '', $usage);
+		$usage = trim((string) preg_replace('/\s+/', ' ', $usage));
+		$this->currentSender->sendMessage(TextFormat::RED . "Usage: " . $usage);
 	}
 
 	public function sendError(int $errorCode, array $args = []): void {

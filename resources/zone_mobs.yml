@@ -6,6 +6,25 @@ settings:
   default-mobs-per-player: 2
   default-max-alive: 12
   default-anchor-radius: 22
+  elite-min-kills: 20
+  elite-max-kills: 40
+  elite-health-multiplier: 1.65
+  elite-damage-multiplier: 1.45
+  elite-speed-multiplier: 1.08
+  elite-xp-multiplier: 1.75
+  elite-loot-multiplier: 1.45
+  elite-name-prefix: "&6&lElite &r"
+  elite-types:
+    - exploding
+    - imploding
+    - molten
+    - frost
+    - charged
+    - gravitic
+    - reinforced
+    - leeching
+    - corrupted
+    - splitter
 
 zones:
   azure_plains:
@@ -17,36 +36,52 @@ zones:
     streak-rewards: {}
     mobs:
       meadow_husk:
-        entity: zombie
-        display: "&bMeadow Husk"
+        entity: husk
+        display: "&r&l&nMeadow Husk &r&7(Tier I)"
         health: 28
-        damage: 3
-        speed: 0.18
+        damage: 5
+        speed: 0.22
         target-range: 14
+        attack-reach: 2.1
+        melee-cooldown: 11
+        horde-separation: 0.28
         xp: 18
         weight: 70
+        combat-style: melee
+        weapon: none
         rewards:
           - chance: 55
-            type: vanilla
-            id: rotten_flesh
+            type: item
+            id: dewthread_sinew
             count: "1-2"
           - chance: 15
-            type: vanilla
-            id: wheat
+            type: item
+            id: straybone_charm
             count: 1
       plains_stray:
         entity: skeleton
-        display: "&bPlains Stray"
+        display: "&r&l&pPlains Stray &r&7(Tier II)"
         health: 34
-        damage: 4
-        speed: 0.19
-        target-range: 15
+        damage: 6
+        speed: 0.23
+        target-range: 20
+        attack-reach: 1.8
+        melee-cooldown: 13
+        ranged-cooldown: 18
+        ideal-range-min: 7
+        ideal-range-max: 14
+        strafe-chance: 48
+        retreat-when-too-close: true
+        allow-melee-when-ranged: false
+        horde-separation: 0.32
         xp: 24
         weight: 30
+        combat-style: ranged
+        weapon: bow
         rewards:
           - chance: 50
-            type: vanilla
-            id: bone
+            type: item
+            id: straybone_charm
             count: "1-2"
 
   irondepths:
@@ -56,34 +91,43 @@ zones:
     max-alive: 12
     spawn-batch: 2
     streak-rewards: {}
+    elite-broadcast: "&r&6⚠ &fAn elite mob has spawned in &8{zone}&f! Triggered by &b{player}&f."
     mobs:
       cave_stalker:
         entity: spider
         display: "&8Cave Stalker"
         health: 58
-        damage: 6
-        speed: 0.20
+        damage: 10
+        speed: 0.24
         target-range: 16
+        attack-reach: 2.3
+        attack-windup-ticks: 5
+        melee-cooldown: 10
+        strafe-chance: 52
+        horde-separation: 0.3
         xp: 42
         weight: 65
         rewards:
           - chance: 45
-            type: vanilla
-            id: coal
+            type: item
+            id: coalblack_ichor
             count: "1-3"
       ironbound_guard:
         entity: iron_golem
         display: "&7Ironbound Guard"
         health: 74
-        damage: 7
-        speed: 0.18
+        damage: 12
+        speed: 0.22
         target-range: 15
+        attack-reach: 2.6
+        melee-cooldown: 12
+        horde-separation: 0.24
         xp: 55
         weight: 35
         rewards:
           - chance: 35
-            type: vanilla
-            id: iron_nugget
+            type: item
+            id: ironslag_plate
             count: "2-5"
 
   frostreach:
@@ -98,29 +142,35 @@ zones:
         entity: zombie
         display: "&fFrostbitten"
         health: 92
-        damage: 9
-        speed: 0.20
+        damage: 13
+        speed: 0.25
         target-range: 17
+        attack-reach: 2.2
+        melee-cooldown: 10
+        horde-separation: 0.3
         xp: 76
         weight: 65
         rewards:
           - chance: 45
-            type: vanilla
-            id: snowball
+            type: item
+            id: rimebound_fang
             count: "2-6"
       icebound_brute:
         entity: snow_golem
         display: "&bIcebound Brute"
         health: 122
-        damage: 11
-        speed: 0.17
+        damage: 16
+        speed: 0.21
         target-range: 15
+        attack-reach: 2.4
+        melee-cooldown: 12
+        horde-separation: 0.22
         xp: 96
         weight: 35
         rewards:
           - chance: 30
-            type: vanilla
-            id: packed_ice
+            type: item
+            id: glacial_heartchip
             count: 1
 
   infernal_rift:
@@ -135,29 +185,43 @@ zones:
         entity: blaze
         display: "&cRift Cinder"
         health: 155
-        damage: 14
-        speed: 0.21
-        target-range: 18
+        damage: 19
+        speed: 0.26
+        target-range: 22
+        attack-reach: 1.8
+        melee-cooldown: 13
+        ranged-cooldown: 16
+        ideal-range-min: 8
+        ideal-range-max: 15
+        strafe-chance: 42
+        retreat-when-too-close: true
+        allow-melee-when-ranged: false
+        horde-separation: 0.34
         xp: 125
         weight: 60
+        combat-style: ranged
+        weapon: bow
         rewards:
           - chance: 40
-            type: vanilla
-            id: blaze_powder
+            type: item
+            id: rift_ash
             count: "1-3"
       ember_revenant:
         entity: zombie_pigman
         display: "&6Ember Revenant"
         health: 190
-        damage: 16
-        speed: 0.19
+        damage: 22
+        speed: 0.24
         target-range: 17
+        attack-reach: 2.4
+        melee-cooldown: 11
+        horde-separation: 0.28
         xp: 155
         weight: 40
         rewards:
           - chance: 30
-            type: vanilla
-            id: magma_cream
+            type: item
+            id: emberbrand_scale
             count: "1-2"
 
   endfall:
@@ -172,27 +236,33 @@ zones:
         entity: enderman
         display: "&dEndfall Wraith"
         health: 230
-        damage: 19
-        speed: 0.22
+        damage: 26
+        speed: 0.28
         target-range: 18
+        attack-reach: 2.7
+        melee-cooldown: 10
+        horde-separation: 0.3
         xp: 190
         weight: 65
         rewards:
           - chance: 35
-            type: vanilla
-            id: ender_pearl
+            type: item
+            id: voidglass_shard
             count: 1
       voidbound_knight:
         entity: iron_golem
         display: "&5Voidbound Knight"
         health: 285
-        damage: 22
-        speed: 0.19
+        damage: 30
+        speed: 0.23
         target-range: 17
+        attack-reach: 2.9
+        melee-cooldown: 11
+        horde-separation: 0.24
         xp: 230
         weight: 35
         rewards:
           - chance: 25
-            type: vanilla
-            id: chorus_fruit
+            type: item
+            id: endfallen_relic
             count: "1-2"

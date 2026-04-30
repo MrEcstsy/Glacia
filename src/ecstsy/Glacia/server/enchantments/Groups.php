@@ -15,6 +15,7 @@ final class Groups {
         'EXOTIC' => ['id' => 4, 'global_color' => "&e", 'group_name' => "Exotic"],
         'LEGENDARY'  => ['id' => 5, 'global_color' => "&6", 'group_name' => "Legendary"],
         'MASTERY' => ['id' => 6, 'global_color' => "&4", 'group_name' => "Mastery"],
+        'EXCLUSIVE' => ['id' => 7, 'global_color' => "&u", 'group_name' => "Exclusive"],
     ];
 
     private static ?string $fallbackGroup = 'SIMPLE';

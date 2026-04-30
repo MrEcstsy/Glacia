@@ -6,10 +6,9 @@ namespace ecstsy\Glacia\commands;
 
 use CortexPE\Commando\BaseCommand;
 use ecstsy\Glacia\Loader;
-use ecstsy\Glacia\utils\GlaciaUtils;
+use ecstsy\Glacia\server\staff\StaffModeManager;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
-use pocketmine\utils\TextFormat as C;
 
 final class AdminModeCommand extends BaseCommand {
 
@@ -24,20 +23,7 @@ final class AdminModeCommand extends BaseCommand {
         }
 
         $session = Loader::getPlayerManager()->getSession($sender);
-
-        if ($session->isInAdminMode()) {
-            $session->setInAdminMode(false);
-            $sender->sendMessage(GlaciaUtils::format("admin-mode.disabled"));
-            GlaciaUtils::logAdminAction("Admin Mode Disabled", [
-                "admin" => $sender->getName()
-            ]);
-        } else {
-            $session->setInAdminMode(true);
-            $sender->sendMessage(GlaciaUtils::format("admin-mode.enabled"));
-            GlaciaUtils::logAdminAction("Admin Mode Enabled", [
-                "admin" => $sender->getName()
-            ]);
-        }
+        StaffModeManager::toggle($sender, $session);
     }
 
     public function getPermission(): string {

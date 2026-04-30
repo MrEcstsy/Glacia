@@ -57,14 +57,14 @@ final class OpenableLootPreviewScreen {
         $form->setContent(implode("\n", $lines));
 
         if ($page > 0) {
-            $form->addButton(C::colorize("&r&bPrevious Page"), label: "prev");
+            $form->addButton(C::colorize("&r&8Previous Page"), label: "prev");
         }
 
         if ($page < $maxPage) {
-            $form->addButton(C::colorize("&r&bNext Page"), label: "next");
+            $form->addButton(C::colorize("&r&8Next Page"), label: "next");
         }
 
-        $form->addButton(C::colorize("&r&7Close"), label: "close");
+        $form->addButton(C::colorize("&r&8Close"), label: "close");
         $player->sendForm($form);
     }
 

@@ -31,6 +31,8 @@ runes:
   verdant:
     mode: passive
     display: "Verdant"
+    anti-trample-farmland: true
+    farmland-trample-chance: 100
 
   pet_duration:
     mode: passive
@@ -58,3 +60,117 @@ runes:
   envoy_vacuum:
     mode: passive
     display: "Envoy Vacuum"
+
+  raider_edge:
+    mode: applied
+    success: 82
+    chance: 5
+    applies-to:
+      - "weapon"
+    display: "Raider's Edge"
+
+  null_field:
+    mode: applied
+    success: 76
+    chance: 1
+    damage-multiplier: 2.0
+    radius: 2.0
+    applies-to:
+      - "armor"
+    display: "Null Field"
+
+  echo_cache:
+    mode: passive
+    chance: 1
+    items:
+      - "lootbox"
+    display: "Echo Cache"
+
+  hemoguard:
+    mode: applied
+    success: 85
+    applies-to:
+      - "armor"
+    display: "Hemoguard"
+
+  chronoshift:
+    mode: passive
+    booster-duration-multiplier: 1.2
+    display: "Chronoshift"
+
+  merchant_sigil:
+    mode: passive
+    multiplier: 2.0
+    display: "Merchant Sigil"
+
+  tidehook:
+    mode: applied
+    success: 84
+    fishing-speed-multiplier: 1.5
+    applies-to:
+      - "rod"
+    display: "Tidehook"
+
+  solitary_hunt:
+    mode: applied
+    success: 79
+    spawn-speed-multiplier: 2.0
+    zone-xp-multiplier: 1.5
+    applies-to:
+      - "armor"
+    display: "Solitary Hunt"
+
+  envoy_echo:
+    mode: passive
+    chance: 2
+    display: "Envoy Echo"
+
+  swiftbane:
+    mode: applied
+    success: 77
+    proc-bonus-percent: 3
+    applies-to:
+      - "armor"
+    display: "Swiftbane"
+
+  sigil_of_surge:
+    mode: applied
+    success: 83
+    proc-bonus-percent: 1
+    applies-to:
+      - "armor"
+    display: "Sigil of Surge"
+
+  reaper_oath:
+    mode: applied
+    success: 74
+    chance: 2
+    applies-to:
+      - "weapon"
+    display: "Reaper's Oath"
+
+  bottomless_gullet:
+    mode: passive
+    auction-fee-multiplier: 0.8
+    display: "Bottomless Gullet"
+
+  stormward:
+    mode: applied
+    success: 80
+    legendary-damage-reduction-percent: 10
+    applies-to:
+      - "armor"
+    display: "Stormward"
+
+  beastclock:
+    mode: passive
+    pet-cooldown-multiplier: 0.9
+    display: "Beastclock"
+
+  harvester_mark:
+    mode: applied
+    success: 78
+    mob-reward-multiplier: 2.5
+    applies-to:
+      - "weapon"
+    display: "Harvester Mark"

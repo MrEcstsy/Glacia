@@ -5,6 +5,7 @@ namespace ecstsy\Glacia\commands\sub\balance;
 use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\player\GlaciaPlayer;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\command\CommandSender;
@@ -38,7 +39,7 @@ class GiveSubCommand extends BaseSubCommand {
             return;
         }
 
-        if ($session->getBalance() + $amount > 9000000000) {
+        if ($session->getBalance() + $amount > GlaciaPlayer::MAX_BALANCE) {
             $sender->sendMessage(C::colorize("&r&cError: &4You cannot give more money than the server allows."));
             return;
         }

@@ -48,10 +48,22 @@ final class CreateSubCommand extends BaseSubCommand {
 
         $factionId = uniqid("", true);
         $f = Loader::getFactionManager()->createFaction($factionId, $filteredName, "Default faction description :(", $sender->getUniqueId()->toString(), $sender->getName());
+        if ($f === null) {
+            $sender->sendMessage(C::colorize("&r&cCould not create that faction (name may have been taken). Try again."));
+            return;
+        }
 
         $session->joinFaction($factionId, "leader");
+        Loader::getDatabase()->waitAll();
+        $f->refreshScoreboards();
 
         $factionName = $f->getName();
+
+        GlaciaUtils::logFactionAudit("Create", [
+            "founder" => $sender->getName(),
+            "faction" => $factionName,
+            "faction_id" => $factionId,
+        ]);
 
         $sender->sendMessage(C::colorize("&r&l&3    FACTION CREATED"));
         $sender->sendMessage(C::colorize("&r&7You have founded &b{$factionName}&7."));

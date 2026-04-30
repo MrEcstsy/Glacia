@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\enchantments\enchants\armor;
 
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
+use ecstsy\Glacia\server\enchantments\essence\EnchantEssenceManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
@@ -39,8 +40,8 @@ final class ArmoredEnchant implements EntityDamageByEntityEnchantmentHandler {
             return;
         }
 
-        // 0.75% per level
-        $reduction = 0.0075 * $level;
+        $perLevelReduction = EnchantEssenceManager::resolveArmorValue($victim, "armored", "damage-reduction-per-level", 0.0075);
+        $reduction = $perLevelReduction * $level;
 
         $event->setBaseDamage($base * (1 - $reduction));
     }

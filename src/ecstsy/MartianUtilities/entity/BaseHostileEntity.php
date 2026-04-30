@@ -8,6 +8,7 @@ use pocketmine\block\Stair;
 use pocketmine\entity\Living;
 use pocketmine\entity\Location;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\math\Vector3;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\player\Player;
@@ -15,6 +16,10 @@ use pocketmine\utils\TextFormat;
 use pocketmine\world\Position;
 
 abstract class BaseHostileEntity extends Living {
+    protected const BASE_PATH_COOLDOWN_TICKS = 8;
+    protected const STUCK_REPATH_THRESHOLD = 7;
+    protected const HARD_STUCK_THRESHOLD = 14;
+    protected const TARGET_NODE_SHIFT_REPATH_SQ = 1.0;
 
     protected ?Player $target = null;
     protected bool $persistent = false;
@@ -34,6 +39,7 @@ abstract class BaseHostileEntity extends Living {
     protected ?Vector3 $lastTargetNode = null;
     protected ?Vector3 $lastPos = null;
     protected int $stuckTicks = 0;
+    protected int $failedPathRecalculations = 0;
 
     public function __construct(Location $location, ?CompoundTag $nbt = null) {
         parent::__construct($location, $nbt);
@@ -135,8 +141,13 @@ abstract class BaseHostileEntity extends Living {
             $this->motion->z *= 0.6;
         }
 
-        if ($this->shouldJumpAhead()) {
+        if ($this->shouldJumpAhead() || ($this->requiresJumpTowardElevatedNearbyTarget())) {
             $this->jump();
+        }
+
+        if ($this->stuckTicks >= 4) {
+            $this->motion->y = max($this->motion->y, 0.42);
+            $this->pathCooldown = 0;
         }
     }
 
@@ -204,7 +215,7 @@ abstract class BaseHostileEntity extends Living {
             return true;
         }
 
-        if ($this->stuckTicks >= 6) {
+        if ($this->stuckTicks >= self::STUCK_REPATH_THRESHOLD) {
             return true;
         }
 
@@ -213,7 +224,7 @@ abstract class BaseHostileEntity extends Living {
             return true;
         }
 
-        return $this->lastTargetNode->distanceSquared($targetNode) >= 2.0;
+        return $this->lastTargetNode->distanceSquared($targetNode) >= self::TARGET_NODE_SHIFT_REPATH_SQ;
     }
 
     protected function recalculatePath(): void {
@@ -228,9 +239,15 @@ abstract class BaseHostileEntity extends Living {
 
         $this->path = $newPath ?? [];
         $this->pathIndex = 0;
-        $this->pathCooldown = 6;
+        $this->pathCooldown = self::BASE_PATH_COOLDOWN_TICKS;
         $this->lastTargetNode = $goal;
-        $this->stuckTicks = 0;
+        if ($newPath === null || $newPath === []) {
+            $this->failedPathRecalculations++;
+            $this->pathCooldown = max(3, self::BASE_PATH_COOLDOWN_TICKS - min(4, $this->failedPathRecalculations));
+        } else {
+            $this->failedPathRecalculations = 0;
+            $this->stuckTicks = 0;
+        }
     }
 
     protected function getCurrentPathNode(): ?Vector3 {
@@ -306,6 +323,12 @@ abstract class BaseHostileEntity extends Living {
         }
 
         $this->lastPos = $current->asVector3();
+
+        if ($this->stuckTicks >= self::HARD_STUCK_THRESHOLD && $this->target !== null) {
+            $this->performStuckRecoveryMove();
+            $this->pathCooldown = 0; // force repath on next AI cycle
+            $this->stuckTicks = 0;
+        }
     }
 
     protected function shouldJumpAhead(): bool {
@@ -313,20 +336,79 @@ abstract class BaseHostileEntity extends Living {
             return false;
         }
 
-        $dir = $this->getHorizontalFacingVector();
+        $dir = $this->getHorizontalIntentVector();
         if ($dir === null) {
             return false;
         }
 
+        $world = $this->getWorld();
+        $floorY = $this->getPosition()->getFloorY();
         $front = $this->getPosition()->add($dir->x, 0, $dir->z)->floor();
-        $frontBlock = $this->getWorld()->getBlockAt($front->x, $front->y, $front->z);
-        $aboveFront = $this->getWorld()->getBlockAt($front->x, $front->y + 1, $front->z);
+
+        // Sample using floor Y anchor (fixes lip ledges where the cell below the step is empty).
+        $frontBlock = $world->getBlockAt((int) $front->x, $floorY, (int) $front->z);
+        $aboveFront = $world->getBlockAt((int) $front->x, $floorY + 1, (int) $front->z);
+        $twoAboveFront = $world->getBlockAt((int) $front->x, $floorY + 2, (int) $front->z);
+        $threeAboveFront = $world->getBlockAt((int) $front->x, $floorY + 3, (int) $front->z);
+
+        $nextNode = $this->getCurrentPathNode();
+        if ($nextNode !== null && (($nextNode->y - $this->getPosition()->getY()) > 0.45) && !$aboveFront->isSolid()) {
+            return true;
+        }
 
         if (($frontBlock instanceof Slab || $frontBlock instanceof Stair) && !$aboveFront->isSolid()) {
             return true;
         }
 
-        return $frontBlock->isSolid() && !$aboveFront->isSolid();
+        // Standard same-level step-up: solid block face with headroom.
+        if ($frontBlock->isSolid() && !$aboveFront->isSolid() && !$twoAboveFront->isSolid()) {
+            return true;
+        }
+
+        // One-block lip / platform ahead: feet column is empty at standing level but the next tier is solid walkable surface.
+        if (
+            !$frontBlock->isSolid() &&
+            $aboveFront->isSolid() &&
+            !$twoAboveFront->isSolid() &&
+            !$threeAboveFront->isSolid()
+        ) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Movement-facing (motion), else intent toward path node or chase target — so jump checks still run when motion damping zeroes xz.
+     */
+    protected function getHorizontalIntentVector(): ?Vector3
+    {
+        $mx = $this->motion->x;
+        $mz = $this->motion->z;
+        $lenSq = ($mx * $mx) + ($mz * $mz);
+        if ($lenSq > 0.0004) {
+            $len = sqrt($lenSq);
+            return new Vector3($mx / $len, 0, $mz / $len);
+        }
+
+        $goal = $this->getCurrentPathNode();
+        if ($goal === null && $this->target !== null) {
+            $goal = $this->target->getPosition()->asVector3();
+        }
+
+        if ($goal === null) {
+            return null;
+        }
+
+        $dx = $goal->x - $this->location->x;
+        $dz = $goal->z - $this->location->z;
+        $gLenSq = ($dx * $dx) + ($dz * $dz);
+        if ($gLenSq <= 0.0004) {
+            return null;
+        }
+
+        $gLen = sqrt($gLenSq);
+        return new Vector3($dx / $gLen, 0, $dz / $gLen);
     }
 
     protected function getHorizontalFacingVector(): ?Vector3 {
@@ -386,13 +468,118 @@ abstract class BaseHostileEntity extends Living {
         return $this;
     }
 
-    protected function targetIsTooHigh(): bool {
-        return $this->target !== null && (($this->target->getPosition()->y - $this->getPosition()->y) > 1.8);
+    /**
+     * One-block rises (lip chases): old threshold required >1.8; players one block up never triggered jumps.
+     */
+    protected function requiresJumpTowardElevatedNearbyTarget(): bool
+    {
+        if ($this->target === null || !$this->onGround || !$this->target->isAlive()) {
+            return false;
+        }
+
+        $tp = $this->target->getPosition();
+        $mp = $this->getPosition();
+        $yDiff = $tp->y - $mp->y;
+        // Roughly half-block to slightly over one block climb; avoid sky bases & huge gaps.
+        if ($yDiff < 0.38 || $yDiff > 2.4) {
+            return false;
+        }
+
+        $dx = $tp->x - $mp->x;
+        $dz = $tp->z - $mp->z;
+        if (($dx * $dx) + ($dz * $dz) > 81.0) {
+            return false;
+        }
+
+        return true;
     }
 
     protected function strafe(Vector3 $dir, float $speed): void {
         $this->motion->x = -$dir->z * $speed * 0.75;
         $this->motion->z =  $dir->x * $speed * 0.75;
+    }
+
+    protected function performStuckRecoveryMove(): void
+    {
+        // First check if we're physically embedded inside terrain.
+        // If so, teleport vertically into the nearest open column rather
+        // than trying to walk it off — sideways nudges can't escape that.
+        if ($this->escapeIfClippedIntoBlocks()) {
+            return;
+        }
+
+        $side = (mt_rand(0, 1) === 0) ? -1.0 : 1.0;
+        $speed = max(0.12, $this->getMoveSpeed() * 0.7);
+        $forward = $this->buildMovementToward($this->target->getPosition(), $speed);
+
+        // Quick side-step nudge to break local collision deadlocks.
+        $this->motion->x = ($forward->x * 0.35) + ((-$forward->z) * $side * 0.85);
+        $this->motion->z = ($forward->z * 0.35) + (($forward->x) * $side * 0.85);
+
+        // Force a vertical hop even when onGround is unreliable (we're stuck).
+        // Using motion directly avoids jump()'s onGround guard.
+        $this->motion->y = max($this->motion->y, 0.42);
+    }
+
+    /**
+     * Detects when the entity bounding box overlaps a non-passable block and
+     * teleports the entity straight up to the nearest open column. Returns
+     * true when a teleport occurred.
+     */
+    protected function escapeIfClippedIntoBlocks(): bool
+    {
+        $world = $this->getWorld();
+        $pos = $this->location;
+        $bb = $this->getBoundingBox();
+
+        $minX = (int) floor($bb->minX + 0.001);
+        $maxX = (int) floor($bb->maxX - 0.001);
+        $minZ = (int) floor($bb->minZ + 0.001);
+        $maxZ = (int) floor($bb->maxZ - 0.001);
+        $minY = (int) floor($bb->minY + 0.001);
+        $maxY = (int) floor($bb->maxY - 0.001);
+
+        $clipped = false;
+        for ($y = $minY; $y <= $maxY && !$clipped; $y++) {
+            for ($x = $minX; $x <= $maxX && !$clipped; $x++) {
+                for ($z = $minZ; $z <= $maxZ; $z++) {
+                    $block = $world->getBlockAt($x, $y, $z);
+                    if ($block->isSolid()) {
+                        $clipped = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!$clipped) {
+            return false;
+        }
+
+        $height = max(1, (int) ceil($bb->maxY - $bb->minY));
+        $blockX = (int) floor($pos->x);
+        $blockZ = (int) floor($pos->z);
+        $startY = (int) floor($pos->y);
+
+        // Walk upward looking for a vertical gap tall enough for the entity.
+        for ($y = $startY; $y < $startY + 16; $y++) {
+            $clear = true;
+            for ($h = 0; $h < $height; $h++) {
+                if ($world->getBlockAt($blockX, $y + $h, $blockZ)->isSolid()) {
+                    $clear = false;
+                    break;
+                }
+            }
+            if ($clear) {
+                $this->teleport(new \pocketmine\math\Vector3($blockX + 0.5, (float) $y, $blockZ + 0.5));
+                $this->motion->x = 0.0;
+                $this->motion->y = 0.0;
+                $this->motion->z = 0.0;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected function hasCustomMovement(): bool {
@@ -426,13 +613,29 @@ abstract class BaseHostileEntity extends Living {
     protected function updateHealthNameTag(): void {
         $health = max(0, (int) ceil($this->getHealth()));
         $max = max(1, (int) ceil($this->getMaxHealth()));
-        $color = $health <= ($max * 0.3) ? TextFormat::RED : ($health <= ($max * 0.6) ? TextFormat::YELLOW : TextFormat::GREEN);
+        $color = TextFormat::RED;
+        $bar = $this->buildHealthAuraBar($health, $max);
 
         $this->setNameTag(TextFormat::colorize(
-            "&r&l" . $this->getName() . "\n&r" . $color . "HP &f{$health}&7/&f{$max}"
+            "&r&l" . $this->getName() . "\n&r" . $color . $bar . " &8(&f{$health}&7/&f{$max}&8)"
         ));
         $this->setNameTagVisible(true);
         $this->setNameTagAlwaysVisible(true);
+    }
+
+    protected function buildHealthAuraBar(int $health, int $max): string
+    {
+        $segments = 10;
+        $ratio = $max > 0 ? max(0.0, min(1.0, $health / $max)) : 0.0;
+        $filled = (int) floor($ratio * $segments);
+
+        return str_repeat("❤", $filled) . TextFormat::GRAY . str_repeat("❤", max(0, $segments - $filled));
+    }
+
+    public function attack(EntityDamageEvent $source): void
+    {
+        parent::attack($source);
+        $this->updateHealthNameTag();
     }
     
 }

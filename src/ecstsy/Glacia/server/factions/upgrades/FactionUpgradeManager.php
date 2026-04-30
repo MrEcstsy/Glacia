@@ -8,6 +8,7 @@ use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\listeners\FactionListener;
 use ecstsy\Glacia\server\factions\Faction;
 use ecstsy\Glacia\utils\QueryStmts;
+use ecstsy\Glacia\utils\StorageUtils;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\scheduler\ClosureTask;
 
@@ -20,7 +21,7 @@ final class FactionUpgradeManager
     {
         Loader::getDatabase()->executeSelect(QueryStmts::FACTION_UPGRADE_BANK_SELECT, [], function(array $rows): void {
             foreach ($rows as $row) {
-                $decoded = json_decode((string) ($row["upgrade_data"] ?? "{}"), true);
+                $decoded = StorageUtils::decodeJsonString((string) ($row["upgrade_data"] ?? "{}"), "faction upgrades for " . (string) ($row["faction_id"] ?? "unknown"));
                 $this->entries[(string) $row["faction_id"]] = [
                     "bank_balance" => (float) ($row["bank_balance"] ?? 0.0),
                     "upgrade_data" => is_array($decoded) ? array_map("intval", $decoded) : [],
@@ -168,6 +169,22 @@ final class FactionUpgradeManager
         return $chancePerLevel * $level;
     }
 
+    public function getChallengeParticipantBonus(?Faction $faction): int
+    {
+        if ($faction === null) {
+            return 0;
+        }
+
+        $definition = $this->getUpgradeDefinition("challenge_roster");
+        if ($definition === null || !((bool) ($definition["enabled"] ?? false))) {
+            return 0;
+        }
+
+        $level = $this->getUpgradeLevel($faction->getFactionId(), "challenge_roster");
+        $bonusPerLevel = max(0, (int) ($definition["extra-participants-per-level"] ?? 0));
+        return $level * $bonusPerLevel;
+    }
+
     public function rollQuestBonus(?Faction $faction): bool
     {
         $chance = $this->getQuestBonusChance($faction);
@@ -252,10 +269,15 @@ final class FactionUpgradeManager
     private function persist(string $factionId): void
     {
         $entry = $this->entries[$factionId] ?? ["bank_balance" => 0.0, "upgrade_data" => []];
+        $payload = StorageUtils::encodeJsonString($entry["upgrade_data"] ?? [], "faction upgrades for {$factionId}");
+        if ($payload === null) {
+            return;
+        }
+
         Loader::getDatabase()->executeInsert(QueryStmts::FACTION_UPGRADE_BANK_CREATE, [
             "faction_id" => $factionId,
             "bank_balance" => (float) ($entry["bank_balance"] ?? 0.0),
-            "upgrade_data" => json_encode($entry["upgrade_data"] ?? [], JSON_UNESCAPED_SLASHES),
+            "upgrade_data" => $payload,
         ]);
     }
 }

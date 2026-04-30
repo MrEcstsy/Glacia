@@ -6,6 +6,9 @@ namespace ecstsy\Glacia\server\economy;
 
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\quests\QuestInstance;
+use ecstsy\Glacia\server\items\CustomMobItemManager;
+use ecstsy\Glacia\server\items\runes\RuneManager;
+use ecstsy\Glacia\server\factions\contribution\FactionContributionManager;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\item\Item;
@@ -63,8 +66,9 @@ final class SellHandler {
     public static function sellItem(Player $player, Item $item): bool {
         $count = $item->getCount();
         $id = $item->getTypeId();
+        $customPrice = CustomMobItemManager::getSellPrice($item);
 
-        if (!isset(self::$sellPrices[$id])) {
+        if ($customPrice === null && !isset(self::$sellPrices[$id])) {
             $player->sendMessage(C::colorize("&r&cThis item cannot be sold."));
             PlayerUtils::playSound($player, "note.bass");
             $pos = $player->getPosition()->add(0, 1.5, 0);
@@ -74,18 +78,21 @@ final class SellHandler {
 
         $session = Loader::getPlayerManager()->getSession($player);
 
-        $basePrice = self::$sellPrices[$id] * $count;
-        $multiplier = $session->getSellMultiplier() ?? 1.0;
+        $basePrice = ($customPrice ?? self::$sellPrices[$id]) * $count;
+        $factionSellBuff = FactionContributionManager::getBuffMultiplierForPlayer($player, "sell-multiplier", 1.0);
+        $multiplier = ($session->getSellMultiplier() ?? 1.0) * RuneManager::getSellMultiplier($player) * $factionSellBuff;
         $finalPrice = round($basePrice * $multiplier, 2);
 
         $session->addBalance($finalPrice);
         $player->getInventory()->removeItem($item);
 
         $multiplierText = $multiplier > 1.0 ? " &r&7(x{$multiplier} Multiplier)" : "";
-        $player->sendMessage(C::colorize("&r&aYou sold &f{$count}x &a" . $item->getVanillaName() . " &r&afor &b$" . number_format($finalPrice, 2) . "{$multiplierText}&r&a."));
+        $display = $customPrice !== null ? CustomMobItemManager::getSellDisplayName($item) : $item->getVanillaName();
+        $player->sendMessage(C::colorize("&r&aYou sold &f{$count}x &a" . $display . " &r&afor &b$" . number_format($finalPrice, 2) . "{$multiplierText}&r&a."));
         PlayerUtils::playSound($player, "random.orb");
 
         QuestInstance::onSell($player, $item, $count);
+        FactionContributionManager::addSellContribution($player, $finalPrice);
 
         return true;
     }
@@ -96,18 +103,20 @@ final class SellHandler {
         $totalEarned = 0.0;
         $itemsSold = 0;
 
-        $multiplier = $session->getSellMultiplier() ?? 1.0;
+        $factionSellBuff = FactionContributionManager::getBuffMultiplierForPlayer($player, "sell-multiplier", 1.0);
+        $multiplier = ($session->getSellMultiplier() ?? 1.0) * RuneManager::getSellMultiplier($player) * $factionSellBuff;
         $multiplierText = $multiplier > 1.0 ? " &r&7(x{$multiplier} Multiplier)" : "";
 
         foreach ($inventory->getContents() as $slot => $item) {
             $id = $item->getTypeId();
+            $customPrice = CustomMobItemManager::getSellPrice($item);
 
-            if (!isset(self::$sellPrices[$id])) {
+            if ($customPrice === null && !isset(self::$sellPrices[$id])) {
                 continue;
             }
 
             $count = $item->getCount();
-            $price = self::$sellPrices[$id] * $count;
+            $price = ($customPrice ?? self::$sellPrices[$id]) * $count;
             $finalPrice = round($price * $multiplier, 2);
 
             $totalEarned += $finalPrice;
@@ -120,6 +129,7 @@ final class SellHandler {
 
         if ($totalEarned > 0) {
             $session->addBalance($totalEarned);
+            FactionContributionManager::addSellContribution($player, $totalEarned);
             $player->sendMessage(C::colorize("&r&aYou sold &f{$itemsSold} &aitems for &b$" . number_format($totalEarned, 2) . "{$multiplierText}&r&a."));
             PlayerUtils::playSound($player, "random.orb");
         } else {
