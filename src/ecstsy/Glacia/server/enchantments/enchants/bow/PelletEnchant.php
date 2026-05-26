@@ -10,6 +10,7 @@ use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
 use pocketmine\entity\projectile\Projectile;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\event\entity\EntityDamageByChildEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\player\Player;
 
@@ -20,8 +21,11 @@ final class PelletEnchant implements EntityDamageByEntityEnchantmentHandler
         if ($event->isCancelled()) return;
         $damager = $event->getDamager();
         $victim = $event->getEntity();
-        if (!$damager instanceof Projectile || !$victim instanceof Player) return;
-        $owner = $damager->getOwningEntity();
+        $projectile = $damager instanceof Projectile
+            ? $damager
+            : (($event instanceof EntityDamageByChildEntityEvent && $event->getChild() instanceof Projectile) ? $event->getChild() : null);
+        if (!$projectile instanceof Projectile || !$victim instanceof Player) return;
+        $owner = $projectile->getOwningEntity();
         if (!$owner instanceof Player) return;
 
         $chance = EnchantTuningManager::getLevelInt("pellet", "chance-by-level", $level, $level);

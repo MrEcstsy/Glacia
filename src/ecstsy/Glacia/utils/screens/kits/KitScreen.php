@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\utils\screens\kits;
 
 use ecstsy\Glacia\server\kits\KitRepository;
+use ecstsy\Glacia\utils\inventory\CustomSizedInvMenu;
 use ecstsy\MartianUtilities\utils\screens\BaseScreen;
 use muqsit\invmenu\InvMenu;
 use muqsit\invmenu\transaction\DeterministicInvMenuTransaction;
@@ -20,7 +21,7 @@ final class KitScreen extends BaseScreen {
 
     public function __construct()
     {
-        $this->invMenu = InvMenu::create(InvMenu::TYPE_CHEST);
+        $this->invMenu = CustomSizedInvMenu::create(27);
         $this->invMenu->setName(C::colorize("&r&8Rank Kits"));
         $this->build();
 

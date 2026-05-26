@@ -7,13 +7,17 @@ namespace ecstsy\Glacia\server\fishing;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\factions\contribution\FactionContributionManager;
 use ecstsy\Glacia\server\items\runes\RuneManager;
+use ecstsy\Glacia\server\world\events\WorldEventManager;
 use ecstsy\Glacia\utils\RewardResolver;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\block\Water;
+use pocketmine\item\FishingRod;
+use pocketmine\item\Item;
 use pocketmine\item\ItemTypeIds;
 use pocketmine\math\Vector3;
+use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\player\Player;
 use pocketmine\scheduler\Task;
 use pocketmine\utils\TextFormat as C;
@@ -23,6 +27,9 @@ use pocketmine\world\particle\HappyVillagerParticle;
 use pocketmine\world\particle\WaterParticle;
 
 final class FishingManager{
+    private const ROD_LEVEL_TAG = "fishingRodLevel";
+    private const ROD_XP_TAG = "fishingRodXp";
+    private const ROD_MAX_SLOTS = 3;
 
     /** @var array<string, mixed> */
     private static array $settings = [];
@@ -49,7 +56,7 @@ final class FishingManager{
     }
 
     public static function usesVanillaHookEntity(): bool{
-        return (bool) (self::$settings["use-vanilla-hook-entity"] ?? false);
+        return (bool) (self::$settings["use-vanilla-hook-entity"] ?? true);
     }
 
     public static function getPlayerHook(Player $player): ?GlaciaFishingHook{
@@ -126,6 +133,10 @@ final class FishingManager{
             return;
         }
 
+        if($item instanceof FishingRod){
+            self::prepareFishingRod($player, $item);
+        }
+
         $uuid = $player->getUniqueId()->toString();
 
         if(self::usesVanillaHookEntity()){
@@ -134,11 +145,11 @@ final class FishingManager{
             $hook = self::getPlayerHook($player);
             if($hook !== null){
                 if($hook->isFlaggedForDespawn()){
+                    self::clearHookFor($player, $hook);
+                }else{
+                    $hook->reelLine();
                     return;
                 }
-
-                $hook->reelLine();
-                return;
             }
 
             if((self::$recentCastTicks[$uuid] ?? -99) >= (self::$serverTick - 1)){
@@ -146,7 +157,7 @@ final class FishingManager{
             }
             self::$recentCastTicks[$uuid] = self::$serverTick;
 
-            if(!self::canFishHere($player)){
+            if(!self::canStartFishingCast($player)){
                 $msg = (string) (self::$settings["messages"]["invalid-location"] ?? "&r&cYou need nearby water to fish.");
                 $player->sendMessage(C::colorize($msg));
                 return;
@@ -272,7 +283,7 @@ final class FishingManager{
     }
 
     private static function deliverGlaciaCatch(Player $player): void{
-        $entry = RewardResolver::rollEntry(self::$lootTable);
+        $entry = self::rollCatchEntry($player);
         if($entry === null){
             $player->sendMessage(C::colorize("&r&cFishing loot table is empty."));
             return;
@@ -282,6 +293,8 @@ final class FishingManager{
         if($item === null){
             return;
         }
+
+        WorldEventManager::handleFishingCatchBroadcast($player, $entry, $item);
 
         $session = Loader::getPlayerManager()->getSession($player);
         foreach($player->getInventory()->addItem($item) as $leftover){
@@ -293,11 +306,17 @@ final class FishingManager{
         $caught = (string) (self::$settings["messages"]["caught"] ?? "&r&aYou caught &f{item} &7x&f{count}&a.");
         $caught = str_replace(["{item}", "{count}"], [$name, (string) $count], $caught);
         $player->sendMessage(C::colorize($caught));
+        Loader::getQuestBoardManager()->recordProgress($player, "fishes_caught", 1);
 
         $rarity = self::resolveCatchRarity((array) $entry);
         FactionContributionManager::addFishingContribution($player, $rarity);
         if ($rarity === "rare" || $rarity === "epic") {
             FactionContributionManager::recordTaskProgress($player, "rare_fish_caught", 1);
+        }
+
+        $hand = $player->getInventory()->getItemInHand();
+        if($hand instanceof FishingRod){
+            self::grantRodExperience($player, $hand, $rarity);
         }
 
         $bonusChance = max(0.0, FactionContributionManager::getBuffMultiplierForPlayer($player, "fishing-luck-multiplier", 1.0) - 1.0);
@@ -311,6 +330,50 @@ final class FishingManager{
         if((bool) (self::$settings["show-cast-fx"] ?? true)){
             self::playCatchEffects($player);
         }
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private static function rollCatchEntry(Player $player): ?array{
+        if(self::$lootTable === []){
+            return null;
+        }
+
+        $table = WorldEventManager::decorateFishingLootTable($player, self::$lootTable);
+        if ($table === []) {
+            return null;
+        }
+
+        $rodLevel = self::getHeldRodLevel($player);
+        if($rodLevel <= 0){
+            $entry = RewardResolver::rollEntry($table);
+            return is_array($entry) ? $entry : null;
+        }
+
+        $leveledTable = [];
+        $bonusPerLevel = max(0.0, (float) (self::getRodLevelingSettings()["rare-weight-bonus-per-level"] ?? 0.06));
+        $commonReductionPerLevel = max(0.0, (float) (self::getRodLevelingSettings()["common-weight-reduction-per-level"] ?? 0.04));
+        foreach($table as $entry){
+            if(!is_array($entry)){
+                continue;
+            }
+
+            $rarity = self::resolveCatchRarity($entry);
+            $modified = $entry;
+            $baseChance = (float) ($entry["chance"] ?? 0);
+            $multiplier = match($rarity){
+                "epic" => 1.0 + ($bonusPerLevel * 1.85 * $rodLevel),
+                "rare" => 1.0 + ($bonusPerLevel * 1.2 * $rodLevel),
+                "uncommon" => 1.0 + ($bonusPerLevel * 0.45 * $rodLevel),
+                default => max(0.25, 1.0 - ($commonReductionPerLevel * $rodLevel)),
+            };
+            $modified["chance"] = max(1, (int) round(max(1.0, $baseChance) * $multiplier));
+            $leveledTable[] = $modified;
+        }
+
+        $entry = RewardResolver::rollEntry($leveledTable);
+        return is_array($entry) ? $entry : null;
     }
 
     /**
@@ -365,17 +428,23 @@ final class FishingManager{
             return;
         }
 
-        $steps = (int) max(4, min(14, floor($dist / 0.85)));
+        $steps = (int) max(8, min(28, floor($dist / 0.45)));
         $water = VanillaBlocks::WATER();
         for($s = 1; $s <= $steps; $s++){
             $t = $s / $steps;
+            $point = new Vector3($eye->x + $dx * $t, $eye->y + $dy * $t, $eye->z + $dz * $t);
+            $world->addParticle($point, new BlockBreakParticle($water));
+            if($s % 2 === 0){
+                $world->addParticle($point->add(0, 0.05, 0), new WaterParticle());
+            }
+        }
+
+        for($i = 0; $i < 5; $i++){
             $world->addParticle(
-                new Vector3($eye->x + $dx * $t, $eye->y + $dy * $t, $eye->z + $dz * $t),
+                $bob->add((mt_rand(-10, 10) / 60.0), mt_rand(0, 4) / 60.0, (mt_rand(-10, 10) / 60.0)),
                 new BlockBreakParticle($water)
             );
         }
-
-        $world->addParticle($bob, new BlockBreakParticle($water));
         PlayerUtils::playSound($player, "bucket.empty_water", 0.4, 1.15, 10);
     }
 
@@ -391,13 +460,20 @@ final class FishingManager{
 
         $world = $player->getWorld();
         $center = new Vector3((float) $bob["x"], (float) $bob["y"], (float) $bob["z"]);
-        for($i = 0; $i < 10; $i++){
+        for($i = 0; $i < 16; $i++){
             $angle = deg2rad($i * 36);
             $world->addParticle(
                 $center->addVector(new Vector3(cos($angle) * 0.35, 0.12, sin($angle) * 0.35)),
                 new BlockBreakParticle(VanillaBlocks::WATER())
             );
         }
+        for($i = 0; $i < 8; $i++){
+            $world->addParticle(
+                $center->addVector(new Vector3(mt_rand(-12, 12) / 40.0, 0.08 + (mt_rand(0, 10) / 80.0), mt_rand(-12, 12) / 40.0)),
+                new BubbleParticle()
+            );
+        }
+        $world->addParticle($center->addVector(new Vector3(0, 0.12, 0)), new WaterParticle());
 
         PlayerUtils::playSound($player, "note.pling", 0.55, 1.45, 12);
     }
@@ -414,7 +490,9 @@ final class FishingManager{
         $world = $player->getWorld();
         $v = new Vector3((float) $bob["x"], (float) $bob["y"], (float) $bob["z"]);
         $world->addParticle($v, new BubbleParticle());
+        $world->addParticle($v->addVector(new Vector3(0, 0.05, 0)), new BubbleParticle());
         $world->addParticle($v->addVector(new Vector3(0, 0.1, 0)), new WaterParticle());
+        $world->addParticle($v->addVector(new Vector3(0.12, 0.02, -0.08)), new WaterParticle());
     }
 
     private static function playCatchEffects(Player $player): void{
@@ -431,6 +509,20 @@ final class FishingManager{
     }
 
     private static function canFishHere(Player $player): bool{
+        if(!self::canStartFishingCast($player)){
+            return false;
+        }
+
+        $requireWater = (bool) (self::$settings["require-water"] ?? true);
+        if(!$requireWater){
+            return true;
+        }
+
+        $range = max(3, min(20, (int) (self::$settings["cast-range"] ?? 14)));
+        return self::findBobPosition($player, $range) !== null;
+    }
+
+    private static function canStartFishingCast(Player $player): bool{
         if((bool) (self::$settings["warzone-only"] ?? false)){
             $warzone = Loader::getRegionManager()->getRegionByName("Warzone");
             if($warzone === null || Loader::getRegionManager()->getRegionAt($player->getPosition()) !== $warzone){
@@ -446,13 +538,7 @@ final class FishingManager{
             return false;
         }
 
-        $requireWater = (bool) (self::$settings["require-water"] ?? true);
-        if(!$requireWater){
-            return true;
-        }
-
-        $range = max(3, min(20, (int) (self::$settings["cast-range"] ?? 14)));
-        return self::findBobPosition($player, $range) !== null;
+        return true;
     }
 
     private static function isEnabled(): bool{
@@ -464,11 +550,179 @@ final class FishingManager{
      */
     public static function scaleTicksForRodRune(Player $player, int $baseTicks): int{
         $m = RuneManager::getRodSpawnRateMultiplier($player);
-        if($m <= 1.0){
-            return max(1, $baseTicks);
-        }
+        $m *= self::getRodBiteSpeedMultiplier($player);
 
         return max(1, (int) floor($baseTicks / $m));
     }
-}
 
+    /**
+     * @return array<string, mixed>
+     */
+    private static function getRodLevelingSettings(): array{
+        $settings = self::$settings["rod-leveling"] ?? [];
+        return is_array($settings) ? $settings : [];
+    }
+
+    private static function getHeldRodLevel(Player $player): int{
+        $item = $player->getInventory()->getItemInHand();
+        return $item instanceof FishingRod ? self::getFishingRodLevel($item) : 0;
+    }
+
+    private static function getRodBiteSpeedMultiplier(Player $player): float{
+        $settings = self::getRodLevelingSettings();
+        if(!(bool) ($settings["enabled"] ?? true)){
+            return 1.0;
+        }
+
+        $perLevel = max(0.0, (float) ($settings["bite-speed-bonus-per-level"] ?? 0.04));
+        return 1.0 + ($perLevel * self::getHeldRodLevel($player));
+    }
+
+    private static function prepareFishingRod(Player $player, FishingRod $rod): void{
+        self::ensureFishingRodState($rod);
+        $player->getInventory()->setItemInHand($rod);
+    }
+
+    private static function ensureFishingRodState(FishingRod $rod): void{
+        $root = self::getRodGlaciaRoot($rod);
+        $changed = false;
+
+        if(!$root->getTag(self::ROD_LEVEL_TAG)){
+            $root->setInt(self::ROD_LEVEL_TAG, 1);
+            $changed = true;
+        }
+        if(!$root->getTag(self::ROD_XP_TAG)){
+            $root->setInt(self::ROD_XP_TAG, 0);
+            $changed = true;
+        }
+        if(!$root->getTag("maxEnchantSlots")){
+            $root->setInt("maxEnchantSlots", self::ROD_MAX_SLOTS);
+            $changed = true;
+        }
+
+        if($changed){
+            $rod->getNamedTag()->setTag("Glacia", $root);
+        }
+
+        self::refreshFishingRodLore($rod);
+    }
+
+    private static function grantRodExperience(Player $player, FishingRod $rod, string $rarity): void{
+        $settings = self::getRodLevelingSettings();
+        if(!(bool) ($settings["enabled"] ?? true)){
+            return;
+        }
+
+        self::ensureFishingRodState($rod);
+        $root = self::getRodGlaciaRoot($rod);
+        $level = max(1, $root->getInt(self::ROD_LEVEL_TAG, 1));
+        $maxLevel = max($level, (int) ($settings["max-level"] ?? 25));
+        $xpPerCatch = $settings["xp-per-catch"] ?? [];
+        if(!is_array($xpPerCatch)){
+            $xpPerCatch = [];
+        }
+        $xpGain = max(1, (int) (($xpPerCatch[$rarity] ?? null) ?? match($rarity){
+            "epic" => 20,
+            "rare" => 12,
+            "uncommon" => 8,
+            default => 5,
+        }));
+        $xpGain = max(1, (int) ceil($xpGain * Loader::getZoneBoosterManager()->getFishingMultiplierAt($player)));
+
+        if($level >= $maxLevel){
+            $root->setInt(self::ROD_XP_TAG, self::getRequiredXpForLevel($maxLevel));
+            $rod->getNamedTag()->setTag("Glacia", $root);
+            self::refreshFishingRodLore($rod);
+            $player->getInventory()->setItemInHand($rod);
+            return;
+        }
+
+        $xp = $root->getInt(self::ROD_XP_TAG, 0) + $xpGain;
+        while($level < $maxLevel){
+            $required = self::getRequiredXpForLevel($level);
+            if($xp < $required){
+                break;
+            }
+
+            $xp -= $required;
+            $level++;
+        }
+
+        if($level >= $maxLevel){
+            $level = $maxLevel;
+            $xp = self::getRequiredXpForLevel($maxLevel);
+        }
+
+        $root->setInt(self::ROD_LEVEL_TAG, $level);
+        $root->setInt(self::ROD_XP_TAG, $xp);
+        $root->setInt("maxEnchantSlots", self::ROD_MAX_SLOTS);
+        $rod->getNamedTag()->setTag("Glacia", $root);
+        self::refreshFishingRodLore($rod);
+        $player->getInventory()->setItemInHand($rod);
+
+        $xpMessage = (string) ($settings["xp-message"] ?? "&r&bRod XP &f+{xp} &7({percent}%)");
+        $required = self::getRequiredXpForLevel($level);
+        $percent = $level >= $maxLevel ? 100 : (int) round(min(1.0, $xp / max(1, $required)) * 100);
+        $player->sendActionBarMessage(C::colorize(str_replace(
+            ["{xp}", "{percent}", "{level}"],
+            [(string) $xpGain, (string) $percent, (string) $level],
+            $xpMessage
+        )));
+    }
+
+    private static function getFishingRodLevel(Item $item): int{
+        $root = $item->getNamedTag()->getCompoundTag("Glacia");
+        return max(1, $root?->getInt(self::ROD_LEVEL_TAG, 1) ?? 1);
+    }
+
+    private static function getRequiredXpForLevel(int $level): int{
+        $settings = self::getRodLevelingSettings();
+        $base = max(1, (int) ($settings["base-xp"] ?? 35));
+        $perLevel = max(0, (int) ($settings["xp-per-level"] ?? 18));
+        return $base + max(0, $level - 1) * $perLevel;
+    }
+
+    private static function getRodGlaciaRoot(Item $item): CompoundTag{
+        return $item->getNamedTag()->getCompoundTag("Glacia") ?? new CompoundTag();
+    }
+
+    private static function refreshFishingRodLore(FishingRod $rod): void{
+        $settings = self::getRodLevelingSettings();
+        $level = self::getFishingRodLevel($rod);
+        $maxLevel = max($level, (int) ($settings["max-level"] ?? 25));
+        $root = self::getRodGlaciaRoot($rod);
+        $xp = max(0, $root->getInt(self::ROD_XP_TAG, 0));
+        $required = self::getRequiredXpForLevel($level);
+        $percent = $level >= $maxLevel ? 100 : (int) round(min(1.0, $xp / max(1, $required)) * 100);
+
+        $barLength = max(8, (int) ($settings["progress-bar-length"] ?? 12));
+        $filled = $level >= $maxLevel ? $barLength : (int) round(($percent / 100) * $barLength);
+        $filled = max(0, min($barLength, $filled));
+        $bar = "&a" . str_repeat("█", $filled) . "&7" . str_repeat("█", $barLength - $filled);
+
+        $filteredLore = [];
+        foreach($rod->getLore() as $line){
+            $clean = trim(C::clean($line));
+            if($clean === ""
+                || $clean === "LEVEL"
+                || str_contains($clean, "A leveling fishing rod.")
+                || str_contains($clean, "Catch fish to increase its power.")
+                || str_contains($clean, "Catch better fish as this rod grows.")
+                || str_contains($clean, "Reel in catches to power it up.")
+                || preg_match('/\d+%$/', $clean) === 1
+                || preg_match('/^Level \d+\/\d+$/i', $clean) === 1
+            ){
+                continue;
+            }
+            $filteredLore[] = $line;
+        }
+
+        $filteredLore[] = C::colorize("&r&7A leveling fishing rod.");
+        $filteredLore[] = C::colorize("&r&7Catch fish to increase its power.");
+        $filteredLore[] = C::colorize("&r");
+        $filteredLore[] = C::colorize("&r&f&lLEVEL");
+        $filteredLore[] = C::colorize("&r&bLevel &f{$level}&7/&f{$maxLevel}");
+        $filteredLore[] = C::colorize("&r{$bar} &f{$percent}%");
+        $rod->setLore($filteredLore);
+    }
+}

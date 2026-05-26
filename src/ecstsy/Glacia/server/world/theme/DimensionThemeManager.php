@@ -7,11 +7,9 @@ namespace ecstsy\Glacia\server\world\theme;
 use ecstsy\Glacia\Loader;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
-use pocketmine\block\Block;
 use pocketmine\item\ItemBlock;
 use pocketmine\item\StringToItemParser;
 use pocketmine\player\Player;
-use pocketmine\world\particle\PortalParticle;
 use pocketmine\world\Position;
 
 final class DimensionThemeManager {
@@ -122,17 +120,7 @@ final class DimensionThemeManager {
 
         $uuid = $player->getUniqueId()->toString();
         $ambience = (array) ($theme["ambience"] ?? []);
-        $particleCfg = is_array($ambience["particles"] ?? null) ? $ambience["particles"] : [];
         $soundCfg = is_array($ambience["sound"] ?? null) ? $ambience["sound"] : [];
-
-        if ((bool) ($particleCfg["enabled"] ?? false)) {
-            $interval = max(1, (int) ($particleCfg["interval-ticks"] ?? 20));
-            $nextAt = self::$playerAmbientCooldowns[$uuid]["particle"] ?? 0;
-            if ($tick >= $nextAt) {
-                self::spawnAmbientParticles($player, $particleCfg);
-                self::$playerAmbientCooldowns[$uuid]["particle"] = $tick + $interval;
-            }
-        }
 
         if ((bool) ($soundCfg["enabled"] ?? false)) {
             $interval = max(20, (int) ($soundCfg["interval-ticks"] ?? 160));
@@ -176,34 +164,4 @@ final class DimensionThemeManager {
         return $fallbackStateId;
     }
 
-    private static function spawnAmbientParticles(Player $player, array $particleCfg) : void
-    {
-        $count = max(1, (int) ($particleCfg["count"] ?? 4));
-        $radius = max(1, (int) ($particleCfg["radius"] ?? 5));
-        $world = $player->getWorld();
-        $origin = $player->getPosition();
-        $particle = self::createParticle((string) ($particleCfg["particle"] ?? "portal"));
-        if ($particle === null) {
-            return;
-        }
-
-        for ($i = 0; $i < $count; $i++) {
-            $world->addParticle(
-                $origin->add(
-                    mt_rand(-$radius, $radius) / 2,
-                    mt_rand(0, 3),
-                    mt_rand(-$radius, $radius) / 2
-                ),
-                $particle
-            );
-        }
-    }
-
-    private static function createParticle(string $particle) : ?object
-    {
-        return match (strtolower(trim($particle))) {
-            "portal" => new PortalParticle(),
-            default => new PortalParticle(),
-        };
-    }
 }

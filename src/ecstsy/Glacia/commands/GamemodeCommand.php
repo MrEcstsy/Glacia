@@ -56,8 +56,8 @@ final class GamemodeCommand extends BaseCommand {
                     $gamemode = GameMode::SPECTATOR();
                     break;
                 default:
-                    $sender->sendMessage(C::YELLOW . "Usage(s):");
-                    $sender->sendMessage(C::WHITE  . "/gm " . C::GOLD . "<survival|creative|adventure|spectator> [player]");
+                    $sender->sendMessage(C::colorize("&eUsage(s):"));
+                    $sender->sendMessage(C::colorize("&f/gm &6<survival|creative|adventure|spectator> [player]"));
                     return;
             }
         }

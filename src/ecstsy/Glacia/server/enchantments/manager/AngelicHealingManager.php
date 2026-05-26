@@ -26,27 +26,33 @@ final class AngelicHealingManager {
         return isset(self::$cooldowns[$id]) && self::$cooldowns[$id] > time();
     }
 
-    public static function start(Player $player, int $level): void {
+    public static function secondsRemaining(Player $player): int
+    {
+        $id = $player->getId();
+        return max(0, (self::$cooldowns[$id] ?? 0) - time());
+    }
+
+    public static function start(Player $player, int $level, float $healAmount, int $durationTicks, int $intervalTicks, int $cooldownSeconds): void {
         $id = $player->getId();
 
-        if (self::hasActive($player) || self::isOnCooldown($player)) {
+        if (
+            self::hasActive($player) ||
+            self::isOnCooldown($player) ||
+            AdvancedEnchantState::isAnatomyBlocked($player) ||
+            EnchantCombatStateManager::areCustomEnchantsDisabled($player)
+        ) {
             return;
         }
 
-        $healAmount = match (true) {
-            $level >= 4 => 1,
-            $level >= 2 => 0.5,
-            default => 1
-        };
-
-        $maxTicks = 20 * 1.5; // 1.5 seconds
-        $interval = 20; // every second
+        $healAmount = max(0.0, $healAmount);
+        $maxTicks = max(1, $durationTicks);
+        $interval = max(1, $intervalTicks);
         $elapsed = 0;
 
-        self::$cooldowns[$id] = time() + 8;
+        self::$cooldowns[$id] = time() + max(0, $cooldownSeconds);
 
         $handler = Loader::getInstance()->getScheduler()->scheduleRepeatingTask(
-            new ClosureTask(function() use ($player, $id, $healAmount, $maxTicks, &$elapsed, &$handler): void {
+            new ClosureTask(function() use ($player, $id, $level, $healAmount, $maxTicks, $interval, &$elapsed, &$handler): void {
                 if (
                     !$player->isOnline() ||
                     $player->isClosed() ||
@@ -62,13 +68,25 @@ final class AngelicHealingManager {
                     $handler?->cancel();
                     return;
                 }
+                if (
+                    AdvancedEnchantState::isAnatomyBlocked($player) ||
+                    EnchantCombatStateManager::areCustomEnchantsDisabled($player)
+                ) {
+                    unset(self::$active[$id]);
+                    $handler?->cancel();
+                    return;
+                }
 
                 $player->setHealth(min(
                     $player->getMaxHealth(),
                     $player->getHealth() + $healAmount
                 ));
+                EnchantDebugManager::logPassiveValues($player, "angelic", $level, [
+                    "pulse_heal" => $healAmount,
+                    "health_after" => $player->getHealth(),
+                ]);
 
-                $elapsed += 20;
+                $elapsed += $interval;
             }),
             $interval
         );

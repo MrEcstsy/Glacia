@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\server\items\rename;
 
+use ecstsy\Glacia\server\factions\FactionNameBlocklist;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\item\Item;
@@ -117,6 +118,13 @@ final class ItemRenameManager {
 
             if (strlen($clean) > self::MAX_VISIBLE_LENGTH) {
                 $player->sendMessage(C::colorize("&r&cThat name is too long. Keep it under " . self::MAX_VISIBLE_LENGTH . " visible characters."));
+                PlayerUtils::playSound($player, "note.bass");
+                return true;
+            }
+
+            $violation = FactionNameBlocklist::firstGenericTextViolation($clean, "item name", self::MAX_VISIBLE_LENGTH);
+            if ($violation !== null) {
+                $player->sendMessage(C::colorize("&r&c" . $violation));
                 PlayerUtils::playSound($player, "note.bass");
                 return true;
             }

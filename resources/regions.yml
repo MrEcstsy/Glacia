@@ -1,0 +1,42 @@
+schema-version: 1
+regions:
+  spawn:
+    display: "Spawn"
+    preset: "spawn"
+    world: "world"
+    pos1:
+      x: 385
+      y: 0
+      z: 114
+    pos2:
+      x: 114
+      y: 204
+      z: 385
+    permissions:
+      pvp: false
+      can-break: false
+      fly: true
+      fall-damage: false
+      build: false
+      interact: false
+      explosions: false
+  warzone:
+    display: "Warzone"
+    preset: "warzone"
+    world: "world"
+    pos1:
+      x: 0
+      y: 0
+      z: 500
+    pos2:
+      x: 500
+      y: 204
+      z: 0
+    permissions:
+      pvp: true
+      can-break: false
+      fly: true
+      fall-damage: false
+      build: false
+      interact: false
+      explosions: false

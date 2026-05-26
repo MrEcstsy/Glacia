@@ -12,6 +12,7 @@ use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
 use pocketmine\entity\projectile\Projectile;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\event\entity\EntityDamageByChildEntityEvent;
 use pocketmine\item\Durable;
 use pocketmine\player\Player;
 
@@ -22,8 +23,11 @@ final class SiegebreakerEnchant implements EntityDamageByEntityEnchantmentHandle
         if ($event->isCancelled()) return;
         $damager = $event->getDamager();
         $victim = $event->getEntity();
-        if (!$damager instanceof Projectile || !$victim instanceof Player) return;
-        $owner = $damager->getOwningEntity();
+        $projectile = $damager instanceof Projectile
+            ? $damager
+            : (($event instanceof EntityDamageByChildEntityEvent && $event->getChild() instanceof Projectile) ? $event->getChild() : null);
+        if (!$projectile instanceof Projectile || !$victim instanceof Player) return;
+        $owner = $projectile->getOwningEntity();
         if (!$owner instanceof Player) return;
 
         if (EnchantCombatStateManager::isSiegebreakerActive($owner)) {
@@ -33,8 +37,10 @@ final class SiegebreakerEnchant implements EntityDamageByEntityEnchantmentHandle
 
         $forcedProc = \ecstsy\Glacia\server\enchantments\enchants\sword\BrotherhoodEnchant::consumeForcedProc($owner, "siegebreaker");
         if (!$forcedProc) {
-            $chance = EnchantTuningManager::getInt("siegebreaker", "activation-chance", 6);
+            $chance = EnchantTuningManager::getLevelInt("siegebreaker", "chance-by-level", $level, EnchantTuningManager::getInt("siegebreaker", "activation-chance", 6));
             if (!ProcLuckManager::roll($owner, "siegebreaker", $chance, 1, 6)) return;
+        } else {
+            ProcLuckManager::notifyProc($owner, "siegebreaker");
         }
 
         $duration = max(1, EnchantTuningManager::getInt("siegebreaker", "duration-seconds", 7));

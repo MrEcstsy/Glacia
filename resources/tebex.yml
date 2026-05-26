@@ -1,0 +1,5 @@
+---
+enabled: true
+secret: "1c1d58a8aea93fd98d2c1570578df7fbdb39da9d"
+poll-seconds: 30
+...

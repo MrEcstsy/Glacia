@@ -7,6 +7,8 @@ namespace ecstsy\Glacia\server\enchantments\enchants\sword;
 use ecstsy\Glacia\entity\SpawnerEntity;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\handler\EntityDeathEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantProcManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDeathEvent;
 use pocketmine\player\Player;
@@ -30,26 +32,29 @@ final class KillAuraEnchant implements EntityDeathEnchantmentHandler {
             return;
         }
 
-        $chance = match ($level) {
-            1 => 10,
-            2 => 15,
-            3 => 20,
-            4 => 25,
-            5 => 30,
-            default => 0
-        };
-
-        if ($chance <= 0 || mt_rand(1, 100) > $chance) {
+        $result = EnchantProcManager::attempt(
+            $damager,
+            "killaura",
+            $level,
+            EnchantTuningManager::chance("killaura", $level, 10.0),
+            EnchantTuningManager::cooldownSeconds("killaura", $level, 0)
+        );
+        if (!$result->success) {
             return;
         }
 
-        $extraKills = min($entity->getStack(), mt_rand(1, $level));
+        $maxExtraKills = max(1, EnchantTuningManager::valueInt("killaura", "extra-kills-max", $level, 1));
+        $extraKills = min($entity->getStack(), mt_rand(1, $maxExtraKills));
         for ($i = 0; $i < $extraKills; $i++) {
             if (!$entity->isAlive() || $entity->getStack() <= 0) {
                 break;
             }
-
             $entity->kill();
         }
+
+        EnchantProcManager::debugAppliedValues($damager, $result, [
+            "extra_kills" => $extraKills,
+            "extra_kills_max" => $maxExtraKills,
+        ]);
     }
 }

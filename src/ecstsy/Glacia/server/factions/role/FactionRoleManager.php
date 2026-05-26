@@ -78,4 +78,9 @@ final class FactionRoleManager {
         $this->roles[$factionId][$roleKey] = $role;
         return $role;
     }
+
+    public function resetSeasonState(): void
+    {
+        $this->roles = [];
+    }
 }

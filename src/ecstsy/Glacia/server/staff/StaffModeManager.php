@@ -39,10 +39,7 @@ final class StaffModeManager {
      *   allow_flight: bool,
      *   flying: bool,
      *   block_collision: bool,
-     *   invisible: bool,
-     *   silent: bool,
-     *   name_tag: string,
-     *   name_tag_always_visible: bool,
+     *   auto_vanish: bool,
      *   inventory: array<int, Item>,
      *   armor: array<int, Item>,
      *   offhand: Item,
@@ -84,11 +81,11 @@ final class StaffModeManager {
     }
 
     public static function shouldHideFromPlayerList(Player $subject) : bool {
-        return self::isInStaffMode($subject);
+        return VanishManager::isVanished($subject);
     }
 
     public static function canViewerSeeHiddenStaff(?Player $viewer) : bool {
-        return $viewer !== null && $viewer->hasPermission("glacia.staff.see-hidden");
+        return VanishManager::canViewerSeeVanished($viewer);
     }
 
     public static function shouldHideStaffFromViewer(?Player $viewer, Player $staff): bool
@@ -122,10 +119,7 @@ final class StaffModeManager {
             "allow_flight" => $player->getAllowFlight(),
             "flying" => $player->isFlying(),
             "block_collision" => $player->hasBlockCollision(),
-            "invisible" => $player->isInvisible(),
-            "silent" => $player->isSilent(),
-            "name_tag" => $player->getNameTag(),
-            "name_tag_always_visible" => $player->isNameTagAlwaysVisible(),
+            "auto_vanish" => !VanishManager::isVanished($player),
             "inventory" => self::cloneItemMap($player->getInventory()->getContents()),
             "armor" => self::cloneItemMap($player->getArmorInventory()->getContents()),
             "offhand" => clone $player->getOffHandInventory()->getItem(0),
@@ -144,17 +138,15 @@ final class StaffModeManager {
         if (self::$noClip) {
             $player->setHasBlockCollision(false);
         }
-        $player->setInvisible(true);
-        $player->setSilent(true);
-        $player->setNameTag("");
-        $player->setNameTagAlwaysVisible(false);
 
         $inv = $player->getInventory();
-        $inv->setItem(0, self::tagTool(VanillaItems::COMPASS()->setCustomName(C::RESET . C::AQUA . "Staff " . C::WHITE . "Teleport"), self::TOOL_TP));
-        $inv->setItem(1, self::tagTool(VanillaItems::BOOK()->setCustomName(C::RESET . C::RED . "Staff " . C::WHITE . "Punish"), self::TOOL_PUNISH));
-        $inv->setItem(8, self::tagTool(VanillaItems::CLOCK()->setCustomName(C::RESET . C::GREEN . "Exit " . C::GRAY . "Staff Mode"), self::TOOL_EXIT));
+        $inv->setItem(0, self::tagTool(VanillaItems::COMPASS()->setCustomName(C::colorize("&r&bStaff &fTeleport")), self::TOOL_TP));
+        $inv->setItem(1, self::tagTool(VanillaItems::BOOK()->setCustomName(C::colorize("&r&cStaff &fPunish")), self::TOOL_PUNISH));
+        $inv->setItem(8, self::tagTool(VanillaItems::CLOCK()->setCustomName(C::colorize("&r&aExit &7Staff Mode")), self::TOOL_EXIT));
 
-        self::applyHideFromAll($player);
+        if ((self::$snapshots[$uuid]["auto_vanish"] ?? false) === true) {
+            VanishManager::enable($player);
+        }
         // Force coordinate HUD off while in staff mode, but keep a snapshot so we can restore.
         $session->setSetting("show_coordinates", false);
         GameRuleUtils::modifyGameRule($player, GameRuleUtils::RULE_SHOW_COORDINATES, false, true);
@@ -171,16 +163,10 @@ final class StaffModeManager {
         }
         unset(self::$snapshots[$uuid]);
 
-        self::applyShowToAll($player);
-
         $player->setGamemode($snap["gamemode"]);
         $player->setAllowFlight($snap["allow_flight"]);
         $player->setFlying($snap["flying"]);
         $player->setHasBlockCollision($snap["block_collision"]);
-        $player->setInvisible($snap["invisible"]);
-        $player->setSilent($snap["silent"]);
-        $player->setNameTag($snap["name_tag"]);
-        $player->setNameTagAlwaysVisible($snap["name_tag_always_visible"]);
 
         $player->getInventory()->setContents($snap["inventory"]);
         $player->getArmorInventory()->setContents($snap["armor"]);
@@ -190,6 +176,10 @@ final class StaffModeManager {
         GameRuleUtils::modifyGameRule($player, GameRuleUtils::RULE_SHOW_COORDINATES, (bool) ($snap["show_coordinates"] ?? true), true);
 
         $session->setInAdminMode(false);
+
+        if (($snap["auto_vanish"] ?? false) === true) {
+            VanishManager::disable($player, true);
+        }
 
         $worldManager = Server::getInstance()->getWorldManager();
         $world = $worldManager->getDefaultWorld();
@@ -215,11 +205,6 @@ final class StaffModeManager {
             return;
         }
         unset(self::$snapshots[$uuid]);
-        self::applyShowToAll($player);
-        $player->setInvisible($snap["invisible"]);
-        $player->setSilent($snap["silent"]);
-        $player->setNameTag($snap["name_tag"]);
-        $player->setNameTagAlwaysVisible($snap["name_tag_always_visible"]);
         $player->getInventory()->setContents($snap["inventory"]);
         $player->getArmorInventory()->setContents($snap["armor"]);
         $player->getOffHandInventory()->setItem(0, $snap["offhand"]);
@@ -233,6 +218,10 @@ final class StaffModeManager {
         if ($session !== null) {
             $session->setSetting("show_coordinates", (bool) ($snap["show_coordinates"] ?? true));
             $session->setInAdminMode(false);
+        }
+
+        if (($snap["auto_vanish"] ?? false) === true) {
+            VanishManager::disable($player, false);
         }
     }
 

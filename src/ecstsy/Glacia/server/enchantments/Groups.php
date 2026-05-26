@@ -32,7 +32,10 @@ final class Groups {
         return self::GROUPS[strtoupper($groupName)]['id'] ?? null;
     }
 
-    public static function translateGroupToColor(int $groupId): string {
+    public static function translateGroupToColor(?int $groupId): string {
+        if ($groupId === null) {
+            return C::colorize(self::GROUPS[self::$fallbackGroup]['global_color']);
+        }
         foreach (self::GROUPS as $group) {
             if ($group['id'] === $groupId) {
                 return C::colorize($group['global_color']);

@@ -12,13 +12,17 @@ use pocketmine\plugin\Plugin;
 use pocketmine\utils\Config;
 use pocketmine\world\Position;
 use Throwable;
+use function file;
 use function dirname;
 use function file_exists;
+use function file_put_contents;
 use function fclose;
 use function is_array;
 use function is_dir;
 use function mkdir;
 use function pathinfo;
+use function str_starts_with;
+use function trim;
 
 final class GeneralUtils {
 
@@ -64,6 +68,18 @@ final class GeneralUtils {
                     return null;
             }
         } catch (Throwable $e) {
+            if (
+                ($extension === 'yml' || $extension === 'yaml') &&
+                self::repairEmptyYamlRoot($filePath)
+            ) {
+                try {
+                    $config = new Config($filePath, Config::YAML);
+                    self::$configCache[$filePath] = $config;
+                    return $config;
+                } catch (Throwable) {
+                }
+            }
+
             $plugin->getLogger()->error("Failed to load configuration '$filePath': " . $e->getMessage());
             return null;
         }
@@ -112,6 +128,25 @@ final class GeneralUtils {
         $plugin->saveResource($fileName, $overwrite);
         self::forgetConfiguration($plugin, $fileName);
         return true;
+    }
+
+    private static function repairEmptyYamlRoot(string $filePath): bool
+    {
+        $lines = @file($filePath, FILE_IGNORE_NEW_LINES);
+        if (!is_array($lines)) {
+            return false;
+        }
+
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            if ($trimmed === '' || str_starts_with($trimmed, '#')) {
+                continue;
+            }
+
+            return false;
+        }
+
+        return file_put_contents($filePath, "{}\n") !== false;
     }
 
     public static function getNestedString(?Config $config, string $path, string $default = ""): string {

@@ -1,0 +1,250 @@
+#
+# Boss tuning:
+# - `stats` lets you tune core health, melee damage, movement speed, and ranges.
+# - `minions` controls the intermission minion stats by phase.
+# - `rewards.ranks.<place>.items` uses the normal Glacia reward item format, for example:
+#   - { type: item, id: legendarybook, count: 1 }
+#   - { type: item, id: boss_titan_knight, count: 1 }
+#
+schema-version: 1
+
+bosses:
+  astral_devourer:
+    stats:
+      max-health: 1800
+      melee-reach: 2.8
+      target-range: 30.0
+      follow-range: 36.0
+      knockback-resistance: 0.9
+      movement-speed:
+        phase-1: 0.38
+        phase-2: 0.46
+        phase-3: 0.54
+      melee-damage:
+        phase-1: 16.0
+        phase-2: 22.0
+        phase-3: 29.0
+    minions:
+      phase-2:
+        name: "&r&dAstral Shade"
+        health: 72
+        damage: 5.5
+        speed: 0.22
+        target-range: 18.0
+        attack-reach: 1.85
+        attack-cooldown: 12
+      phase-3:
+        name: "&r&5Devourer Shade"
+        health: 92
+        damage: 7.0
+        speed: 0.24
+        target-range: 18.0
+        attack-reach: 1.85
+        attack-cooldown: 10
+    rewards:
+      top-damagers: 5
+      ranks:
+        1:
+          money: 0
+          items:
+            - type: lootbox
+              id: avs
+              count: 3
+        2:
+          money: 0
+          items:
+            - type: lootbox
+              id: avs
+              count: 2
+        3:
+          money: 0
+          items:
+            - type: lootbox
+              id: avs
+              count: 1
+        4:
+          money: 0
+          items: []
+        5:
+          money: 0
+          items: []
+
+  titan_knight:
+    stats:
+      max-health: 2500
+      melee-reach: 3.4
+      target-range: 30.0
+      follow-range: 34.0
+      knockback-resistance: 0.95
+      movement-speed:
+        phase-1: 0.28
+        phase-2: 0.34
+        phase-3: 0.40
+      melee-damage:
+        phase-1: 18.0
+        phase-2: 24.0
+        phase-3: 31.0
+    minions:
+      phase-2:
+        name: "&r&dAstral Riftguard"
+        health: 112
+        damage: 7.5
+        speed: 0.27
+        target-range: 26.0
+        attack-reach: 2.2
+        attack-cooldown: 11
+      phase-3:
+        name: "&r&5Sovereign Riftguard"
+        health: 138
+        damage: 9.5
+        speed: 0.30
+        target-range: 26.0
+        attack-reach: 2.2
+        attack-cooldown: 9
+    rewards:
+      top-damagers: 5
+      ranks:
+        1:
+          money: 0
+          items:
+            - type: lootbox
+              id: avs
+              count: 3
+        2:
+          money: 0
+          items:
+            - type: lootbox
+              id: avs
+              count: 2
+        3:
+          money: 0
+          items:
+            - type: lootbox
+              id: avs
+              count: 1
+        4:
+          money: 0
+          items: []
+        5:
+          money: 0
+          items: []
+
+  glacial_hydra:
+    stats:
+      max-health: 5800
+      melee-reach: 2.85
+      target-range: 30.0
+      follow-range: 36.0
+      knockback-resistance: 0.95
+      movement-speed:
+        phase-1: 0.26
+        phase-2: 0.33
+        phase-3: 0.40
+      melee-damage:
+        phase-1: 14.0
+        phase-2: 19.0
+        phase-3: 24.0
+    minions:
+      phase-2:
+        name: "&r&fHydra Whelp"
+        health: 120
+        damage: 8.0
+        speed: 0.25
+        target-range: 24.0
+        attack-reach: 2.15
+        attack-cooldown: 12
+      phase-3:
+        name: "&r&bHydra Frostspawn"
+        health: 150
+        damage: 10.0
+        speed: 0.28
+        target-range: 24.0
+        attack-reach: 2.15
+        attack-cooldown: 10
+    rewards:
+      top-damagers: 5
+      ranks:
+        1:
+          money: 0
+          items:
+            - type: lootbox
+              id: avs
+              count: 3
+        2:
+          money: 0
+          items:
+            - type: lootbox
+              id: avs
+              count: 2
+        3:
+          money: 0
+          items:
+            - type: lootbox
+              id: avs
+              count: 1
+        4:
+          money: 0
+          items: []
+        5:
+          money: 0
+          items: []
+
+  glacial_warden:
+    stats:
+      max-health: 2000
+      melee-reach: 2.2
+      target-range: 30.0
+      follow-range: 32.0
+      knockback-resistance: 0.9
+      movement-speed:
+        phase-1: 0.26
+        phase-2: 0.35
+        phase-3: 0.42
+      melee-damage:
+        phase-1: 12.0
+        phase-2: 17.0
+        phase-3: 23.0
+    minions:
+      phase-2:
+        name: "&r&fWarden Watcher"
+        health: 110
+        damage: 8.5
+        speed: 0.25
+        target-range: 24.0
+        attack-reach: 2.3
+        attack-cooldown: 11
+      phase-3:
+        name: "&r&bFrozen Sentinel"
+        health: 135
+        damage: 10.0
+        speed: 0.28
+        target-range: 24.0
+        attack-reach: 2.3
+        attack-cooldown: 9
+    rewards:
+      top-damagers: 5
+      ranks:
+        1:
+          money: 0
+          items:
+            - type: lootbox
+              id: avs
+              count: 3
+        2:
+          money: 0
+          items:
+            - type: lootbox
+              id: avs
+              count: 2
+        3:
+          money: 0
+          items:
+            - type: lootbox
+              id: avs
+              count: 1
+        4:
+          money: 0
+          items: []
+        5:
+          money: 0
+          items: []

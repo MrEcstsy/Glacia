@@ -67,7 +67,10 @@ final class YijkiLightningStrike {
                 $owner,
                 $entity,
                 EntityDamageEvent::CAUSE_MAGIC,
-                $damage
+                $damage,
+                [],
+                0.0,
+                0.0
             );
             $entity->attack($event);
         }

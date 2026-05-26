@@ -7,6 +7,7 @@ namespace ecstsy\Glacia\commands\sub\auctionhouse;
 use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\factions\guardian\FactionGuardianManager;
 use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\Glacia\utils\screens\auctionhouse\AuctionHouseSellConfirmScreen;
 use ecstsy\MartianUtilities\utils\ItemUtils;
@@ -32,6 +33,10 @@ final class AuctionSellSubCommand extends BaseSubCommand {
         $item = $sender->getInventory()->getItemInHand();
         if ($item->isNull()) {
             $sender->sendMessage(C::colorize("&r&cHold the item you want to list in your hand."));
+            return;
+        }
+        if (FactionGuardianManager::isGuardianEgg($item)) {
+            $sender->sendMessage(C::colorize("&r&cChunk Guardian eggs cannot be listed on the auction house."));
             return;
         }
 

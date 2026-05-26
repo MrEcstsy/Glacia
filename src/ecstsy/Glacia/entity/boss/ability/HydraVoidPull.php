@@ -9,6 +9,7 @@ use ecstsy\Glacia\entity\boss\BossEntity;
 use ecstsy\Glacia\entity\boss\BossParticles;
 use ecstsy\Glacia\entity\boss\bosses\GlacialHydra;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\utils\CustomParticleEffectManager;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\math\Vector3;
@@ -48,7 +49,7 @@ final class HydraVoidPull extends BossAbility
                         $center,
                         2.4,
                         BossParticles::portalParticle(),
-                        16,
+                        8,
                         0.0
                     );
                     BossParticles::ring(
@@ -56,8 +57,42 @@ final class HydraVoidPull extends BossAbility
                         $center,
                         4.0,
                         BossParticles::portalParticle(),
-                        22,
+                        10,
                         0.2
+                    );
+                    CustomParticleEffectManager::stackedRing(
+                        $world,
+                        $center,
+                        4.0,
+                        CustomParticleEffectManager::HYDRA_WARNING,
+                        2,
+                        20,
+                        0.22,
+                        48.0
+                    );
+                    CustomParticleEffectManager::ringVariants(
+                        $world,
+                        $center,
+                        2.7,
+                        [
+                            CustomParticleEffectManager::HYDRA_WARNING,
+                            CustomParticleEffectManager::HYDRA_WARNING_ARC,
+                        ],
+                        16,
+                        0.14,
+                        48.0
+                    );
+                    CustomParticleEffectManager::columnVariants(
+                        $world,
+                        $center->add(0, 0.1, 0),
+                        [
+                            CustomParticleEffectManager::HYDRA_VOID_CORE,
+                            CustomParticleEffectManager::HYDRA_VOID,
+                            CustomParticleEffectManager::HYDRA_VOID_SHARD,
+                        ],
+                        2.1,
+                        8,
+                        48.0
                     );
                 }
             ), $tick);
@@ -73,9 +108,32 @@ final class HydraVoidPull extends BossAbility
                     $world,
                     $center,
                     BossParticles::portalParticle(),
-                    40,
-                    2.8,
-                    1.4
+                    16,
+                    1.7,
+                    0.8
+                );
+                CustomParticleEffectManager::burstVariants(
+                    $world,
+                    $center->add(0, 0.15, 0),
+                    [
+                        CustomParticleEffectManager::HYDRA_VOID,
+                        CustomParticleEffectManager::HYDRA_VOID_CORE,
+                        CustomParticleEffectManager::HYDRA_VOID_SHARD,
+                    ],
+                    24,
+                    0.95,
+                    0.75,
+                    56.0
+                );
+                CustomParticleEffectManager::stackedRing(
+                    $world,
+                    $center,
+                    4.2,
+                    CustomParticleEffectManager::HYDRA_WARNING,
+                    3,
+                    22,
+                    0.22,
+                    56.0
                 );
 
                 foreach ($boss->getPlayersInRange(11) as $player) {
@@ -97,20 +155,26 @@ final class HydraVoidPull extends BossAbility
                         0.30,
                         ($delta->z / $length) * $force
                     ));
-                    $player->attack(new EntityDamageByEntityEvent(
-                        $boss,
+                    CustomParticleEffectManager::lineVariants(
+                        $world,
+                        $player->getPosition()->add(0, 0.9, 0),
+                        $center,
+                        [
+                            CustomParticleEffectManager::HYDRA_VOID_CORE,
+                            CustomParticleEffectManager::HYDRA_VOID_SHARD,
+                        ],
+                        8,
+                        48.0
+                    );
+                    $boss->dealBossTrueDamage(
                         $player,
-                        EntityDamageEvent::CAUSE_MAGIC,
                         match ($boss->getPhase()) {
-                            1 => 6.0,
-                            2 => 9.0,
-                            3 => 13.0,
-                            default => 6.0,
-                        } * $boss->getPressureDamageMultiplier(),
-                        [],
-                        0.0,
-                        0.0
-                    ));
+                            1 => 5.0,
+                            2 => 7.5,
+                            3 => 10.5,
+                            default => 5.0,
+                        } * $boss->getPressureDamageMultiplier()
+                    );
                 }
 
                 $boss->playAbilitySound("mob.endermen.portal", 1.4, 0.55, 36);
@@ -123,6 +187,16 @@ final class HydraVoidPull extends BossAbility
                     Loader::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(
                         static function () use ($world, $center): void {
                             BossParticles::ring($world, $center, 4.2, BossParticles::warningParticle(), 20, 0.05);
+                            CustomParticleEffectManager::stackedRing(
+                                $world,
+                                $center,
+                                4.2,
+                                CustomParticleEffectManager::HYDRA_WARNING,
+                                2,
+                                22,
+                                0.22,
+                                56.0
+                            );
                         }
                     ), $tick);
                 }
@@ -133,7 +207,32 @@ final class HydraVoidPull extends BossAbility
                             return;
                         }
 
-                        BossParticles::burst($world, $center, BossParticles::portalParticle(), 26, 2.0, 1.2);
+                        BossParticles::burst($world, $center, BossParticles::portalParticle(), 10, 1.4, 0.8);
+                        CustomParticleEffectManager::columnVariants(
+                            $world,
+                            $center->add(0, 0.10, 0),
+                            [
+                                CustomParticleEffectManager::HYDRA_VOID_CORE,
+                                CustomParticleEffectManager::HYDRA_VOID,
+                                CustomParticleEffectManager::HYDRA_VOID_SHARD,
+                            ],
+                            2.7,
+                            10,
+                            56.0
+                        );
+                        CustomParticleEffectManager::burstVariants(
+                            $world,
+                            $center->add(0, 0.18, 0),
+                            [
+                                CustomParticleEffectManager::HYDRA_VOID,
+                                CustomParticleEffectManager::HYDRA_VOID_CORE,
+                                CustomParticleEffectManager::HYDRA_VOID_SHARD,
+                            ],
+                            28,
+                            1.25,
+                            1.0,
+                            56.0
+                        );
                         foreach ($world->getPlayers() as $player) {
                             if (!$player->isAlive() || !$player->isConnected()) {
                                 continue;
@@ -142,15 +241,10 @@ final class HydraVoidPull extends BossAbility
                                 continue;
                             }
 
-                            $player->attack(new EntityDamageByEntityEvent(
-                                $boss,
+                            $boss->dealBossTrueDamage(
                                 $player,
-                                EntityDamageEvent::CAUSE_MAGIC,
-                                ($boss->getPhase() >= 3 ? 15.0 : 10.5) * $boss->getPressureDamageMultiplier(),
-                                [],
-                                0.0,
-                                0.0
-                            ));
+                                ($boss->getPhase() >= 3 ? 13.0 : 9.0) * $boss->getPressureDamageMultiplier()
+                            );
                         }
 
                         $boss->broadcastAbility(C::colorize("&r&5The rift ruptures where the Hydra dragged you!"), 36);

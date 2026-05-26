@@ -1,71 +1,98 @@
-# ============================================================
-# Glacia Custom Enchant Tuning (ce_values.yml)
-# ============================================================
-# This file controls CE balance without code edits.
-# After changes, run /greload cevalues (or /greload).
-#
-# Core rules:
-# - Percent chances use whole-number percent values.
-#   Example: 25 = 25% proc chance.
-# - Flat "chance-by-level" values are direct per-level chances.
-# - If an enchant has both "base-chance" and "chance-by-level",
-#   the enchant code decides how those values combine (varies by enchant).
-#
-# Units and scaling:
-# - Health/heal/damage values are in HALF-HEART units used by PMMP health.
-#   Example: 1.0 = half-heart, 2.0 = 1 full heart, 10.0 = 5 hearts.
-# - trigger-health-percent uses 0.0-1.0 decimal scale.
-#   Example: 0.30 = 30% HP threshold.
-# - Any "-seconds" value is seconds.
-# - cooldown values are seconds unless a key explicitly says ticks.
-# - Effect amplifiers are zero-based.
-#   Example: 0 = Effect I, 1 = Effect II, 2 = Effect III.
-#
-# Proc-luck (anti-dry-streak helper):
-# - enabled: true/false per enchant.
-# - luck-per-miss: chance bonus added after each failed proc.
-# - max-bonus: max extra chance that can be stacked from misses.
-#
-# Per-level maps:
-# - Use string level keys ("1", "2", "3", ...).
-# - Missing levels usually fall back to nearest/default in code.
-# - Keep level progression monotonic unless you intentionally want spikes.
-#
-# Advanced / “new set” enchants (triadward … ironmuzzle):
-# - For many procs, the PHP pass gives a per-hit base chance; ce_values "base-chance" is NOT
-#   used unless the enchant is wired to it. Tuning is mostly proc-luck and the scalars below.
-# - "luck-per-miss" and "max-bonus" should match the defaults passed to ProcLuckManager::roll
-#   in AdvancedSetEnchants (see code) unless you intentionally soften or harden dry streaks.
-# - runeswell: "axe-proc-bonus-per-level" adds to axe proc % (per Runeswell level).
-# - strategist: "koth-capture-bonus-per-level" adds to each KOTH tick when boots have Strategist.
-# - aureateburden: gap "sickness" cooldown is gap-sickness-cooldown-seconds + extra (see that block).
-#
-# Conflicts:
-# - conflicts-with is a list of enchant keys that cannot be applied together.
-# - Example: conflicts-with: ["blind", "slowness"]
-#
-# Safe tuning tips:
-# - Increase in small steps (1-3% chance or small numeric increments).
-# - Test one enchant at a time, then /greload cevalues and re-test.
-#
+---
 settings:
   version: 2
-  # Warm-up: first N hits (random between min and max, per attacker + target) do not roll
-  # custom enchant procs on the attacking weapon. Victim armor / defensive procs are unchanged.
+  debug:
+    enabled: true
+    console: false
+    owner: true
+    owner-targets-only: false
+    staff-permission: glacia.admin
+    targets: []
+  balance:
+    stackable-armor-percent-cap: 5.0
+    weapon-proc-percent-cap: 2.5
+    extra-damage-cap: 5.0
+    sharpness-melee-bonus-per-level: 0.05
+    lifesteal-min-heal: 2.0
+    vampire-min-heal: 2.0
+    dodge-percent-cap: 1.0
+    capped-weapon-procs:
+      - armageddon
+      - blind
+      - brotherhood
+      - cleave
+      - confusion
+      - demonicfinisher
+      - disarmor
+      - doublestrike
+      - execute
+      - fear
+      - hexlock
+      - holy
+      - iceaspect
+      - insomnia
+      - jeopardy
+      - leviathan
+      - lifesteal
+      - pellet
+      - phantom
+      - rage
+      - siegebreaker
+      - silence
+      - slowness
+      - thunderfamine
+      - triggerhappy
+      - vampire
+      - vampiricdevour
+      - virus
+      - anatomy
   weapon-proc-gate:
     enabled: true
     min-hits: 3
     max-hits: 5
-
-  # Enchants in this list cannot be rolled from Mastery random books.
-  # They can still be obtained through direct sources (kits/gkits/loot etc).
+    exempt-enchants:
+      - slingshot
+  conjuration-oracle:
+    allowed-enchants:
+      - beastbound
+      - blind
+      - deathbringer
+      - doublestrike
+      - execute
+      - greatsword
+      - hexlock
+      - lifesteal
+      - rage
+      - slingshot
+      - trickshot
+      - triggerhappy
+      - vampire
   mastery-book-disabled-enchants: []
-
-  # Charm upgrade system.
+  armor-sets:
+    phantom:
+      attack-bonus-fraction: 0.20
+      weapon-bonus-fraction: 0.08
+      rend-proc-chance-percent: 18
+      rend-true-damage: 4.5
+      rend-weapon-bonus-damage: 2.0
+    yeti:
+      damage-reduction-per-boost: 0.07
+      damage-reduction-cap: 0.90
+      attack-bonus-per-boost: 0.14
+      pulse-proc-chance-percent: 14
+      permafrost-pulse-damage: 5.5
+    yijki:
+      damage-reduction-per-boost: 0.03
+      damage-reduction-cap: 0.05
+      mirror-match-disables-reduction: true
+      attack-bonus-fraction: 0.06
+      revenge-proc-chance-percent: 6
+      revenge-cooldown-seconds: 12
+      revenge-lightning-damage: 2.75
+      revenge-lightning-weapon-multiplier: 1.1
   charm-upgrades:
     shard-base-success: 70
     dust-bonus-default: 5
-    # Book-consume (tinkering) reward roll when an enchantment book is used up.
     tinkerer-roll-chance: 12
     tinkerer-shard-weight: 40
     tinkerer-dust-weight: 60
@@ -73,905 +100,1936 @@ settings:
     shard-success-max: 80
     dust-bonus-min: 3
     dust-bonus-max: 8
-
 enchants:
-  armored:
-    sword-damage-reduction-per-level: 0.75
-    max-level: 5
-    cooldown: 0
-    proc-luck:
-      enabled: false
+  vampire:
+    enabled: true
+    max-level: 3
+    trigger: attack
+    proc:
+      chance:
+        base: 1
+        per-level: 1
+        max: 3
+      cooldown-seconds: 0
+    values:
+      heal:
+        base: 2
+        per-level: 0.5
+        max: 3
 
   lifesteal:
-    base-chance: 1
-    chance-by-level:
-      "1": 1
-      "2": 1
-      "3": 2
-      "4": 2
-      "5": 2
-    heal-by-level:
-      "1": 1.0
-      "2": 1.5
-      "3": 2.0
-      "4": 2.5
-      "5": 3.0
-    cooldown: 0
-    proc-luck:
-      enabled: true
-      luck-per-miss: 1
-      max-bonus: 1
-    conflicts-with: []
+    enabled: true
+    max-level: 5
+    trigger: attack
+    proc:
+      chance:
+        base: 1
+        per-level: 0.25
+        max: 2
+      cooldown-seconds: 0
+    values:
+      heal:
+        base: 2
+        per-level: 1.5
+        max: 8
+      damage:
+        base: 1
+        per-level: 0.5
+        max: 3
 
-  rage:
-    base-chance: 6
-    chance-by-level:
-      "1": 6
-      "2": 8
-      "3": 10
-      "4": 12
-      "5": 14
-    combo-reset-seconds: 4
-    cooldown: 0
-    proc-luck:
-      enabled: true
-      luck-per-miss: 1
-      max-bonus: 6
-    conflicts-with: []
+  stormlash:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    proc:
+      chance:
+        base: 1
+        per-level: 0.5
+        max: 3
+      cooldown-seconds: 4
+    values:
+      damage:
+        base: 2
+        per-level: 0
+        max: 2
 
-  execute:
-    base-chance: 20
-    chance-by-level:
-      "1": 4
-      "2": 5
-      "3": 6
-      "4": 7
-      "5": 8
-    cooldown: 0
-    proc-luck:
-      enabled: true
-      luck-per-miss: 2
-      max-bonus: 10
-    conflicts-with: []
+  anatomy:
+    enabled: true
+    max-level: 3
+    trigger: attack
+    proc:
+      chance:
+        base: 1
+        per-level: 0.5
+        max: 2
+    values:
+      damage:
+        base: 1
+        max: 1
+      anti-heal-seconds:
+        base: 3
+        max: 3
 
-  vampire:
-    base-chance: 1
-    chance-by-level:
-      "1": 1
-      "2": 1
-      "3": 1
-    heal-min-by-level:
-      "1": 0.5
-      "2": 0.75
-      "3": 1.0
-    heal-max-by-level:
-      "1": 1.0
-      "2": 1.25
-      "3": 1.5
-    cooldown: 0
-    proc-luck:
-      enabled: true
-      luck-per-miss: 1
-      max-bonus: 1
-    conflicts-with: []
-
-  doublestrike:
-    base-chance: 3
-    chance-by-level:
-      "1": 8
-      "2": 13
-      "3": 19
-    cooldown: 0
-    proc-luck:
-      enabled: true
-      luck-per-miss: 2
-      max-bonus: 10
-    conflicts-with: []
-
-  slowness:
-    base-chance: 25
-    chance-by-level:
-      "1": 25
-      "2": 35
-      "3": 45
-    effect-duration-seconds-by-level:
-      "1": 2
-      "2": 3
-      "3": 4
-    cooldown: 1
-    proc-luck:
-      enabled: true
-      luck-per-miss: 2
-      max-bonus: 12
-    conflicts-with:
-      - "blind"
-
-  blind:
-    base-chance: 25
-    chance-by-level:
-      "1": 25
-      "2": 35
-      "3": 45
-    effect-duration-seconds-by-level:
-      "1": 60
-      "2": 80
-      "3": 100
-    effect-amplifier-by-level:
-      "1": 0
-      "2": 1
-      "3": 2
-    cooldown: 1
-    proc-luck:
-      enabled: true
-      luck-per-miss: 2
-      max-bonus: 12
-    conflicts-with:
-      - "slowness"
-
-  iceaspect:
-    chance-by-level:
-      "1": 10
-      "2": 12
-      "3": 14
-      "4": 16
-      "5": 18
-    freeze-duration-seconds-by-level:
-      "1": 1
-      "2": 2
-      "3": 2
-      "4": 3
-      "5": 3
-    slowness-amplifier: 6
-    cooldown: 3
-    proc-luck:
-      enabled: true
-      luck-per-miss: 2
-      max-bonus: 12
-    conflicts-with: []
+  brotherhood:
+    enabled: true
+    max-level: 3
+    trigger: mastery-proc
+    proc:
+      chance:
+        base: 8
+        per-level: 3
+        max: 14
+    values:
+      ally-radius:
+        base: 3
+        max: 3
 
   disarmor:
-    chance-by-level:
-      "1": 4
-      "2": 6
-      "3": 8
-      "4": 10
-      "5": 12
-    cooldown: 12
-    proc-luck:
-      enabled: true
-      luck-per-miss: 2
-      max-bonus: 10
-    conflicts-with: []
-  brotherhood:
-    chance-by-level:
-      "1": 8
-      "2": 11
-      "3": 14
-      "4": 17
-      "5": 20
-    ally-radius: 3.0
-    cooldown: 0
-    proc-luck:
-      enabled: true
-      luck-per-miss: 1
-      max-bonus: 10
-    conflicts-with: []
+    enabled: true
+    max-level: 3
+    trigger: attack
+    proc:
+      chance:
+        base: 4
+        per-level: 2
+        max: 8
+      cooldown-seconds:
+        base: 12
+        max: 12
 
-  vampiricdevour:
-    chance-by-level:
-      "1": 1
-    cooldown: 25
-    proc-luck:
-      enabled: true
-      luck-per-miss: 1
-      max-bonus: 1
-    conflicts-with: []
+  divinechains:
+    enabled: true
+    max-level: 3
+    trigger: attack
+    proc:
+      chance:
+        base: 1
+        per-level: 0.5
+        max: 2
+    values:
+      stun-seconds:
+        base: 1.5
+        max: 1.5
+      slowness-amplifier:
+        base: 4
+        max: 4
+      bonus-damage-per-hit:
+        base: 3
+        max: 3
+
+  doublestrike:
+    enabled: true
+    max-level: 3
+    trigger: attack
+    proc:
+      chance:
+        base: 8
+        per-level: 5
+        max: 19
+      cooldown-seconds:
+        base: 6
+        max: 6
+    values:
+      followup-strikes:
+        base: 1
+        max: 1
+      followup-damage-multiplier:
+        base: 1
+        max: 1
+
+  dreadanchor:
+    enabled: true
+    max-level: 3
+    trigger: attack
+    proc:
+      chance:
+        base: 0.25
+        per-level: 0.25
+        max: 0.75
+    values:
+      damage:
+        base: 5
+        max: 5
+      slowness-seconds:
+        base: 3
+        max: 3
+      slowness-amplifier:
+        base: 4
+        max: 4
+
+  blind:
+    enabled: true
+    max-level: 3
+    trigger: attack
+    proc:
+      chance:
+        base: 25
+        per-level: 10
+        max: 45
+      cooldown-seconds: 2
+    values:
+      duration-ticks:
+        base: 60
+        per-level: 20
+        max: 100
+      amplifier:
+        base: 0
+        per-level: 1
+        max: 2
+
+  slowness:
+    enabled: true
+    max-level: 3
+    trigger: attack
+    proc:
+      chance:
+        base: 35
+        per-level: 20
+        max: 75
+      cooldown-seconds: 2
+    values:
+      duration-ticks:
+        base: 60
+        per-level: 20
+        max: 100
+      amplifier:
+        base: 0
+        per-level: 1
+        max: 2
+
+  silence:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    proc:
+      chance:
+        base: 10
+        per-level: 5
+        max: 30
+      cooldown-seconds: 12
+    values:
+      duration:
+        base: 1.5
+        per-level: 1
+        max: 5
+
+  fear:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    proc:
+      chance:
+        base: 13
+        per-level: 5.5
+        max: 35
+      cooldown-seconds:
+        base: 4
+        per-level: 1
+        max: 8
+    values:
+      duration-ticks:
+        base: 40
+        per-level: 40
+        max: 200
+      amplifier:
+        base: 0
+        max: 0
+
+  confusion:
+    enabled: true
+    max-level: 3
+    trigger: attack
+    proc:
+      chance:
+        base: 13
+        per-level: 5.5
+        max: 24
+      cooldown-seconds:
+        base: 4
+        per-level: 1
+        max: 6
+    values:
+      duration-ticks:
+        base: 40
+        per-level: 40
+        max: 120
+
+  holy:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    proc:
+      chance:
+        base: 12
+        per-level: 8
+        max: 45
+
+  iceaspect:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    proc:
+      chance:
+        base: 10
+        per-level: 2
+        max: 18
+      cooldown-seconds: 3
+    values:
+      duration-ticks:
+        base: 20
+        per-level: 20
+        max: 60
+      amplifier:
+        base: 4
+        max: 4
+
+  execute:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    proc:
+      chance:
+        base: 4
+        per-level: 1
+        max: 8
+      cooldown-seconds: 0
+    values:
+      threshold-health:
+        base: 6
+        max: 6
+      damage:
+        base: 0.5
+        per-level: 0.4
+        start-level: 0
+      damage-min-floor:
+        base: 1.5
+        max: 1.5
+      damage-cap-min-floor:
+        base: 1.5
+        max: 1.5
+      damage-cap-max-health-fraction:
+        base: 0.08
+        max: 0.08
+
+  insomnia:
+    enabled: true
+    max-level: 7
+    trigger: attack
+    proc:
+      chance:
+        base: 10
+        per-level: 2
+        max: 22
+      cooldown-seconds:
+        base: 10
+        per-level: -0.5
+        max: 10
+        min: 8
+    values:
+      slow-duration-ticks:
+        base: 40
+        per-level: 20
+        max: 180
+      fatigue-duration-ticks:
+        base: 60
+        per-level: 20
+        max: 200
+      nausea-duration-ticks:
+        base: 40
+        per-level: 20
+        max: 180
+
+  featherweight:
+    enabled: true
+    max-level: 3
+    trigger: attack
+    proc:
+      chance:
+        base: 35
+        per-level: 20
+        max: 75
+      cooldown-seconds: 2
+    values:
+      duration-ticks:
+        base: 60
+        per-level: 20
+        max: 100
+      amplifier:
+        base: 0
+        per-level: 1
+        max: 2
+
+  rage:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    proc:
+      chance:
+        base: 6
+        per-level: 2
+        max: 14
+    values:
+      combo-reset-seconds:
+        base: 4
+        max: 4
+      damage-per-stack:
+        base: 0.5
+        max: 0.5
+      max-stacks:
+        base: 4
+        max: 4
+      max-stacks-with-steadfast:
+        base: 10
+        max: 10
+
+  clarity:
+    enabled: true
+    max-level: 5
+    trigger: effect-add
+    proc:
+      chance:
+        base: 20
+        per-level: 20
+        max: 100
+
+  endershift:
+    enabled: true
+    max-level: 3
+    trigger: damaged
+    proc:
+      chance:
+        base: 9
+        per-level: 1
+        max: 11
+      cooldown-seconds:
+        base: 60
+        per-level: 0
+        max: 60
+    values:
+      activation-max-health:
+        base: 3.5
+        max: 3.5
+      speed-duration-ticks:
+        base: 100
+        max: 100
+      speed-amplifier:
+        base: 0
+        per-level: 0
+        max: 0
+      absorption-duration-ticks:
+        base: 120
+        max: 120
+      absorption-amplifier:
+        base: 0
+        per-level: 0
+        max: 0
+
+  heavy:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    values:
+      damage-reduction-fraction:
+        base: 0.02
+        per-level: 0.02
+        max: 0.1
+
+  implants:
+    enabled: true
+    max-level: 3
+    trigger: passive
+    proc:
+      cooldown-seconds:
+        base: 45
+        max: 45
+    values:
+      heal:
+        base: 1
+        max: 1
+      food:
+        base: 1
+        max: 1
+
+  wellfed:
+    enabled: true
+    max-level: 5
+    trigger: consume
+    proc:
+      chance:
+        base: 20
+        per-level: 15
+        max: 80
+      cooldown-seconds:
+        base: 3
+        max: 3
+    restore-mode: full
+    values:
+      food-restore:
+        base: 1
+        max: 1
+
+  berserk:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    proc:
+      chance:
+        base: 4
+        per-level: 2
+        max: 12
+      cooldown-seconds:
+        base: 20
+        max: 20
+    values:
+      strength-duration-ticks:
+        base: 80
+        per-level: 20
+        max: 160
+      strength-amplifier:
+        base: 0
+        per-level: 0.25
+        max: 1
+      mining-fatigue-duration-ticks:
+        base: 100
+        per-level: 20
+        max: 180
+      mining-fatigue-amplifier:
+        base: 0
+        max: 0
+
+  bleed:
+    enabled: true
+    max-level: 6
+    trigger: attack
+    proc:
+      chance:
+        base: 5
+        per-level: 5
+        max: 30
+    values:
+      slow-tick-marker-ticks:
+        base: 0
+        max: 0
+      slow-tick-marker-amplifier:
+        base: 4
+        max: 4
+
+  bossslayer:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    values:
+      damage-multiplier:
+        base: 1.05
+        per-level: 0.05
+        max: 1.25
+
+  cleave:
+    enabled: true
+    max-level: 4
+    trigger: attack
+    proc:
+      chance:
+        base: 5
+        per-level: 2
+        max: 12
+      cooldown-seconds:
+        base: 8
+        per-level: 0.5
+        max: 10
+    values:
+      aoe-radius-blocks:
+        base: 1
+        per-level: 1
+        max: 4
+      extra-damage-min:
+        base: 1
+        max: 1
+      extra-damage-max:
+        base: 3
+        max: 3
 
   demonicfinisher:
-    trigger-health-threshold: 8.0
-    chance-by-level:
-      "1": 6
-      "2": 8
-      "3": 10
-      "4": 12
-      "5": 14
-    bonus-damage-by-level:
-      "1": 3.0
-      "2": 4.5
-      "3": 6.0
-      "4": 7.5
-      "5": 9.0
-    cooldown: 6
-    proc-luck:
-      enabled: true
-      luck-per-miss: 2
-      max-bonus: 12
-    conflicts-with: []
+    enabled: true
+    max-level: 3
+    trigger: attack
+    proc:
+      chance:
+        base: 6
+        per-level: 2
+        max: 10
+      cooldown-seconds:
+        base: 6
+        max: 6
+    values:
+      trigger-health-threshold:
+        base: 8
+        max: 8
+      bonus-damage:
+        base: 3.6
+        per-level: 1.6
+        max: 6.8
 
-  mirrored:
-    chance-by-level:
-      "1": 8
-      "2": 12
-      "3": 16
-    reflect-percent-by-level:
-      "1": 22.0
-      "2": 30.0
-      "3": 40.0
-    cooldown: 5
-    proc-luck:
-      enabled: true
-      luck-per-miss: 2
-      max-bonus: 10
-    conflicts-with: []
+  insanity:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    values:
+      damage-multiplier:
+        base: 1.04
+        per-level: 0.04
+        max: 1.2
 
-  trapped:
-    chance-by-level:
-      "1": 8
-      "2": 11
-      "3": 14
-      "4": 17
-      "5": 20
-    root-duration-seconds-by-level:
-      "1": 1
-      "2": 2
-      "3": 3
-      "4": 4
-      "5": 5
-    slowness-amplifier: 6
-    cooldown: 7
-    proc-luck:
-      enabled: true
-      luck-per-miss: 2
-      max-bonus: 10
-    conflicts-with: []
+  jeopardy:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    proc:
+      chance:
+        base: 1
+        per-level: 1
+        max: 5
+    values:
+      disable-seconds:
+        base: 5
+        max: 5
 
-  ascended:
-    trigger-health-percent: 0.30
-    chance-by-level:
-      "1": 8
-      "2": 11
-      "3": 14
-      "4": 17
-      "5": 20
-    # ~peak blocks above your feet (computed launch Y velocity). Overrides launch-velocity when set.
-    target-peak-blocks: 100
-    launch-velocity: 4.35
-    fall-immunity-seconds: 35
-    cooldown: 10
-    proc-luck:
-      enabled: true
-      luck-per-miss: 2
-      max-bonus: 10
-    conflicts-with: []
+  phantom:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    proc:
+      chance:
+        base: 1
+        per-level: 1
+        max: 5
+    values:
+      night-damage-multiplier:
+        base: 2
+        max: 2
 
-  redeemer:
-    chance-by-level:
-      "1": 9
-      "2": 12
-      "3": 15
-    buff-duration-seconds-by-level:
-      "1": 1
-      "2": 2
-      "3": 3
-    strength-amplifier-by-level:
-      "1": 0
-      "2": 0
-      "3": 1
-    cooldown: 9
-    proc-luck:
-      enabled: true
-      luck-per-miss: 2
-      max-bonus: 12
-    conflicts-with: []
+  pummel:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    proc:
+      chance:
+        base: 5
+        per-level: 5
+        max: 25
+      cooldown-seconds:
+        base: 60
+        max: 60
+    values:
+      aoe-radius-blocks:
+        base: 5
+        max: 5
+      slowness-duration-seconds:
+        base: 3
+        max: 3
+      slowness-amplifier:
+        base: 0
+        per-level: 1
+        max: 4
+
+  thunderfamine:
+    enabled: true
+    max-level: 3
+    trigger: attack
+    proc:
+      chance:
+        base: 4
+        per-level: 4
+        max: 12
+    values:
+      strike-damage:
+        base: 4
+        max: 4
+      strike-count:
+        base: 3
+        max: 3
+
+  gloryhunter:
+    enabled: true
+    max-level: 5
+    trigger: entity-death
+    proc:
+      chance:
+        base: 1
+        per-level: 1
+        max: 5
+    reward:
+      type: money
+      amount: 1000
+
+  greatsword:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    values:
+      damage-multiplier:
+        base: 1.02
+        per-level: 0.02
+        max: 1.1
+
+  hexlock:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    proc:
+      chance:
+        base: 4
+        per-level: 4
+        max: 20
+    values:
+      duration-seconds:
+        base: 15
+        max: 15
+      proc-bonus-percent:
+        base: 5
+        max: 5
+
+  inquisitive:
+    enabled: true
+    max-level: 4
+    trigger: entity-death
+    proc:
+      chance:
+        base: 30
+        per-level: 5
+        max: 45
+    values:
+      xp-multiplier:
+        base: 1.25
+        per-level: 0.25
+        max: 2
+
+  killaura:
+    enabled: true
+    max-level: 5
+    trigger: entity-death
+    proc:
+      chance:
+        base: 10
+        per-level: 5
+        max: 30
+    values:
+      extra-kills-max:
+        base: 1
+        per-level: 1
+        max: 5
+
+  leviathan:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    proc:
+      chance:
+        base: 3
+        per-level: 1
+        max: 7
+      cooldown-seconds:
+        base: 24
+        max: 24
+    values:
+      duration-seconds:
+        base: 2
+        max: 2
+      proc-bonus-percent:
+        base: 10
+        max: 10
+
+  blackhand:
+    enabled: true
+    max-level: 3
+    trigger: entity-death
+    proc:
+      chance:
+        base: 3
+        per-level: 3
+        max: 9
+    values:
+      x5-loot-duration-seconds:
+        base: 30
+        max: 30
+
+  vampiricdevour:
+    enabled: true
+    max-level: 3
+    trigger: attack
+    proc:
+      chance:
+        base: 1
+        max: 1
+      cooldown-seconds:
+        base: 25
+        max: 25
+    full-heal: true
 
   satanstreat:
-    chance-by-level:
-      "1": 1
-      "2": 2
-      "3": 3
-      "4": 4
-      "5": 5
-    reward-item-id: "legendarybook"
-    cooldown: 0
-    proc-luck:
-      enabled: true
-      luck-per-miss: 1
-      max-bonus: 5
-    conflicts-with: []
-  watchmen:
-    chance-by-level:
-      "1": 6
-      "2": 9
-      "3": 12
-      "4": 15
-      "5": 18
-    golem-count-by-level:
-      "1": 1
-      "2": 1
-      "3": 2
-      "4": 2
-      "5": 3
-    golem-damage-by-level:
-      "1": 2.0
-      "2": 2.5
-      "3": 3.0
-      "4": 3.5
-      "5": 4.0
-    golem-health: 40
-    guardian-duration-seconds: 12
-    cooldown: 25
-    proc-luck:
-      enabled: true
-      luck-per-miss: 2
-      max-bonus: 12
-    conflicts-with: []
+    enabled: true
+    max-level: 5
+    trigger: block-break
+    proc:
+      chance:
+        base: 1
+        per-level: 1
+    reward-item-id: legendarybook
 
   autosmelt:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
+    enabled: true
+    max-level: 3
+    trigger: block-break
+
   autoplanter:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
+    enabled: true
+    max-level: 1
+    trigger: block-break
+
   lucky:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  decapitation:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  insomnia:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  confusion:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  haste:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  aquatic:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  glowing:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  blazed:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  jellylegs:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  curse:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  featherweight:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  obsidiandestroyer:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  endershift:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  virus:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-    chance-by-level: { "1": 12, "2": 16, "3": 20, "4": 24 }
-    infection-seconds-by-level: { "1": 4, "2": 5, "3": 6, "4": 7 }
-    poison-seconds-by-level: { "1": 3, "2": 4, "3": 5, "4": 6 }
-    poison-amplifier-by-level: { "1": 0, "2": 0, "3": 1, "4": 1 }
-    damage-multiplier-by-level: { "1": 1.25, "2": 1.4, "3": 1.6, "4": 1.8 }
-    regeneration-strip-chance-by-level: { "1": 8, "2": 12, "3": 16, "4": 20 }
-  berserk:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  bounce:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  fear:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  frostbite:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  pummel:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  hardened:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  greatsword:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  trickster:
-    cooldown: 20
-    base-chance: 4
-    per-level-chance: 1
-    max-chance: 12
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  gears:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  diminish:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  cleave:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  clarity:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  lavabound:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  wellfed:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  holy:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  angelic:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  valor:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  dodge:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  enderwalker:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  implants:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  metaphysical:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  tank:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  reforged:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  bleed:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  silence:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  inquisitive:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  drunk:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  overload:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  heavy:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  bossslayer:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  bloodlust:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  deathbringer:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  enlighted:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  killaura:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  insanity:
-    damage-multiplier-by-level:
-      "1": 1.04
-      "2": 1.08
-      "3": 1.12
-      "4": 1.16
-      "5": 1.20
-      "6": 1.24
-      "7": 1.28
-      "8": 1.32
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  pulse:
-    chance-by-level:
-      "1": 1
-      "2": 2
-      "3": 3
-      "4": 4
-      "5": 5
-    knockback-strength: 0.95
-    cooldown: 0
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 5 }
-    conflicts-with: []
-  pellet:
-    chance-by-level:
-      "1": 1
-      "2": 2
-    bonus-damage: 4.0
-    knockback-strength: 1.1
-    cooldown: 0
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 4 }
-    conflicts-with: []
-  phantom:
-    chance-by-level:
-      "1": 1
-      "2": 2
-      "3": 3
-      "4": 4
-      "5": 5
-    night-damage-multiplier: 2.0
-    cooldown: 0
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
-    conflicts-with: []
+    enabled: true
+    max-level: 3
+    trigger: block-break
+    proc:
+      chance:
+        base: 8
+        per-level: 8
+        max: 24
+    values:
+      xp-gain:
+        base: 3
+        per-level: 3
+        max: 9
+
   mecha:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  flourish:
-    activation-chance: 3
-    duration-seconds: 6
-    cooldown: 0
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 4 }
-    conflicts-with: []
-  trickshot:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  plague:
-    chance-by-level:
-      "1": 1
-      "2": 2
-      "3": 3
-      "4": 4
-      "5": 5
-    radius: 5.0
-    duration-seconds: 4
-    cooldown: 0
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
-    conflicts-with: []
-  trixal:
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  kerbus:
-    chance-by-level:
-      "1": 40
-      "2": 70
-    cooldown: 0
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 8 }
-    conflicts-with: []
-  slingshot:
-    chance-by-level:
-      "1": 1
-      "2": 2
-      "3": 3
-      "4": 4
-      "5": 5
-    cooldown: 0
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
-    conflicts-with: []
-  jeopardy:
-    chance-by-level:
-      "1": 1
-      "2": 2
-      "3": 3
-      "4": 4
-      "5": 5
-    disable-seconds: 5
-    cooldown: 0
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
-    conflicts-with: []
-  static:
-    chance-by-level:
-      "1": 3
-      "2": 6
-      "3": 9
-    extra-gapple-cooldown-seconds: 3
-    cooldown: 0
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 8 }
-    conflicts-with: []
-  hexlock:
-    chance-by-level:
-      "1": 3
-      "2": 6
-      "3": 9
-    duration-seconds: 15
-    cooldown: 0
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 8 }
-    conflicts-with: []
-  siegebreaker:
-    activation-chance: 6
-    duration-seconds: 7
-    extra-durability-damage: 25
-    cooldown: 0
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
-    conflicts-with: []
-  thunderfamine:
-    chance-by-level:
-      "1": 5
-      "2": 9
-    strike-damage: 4.0
-    cooldown: 0
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 8 }
-    conflicts-with: []
-  bulwark:
-    chance-by-level:
-      "1": 7
-      "2": 12
-    immunity-seconds: 3
-    cooldown: 0
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 8 }
-    conflicts-with: []
-  muravieva:
-    chance-by-level:
-      "1": 2
-      "2": 4
-      "3": 6
-      "4": 8
-      "5": 10
-    x5-loot-duration-seconds: 30
-    cooldown: 0
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 8 }
-    conflicts-with: []
+    enabled: true
+    max-level: 1
+    trigger: block-break
+    proc:
+      cooldown-seconds:
+        base: 1
+        max: 1
+    sellall-command: sellall
+
   detonate:
-    chance-by-level:
-      "1": 5
-      "2": 9
-      "3": 13
-      "4": 17
-      "5": 21
-      "6": 25
-      "7": 29
-      "8": 33
-      "9": 37
-    radius: 1
-    cooldown: 0
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 10 }
-    conflicts-with: []
+    enabled: true
+    max-level: 9
+    trigger: block-break
+    proc:
+      chance:
+        base: 5
+        per-level: 5
+        max: 45
+      cooldown-seconds:
+        base: 0
+        max: 0
+    values:
+      radius:
+        base: 1
+        max: 1
 
-  # --- Advanced / new-set enchants (see file header) ---
-  triadward:
-    max-level: 4
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  hearttide:
-    max-level: 6
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  furylash:
+  obsidiandestroyer:
+    enabled: true
+    max-level: 5
+    trigger: interact
+    proc:
+      chance:
+        base: 5
+        per-level: 5
+        max: 25
+      cooldown-seconds:
+        base: 0
+        max: 0
+
+  trixal:
+    enabled: true
+    max-level: 1
+    trigger: block-break
+    values:
+      durability-repaired:
+        base: 1
+        max: 1
+
+  angelic:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    proc:
+      chance:
+        base: 10
+        per-level: 10
+        max: 95
+      cooldown-seconds: 10
+    values:
+      heal-per-pulse:
+        base: 0.1
+        per-level: 0.1
+        max: 0.5
+      duration-seconds:
+        base: 2
+        max: 3
+      pulse-interval-ticks:
+        base: 20
+        max: 20
+
+  enlighted:
+    enabled: true
+    max-level: 3
+    trigger: damaged
+    proc:
+      chance:
+        base: 3
+        per-level: 2
+        max: 7
+      cooldown-seconds: 12
+    values:
+      heal:
+        base: 0.5
+        per-level: 0.25
+        max: 1.0
+
+  armored:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    values:
+      damage-reduction-fraction:
+        base: 0.0025
+        per-level: 0.0015
+        max: 0.0085
+
+  tank:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    values:
+      damage-reduction-fraction:
+        base: 0.005
+        per-level: 0.0075
+        max: 0.025
+
+  valor:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    proc:
+      chance:
+        base: 100
+        per-level: 100
+        max: 100
+    values:
+      damage-reduction-percent:
+        base: 1
+        per-level: 4
+        max: 4.5
+
+  shellshock:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    values:
+      required-level:
+        base: 1
+        max: 1
+
+  watchmen:
+    enabled: true
+    max-level: 3
+    trigger: damaged
+    proc:
+      chance:
+        base: 4
+        per-level: 2
+        max: 8
+      cooldown-seconds:
+        base: 25
+        max: 25
+    values:
+      guardian-duration-seconds:
+        base: 12
+        max: 12
+      golem-health:
+        base: 40
+        max: 40
+      golem-damage:
+        base: 2.8
+        per-level: 0.8
+        max: 4.4
+      golem-count:
+        base: 2
+        max: 2
+      spawn-radius:
+        base: 2
+        max: 2
+
+  wrathbreak:
+    enabled: true
     max-level: 10
-    cooldown: 0
-    # roll: base=min(100, level), miss luck 1, cap 6
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
-    conflicts-with: []
-  mirrorbrand:
-    max-level: 4
-    cooldown: 0
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
-    conflicts-with: []
-  glimmerfade:
-    max-level: 3
-    cooldown: 0
-    # roll: 2+2*L, miss luck 2, cap 6
-    proc-luck: { enabled: true, luck-per-miss: 2, max-bonus: 6 }
-    conflicts-with: []
-  forewarned:
-    max-level: 3
-    cooldown: 0
-    # roll: 4+3*L, 1, 5
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 5 }
-    conflicts-with: []
-  maliceward:
-    max-level: 5
-    cooldown: 0
-    # roll: 2+2*L, 1, 6
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
-    conflicts-with: []
-  blastward:
-    max-level: 2
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  vilewound:
-    max-level: 5
-    cooldown: 0
-    # roll: 2+2*L, 1, 5
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 5 }
-    conflicts-with: []
-  coupdegrace:
-    max-level: 1
-    cooldown: 0
-    # roll: 5, 1, 4
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 4 }
-    conflicts-with: []
-  harmonicsurge:
-    max-level: 3
-    cooldown: 0
-    # roll: L, 1, 3
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 3 }
-    conflicts-with: []
-  phalanx:
-    max-level: 2
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  stormrite:
-    max-level: 2
-    gapple-block-seconds: 5
-    cooldown: 0
-    # roll: 1+2*L, 1, 3
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 3 }
-    conflicts-with: []
-  aureateburden:
-    max-level: 8
-    # Total CD when 3/20s “sickness” trips: base + max(0, extra - min(level, cap))
-    gap-sickness-cooldown-seconds: 15
-    gap-cooldown-extra-seconds: 18
-    extra-reduction-level-cap: 8
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  netherwarden:
-    max-level: 2
-    # Spawn attempt chance % before miss-streak; default per level: 5 + 2*L
+    trigger: damaged
     chance-by-level:
-      "1": 7
-      "2": 9
-    cooldown: 0
-    # roll: see chance-by-level, 2, 8
-    proc-luck: { enabled: true, luck-per-miss: 2, max-bonus: 8 }
-    conflicts-with: []
-  fetter:
-    max-level: 2
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  asceticaegis:
+      1: 1
+      2: 2
+      3: 3
+      4: 4
+      5: 5
+      6: 6
+      7: 7
+      8: 8
+      9: 9
+      10: 10
+
+  mirrorbrand:
+    display: "{group-color}Glassbrand"
+    enabled: true
+    max-level: 4
+    trigger: damaged
+    proc:
+      chance:
+        base: 1
+        per-level: 1
+        max: 4
+      cooldown-seconds:
+        base: 0
+        max: 0
+
+  nullglimmer:
+    enabled: true
+    max-level: 3
+    trigger: damaged
+    chance-by-level:
+      1: 4
+      2: 6
+      3: 8
+    suppress-seconds-by-level:
+      1: 2
+      2: 4
+      3: 6
+    cooldown-seconds-by-level:
+      1: 8
+      2: 8
+      3: 8
+
+  premonition:
+    enabled: true
+    max-level: 3
+    trigger: damaged
+    chance-by-level:
+      1: 7
+      2: 10
+      3: 13
+
+  hexproof:
+    enabled: true
     max-level: 5
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  strategist:
+    trigger: damaged
+    chance-by-level:
+      1: 4
+      2: 6
+      3: 8
+      4: 10
+      5: 12
+    immunity-seconds-by-level:
+      1: 5
+      2: 10
+      3: 15
+      4: 20
+      5: 25
+
+  rotbrand:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    chance-by-level:
+      1: 4
+      2: 6
+      3: 8
+      4: 10
+      5: 12
+
+  finalverdict:
+    enabled: true
     max-level: 1
-    koth-capture-bonus-per-level: 0.02
-    koth-bonus-level-cap: 8
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  auroraward:
+    trigger: damaged
+    chance-by-level:
+      1: 3
+    victim-health-threshold-by-level:
+      1: 4
+    attacker-health-threshold-by-level:
+      1: 4
+    invulnerability-seconds-by-level:
+      1: 1
+    attacker-silence-seconds-by-level:
+      1: 4
+    cooldown-seconds-by-level:
+      1: 12
+
+  choirglass:
+    enabled: true
     max-level: 3
-    cooldown: 0
-    # roll: 3+2*L, 1, 4
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 4 }
-    conflicts-with: []
-  steadfastfury:
-    max-level: 1
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  primalpact:
-    max-level: 4
-    pact-active-seconds: 10
-    cooldown: 0
-    # roll: 3+2*L, 1, 5
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 5 }
-    conflicts-with: []
-  runeswell:
+    trigger: damaged
+    chance-by-level:
+      1: 1
+      2: 2
+      3: 3
+    heal-by-level:
+      1: 4
+      2: 4
+      3: 4
+    cooldown-seconds-by-level:
+      1: 12
+      2: 12
+      3: 12
+
+  warband:
+    enabled: true
     max-level: 2
-    axe-proc-bonus-per-level: 2
-    cooldown: 0
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 5 }
-    conflicts-with: []
-  discordverdict:
-    max-level: 1
-    cooldown: 0
-    # roll: 5, 1, 3
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 3 }
-    conflicts-with: []
-  alchemistedge:
-    max-level: 4
-    cooldown: 0
-    proc-luck: { enabled: false, luck-per-miss: 0, max-bonus: 0 }
-    conflicts-with: []
-  supplyscour:
-    max-level: 7
-    cooldown: 0
-    # roll: 1+L, 1, 6
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 6 }
-    conflicts-with: []
-  trifoldrend:
+    trigger: damaged
+    attacker-window-seconds-by-level:
+      1: 8
+      2: 8
+    minimum-attackers-by-level:
+      1: 1
+      2: 1
+    max-regeneration-amplifier-by-level:
+      1: 3
+      2: 3
+    regeneration-seconds-by-level:
+      1: 2
+      2: 2
+
+  tempestomen:
+    enabled: true
+    max-level: 2
+    trigger: damaged
+    chance-by-level:
+      1: 3
+      2: 5
+    cooldown-seconds-by-level:
+      1: 45
+      2: 45
+    tempest-scale-by-level:
+      1: 1.1
+      2: 1.1
+    tempest-display-name: "&r&b&lTempest Charge"
+    tempest-damage-by-level:
+      1: 5.75
+      2: 7.0
+    tempest-damage-radius-by-level:
+      1: 3.4
+      2: 3.4
+    tempest-trigger-radius-by-level:
+      1: 2.35
+      2: 2.35
+    tempest-chase-speed-by-level:
+      1: 0.5
+      2: 0.52
+    tempest-max-chase-ticks-by-level:
+      1: 1200
+      2: 1200
+    tempest-arm-ticks-by-level:
+      1: 12
+      2: 12
+    gapple-block-seconds-by-level:
+      1: 5
+      2: 5
+    armor-damage-percent-by-level:
+      1: 0.05
+      2: 0.05
+
+  hellforged:
+    enabled: true
+    max-level: 2
+    trigger: damaged
+    chance-by-level:
+      1: 7
+      2: 9
+
+  sunveil:
+    enabled: true
     max-level: 3
-    cooldown: 0
-    # second roll (third hit): 6+2*L, 1, 5
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 5 }
-    conflicts-with: []
-  ironmuzzle:
+    trigger: damaged
+    chance-by-level:
+      1: 5
+      2: 7
+      3: 9
+    cooldown-seconds-by-level:
+      1: 10
+      2: 10
+      3: 10
+    day-heal-multiplier: 1.5
+    night-heal-multiplier: 1.0
+    heal-by-level:
+      1: 0.5
+      2: 0.75
+      3: 1.0
+    radius-by-level:
+      1: 9.0
+      2: 9.0
+      3: 9.0
+
+  beastbond:
+    enabled: true
+    max-level: 4
+    trigger: attack
+    chance-by-level:
+      1: 5
+      2: 7
+      3: 9
+      4: 11
+    pact-active-seconds-by-level:
+      1: 10
+      2: 10
+      3: 10
+      4: 10
+
+  severance:
+    enabled: true
     max-level: 1
-    muzzle-seconds: 3
-    cooldown: 0
-    # roll: 2, 1, 1
-    proc-luck: { enabled: true, luck-per-miss: 1, max-bonus: 1 }
-    conflicts-with: []
+    trigger: attack
+    chance-by-level:
+      1: 5
+    linked-slowness-ticks-by-level:
+      1: 20
+    unlinked-slowness-ticks-by-level:
+      1: 60
+    unlinked-magic-damage-multiplier-by-level:
+      1: 1.0
+    slowness-amplifier-by-level:
+      1: 4
 
+  alembic:
+    enabled: true
+    max-level: 4
+    trigger: attack
+    chance-by-level:
+      1: 100
+      2: 100
+      3: 100
+      4: 100
+    no-potion-damage-multiplier-by-level:
+      1: 0.75
+      2: 0.75
+      3: 0.75
+      4: 0.75
+    potion-step-by-level:
+      1: 6
+      2: 6
+      3: 6
+      4: 6
+    bonus-damage-per-step-by-level:
+      1: 0.75
+      2: 0.75
+      3: 0.75
+      4: 0.75
+
+  marauder:
+    enabled: true
+    max-level: 7
+    trigger: attack
+    chance-by-level:
+      1: 2
+      2: 3
+      3: 4
+      4: 5
+      5: 6
+      6: 7
+      7: 8
+    steal-order:
+      - ender_pearl
+      - enchanted_golden_apple
+      - golden_apple
+      - splash_potion
+      - lingering_potion
+      - potion
+
+  thirdeye:
+    enabled: true
+    max-level: 3
+    trigger: attack
+    chance-by-level:
+      1: 8
+      2: 10
+      3: 12
+    damage-multiplier-by-level:
+      1: 2.0
+      2: 2.0
+      3: 2.0
+
+  lockjaw:
+    enabled: true
+    max-level: 1
+    trigger: attack
+    chance-by-level:
+      1: 2
+    muzzle-seconds-by-level:
+      1: 3
+
+  blazed:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    proc:
+      chance:
+        base: 20
+        per-level: 20
+        max: 100
+    values:
+      fire-seconds:
+        base: 4
+        per-level: 1
+        max: 8
+
+  bloodlust:
+    enabled: true
+    max-level: 5
+    trigger: bleed-damage-nearby
+    values:
+      radius-blocks:
+        base: 7
+        max: 7
+      heal:
+        base: 1
+        per-level: 0.5
+        max: 3
+
+  diminish:
+    enabled: true
+    max-level: 6
+    trigger: damaged
+    proc:
+      chance:
+        base: 2
+        per-level: 2
+        max: 10
+      cooldown-seconds:
+        base: 5
+        per-level: 0
+        max: 5
+    values:
+      next-hit-damage-divisor:
+        base: 1.35
+        max: 1.35
+      capped-hit-damage-floor:
+        base: 1.5
+        max: 1.5
+
+  flourish:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    proc:
+      chance:
+        base: 2
+        per-level: 3
+        max: 14
+      cooldown-seconds:
+        base: 4
+        max: 4
+    values:
+      window-seconds:
+        base: 4
+        max: 4
+      reduction-per-attacker-percent:
+        base: 4
+        max: 4
+      max-reduction-percent:
+        base: 24
+        max: 24
+
+  kerbus:
+    enabled: true
+    max-level: 3
+    trigger: damaged
+    proc:
+      chance:
+        base: 45
+        per-level: 45
+        max: 100
+      cooldown-seconds:
+        base: 6
+        max: 6
+    values:
+      protection-window-seconds:
+        base: 2
+        max: 2
+
+  mirrored:
+    enabled: true
+    max-level: 3
+    trigger: damaged
+    reflect-damage-source: original-base # original-base, base, final
+    proc:
+      chance:
+        base: 7
+        per-level: 4
+        max: 15
+      cooldown-seconds:
+        base: 5
+        max: 5
+    values:
+      reflect-percent:
+        base: 28
+        per-level: 8
+        max: 44
+      minimum-reflect-damage:
+        base: 0.5
+        max: 0.5
+
+  plague:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    proc:
+      chance:
+        base: 1
+        per-level: 1
+        max: 5
+    values:
+      radius-blocks:
+        base: 5
+        max: 5
+      duration-seconds:
+        base: 4
+        max: 4
+
+  pulse:
+    enabled: true
+    max-level: 3
+    trigger: damaged
+    proc:
+      chance:
+        base: 2
+        per-level: 2
+        max: 6
+    values:
+      knockback-strength:
+        base: 1
+        max: 1
+      upward-boost:
+        base: 0.25
+        max: 0.25
+
+  jellylegs:
+    enabled: true
+    max-level: 3
+    trigger: damaged
+    proc:
+      chance:
+        base: 40
+        per-level: 40
+        max: 100
+
+  mummification:
+    enabled: true
+    max-level: 3
+    trigger: damaged
+    proc:
+      chance:
+        base: 7
+        per-level: 2
+        max: 11
+      cooldown-seconds:
+        base: 30
+        max: 30
+    values:
+      duration-seconds:
+        base: 4
+        per-level: 1
+        max: 6
+      summon-health:
+        base: 30
+        per-level: 6
+        max: 42
+      summon-damage:
+        base: 5
+        per-level: 1
+        max: 7
+      move-speed:
+        base: 0.27
+        max: 0.27
+      attack-reach:
+        base: 2.3
+        max: 2.3
+      target-range:
+        base: 20
+        max: 20
+      attack-cooldown-ticks:
+        base: 9
+        max: 9
+
+  redeemer:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    proc:
+      chance:
+        base: 9
+        per-level: 50
+        max: 100
+      cooldown-seconds:
+        base: 9
+        max: 9
+    values:
+      buff-duration-seconds:
+        base: 2.5
+        per-level: 2.5
+        max: 7.5
+      strength-amplifier:
+        base: 3
+        max: 3
+
+  static:
+    enabled: true
+    max-level: 3
+    trigger: damaged
+    proc:
+      chance:
+        base: 4
+        per-level: 4
+        max: 12
+      cooldown-seconds:
+        base: 5
+        max: 5
+    values:
+      extra-gapple-cooldown-seconds:
+        base: 3
+        max: 3
+
+  ascended:
+    enabled: true
+    max-level: 3
+    trigger: damaged
+    proc:
+      chance:
+        base: 7
+        per-level: 40
+        max: 100
+      cooldown-seconds:
+        base: 10
+        max: 10
+    values:
+      trigger-health-percent:
+        base: 0.3
+        max: 0.3
+      target-peak-blocks:
+        base: 16
+        per-level: 2
+        max: 20
+      horizontal-launch-speed:
+        base: 1.05
+        per-level: 0.12
+        max: 1.3
+      air-control-ticks:
+        base: 18
+        per-level: 2
+        max: 22
+      air-control-speed:
+        base: 1.1
+        per-level: 0.08
+        max: 1.26
+      air-control-blend:
+        base: 0.72
+        per-level: 0.04
+        max: 0.8
+      fall-immunity-seconds:
+        base: 10
+        max: 10
+
+  enderwalker:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    proc:
+      chance:
+        base: 20
+        per-level: 5
+        max: 25
+    values:
+      heal-minimum-level:
+        base: 4
+        max: 4
+      heal:
+        base: 1
+        max: 1
+
+  metaphysical:
+    enabled: true
+    max-level: 4
+    trigger: effect-add
+    proc:
+      chance:
+        base: 40
+        per-level: 15
+        max: 90
+
+  aquatic:
+    enabled: true
+    max-level: 1
+
+  aristocratic:
+    enabled: true
+    max-level: 5
+    multi-proc-reduction-percent-per-level: 20
+    mirror-chance: 30
+
+  armageddon:
+    enabled: true
+    max-level: 8
+    trigger: attack
+    proc:
+      chance:
+        base: 1
+        per-level: 1
+        max: 8
+      cooldown-seconds:
+        base: 30
+        max: 30
+    extra-proc-chance-percent-per-level: 10
+    soul-crusher-hits: 5
+    soul-crusher-lock-seconds: 8
+    soul-crusher-rage-stack: 10
+    nature-double-seconds-per-level: 2
+    divine-radius: 3.0
+    divine-fireball-radius: 5.0
+    divine-fireball-damage: 6.0
+    divine-fireball-immediate-damage: 4.0
+    nature-lightning-damage: 4.0
+
+  bloodrush:
+    enabled: true
+    max-level: 1
+
+  bounce:
+    enabled: true
+    max-level: 3
+
+  bulwark:
+    enabled: true
+    max-level: 2
+    proc:
+      chance:
+        base: 5
+        per-level: 3
+        max: 8
+    values:
+      immunity-seconds:
+        base: 1
+        max: 1
+      immunity-seconds-by-level:
+        base: 1
+        per-level: 0
+        max: 1
+
+  curse:
+    enabled: true
+    max-level: 3
+    trigger: defend
+    proc:
+      chance:
+        base: 15
+        per-level: 5
+        max: 25
+      cooldown-seconds:
+        base: 7
+        max: 7
+    values:
+      mining-fatigue-duration-seconds:
+        base: 2
+        per-level: 1
+        max: 4
+      mining-fatigue-amplifier:
+        base: 0
+        per-level: 1
+        start-level: 3
+        max: 2
+
+  deathbringer:
+    enabled: true
+    max-level: 3
+    values:
+      double-damage-proc-percent-by-level:
+        base: 2
+        per-level: 2
+        max: 6
+      double-damage-hit-multiplier: 2.0
+
+  decapitation:
+    enabled: true
+    max-level: 10
+
+  dodge:
+    enabled: true
+    max-level: 5
+    trigger: defend
+    proc:
+      chance:
+        base: 0.25
+        per-level: 0.15
+        max: 1.0
+      cooldown-seconds:
+        base: 12
+        max: 12
+      legacy:
+        proc-luck: false
+    values:
+      percent-bonus-if-sneaking:
+        base: 0.25
+        max: 0.25
+
+  drunk:
+    enabled: true
+    max-level: 4
+
+  frostbite:
+    enabled: true
+    max-level: 5
+    trigger: defend
+    proc:
+      chance:
+        base: 5
+        per-level: 5
+        max: 25
+      cooldown-seconds:
+        base: 60
+        per-level: -5
+        max: 60
+        min: 40
+    values:
+      slowness-duration-seconds:
+        base: 5
+        max: 5
+      slowness-amplifier:
+        base: 4
+        max: 4
+
+  gears:
+    enabled: true
+    max-level: 3
+
+  glowing:
+    enabled: true
+    max-level: 1
+
+  hardened:
+    enabled: true
+    max-level: 3
+    proc:
+      chance:
+        base: 10
+        per-level: 10
+        max: 30
+    values:
+      durability-repair:
+        base: 1
+        max: 1
+
+  haste:
+    enabled: true
+    max-level: 3
+
+  lavabound:
+    enabled: true
+    max-level: 1
+
+  lifetide:
+    enabled: true
+    max-level: 6
+    values:
+      health-swing-by-level:
+        base: 0.03
+        per-level: 0.01
+        max: 0.04
+      min-damage-multiplier-by-level:
+        base: 0.97
+        per-level: -0.01
+        min: 0.92
+        max: 0.97
+      max-damage-multiplier-by-level:
+        base: 1.03
+        per-level: 0.01
+        max: 1.08
+
+  midastoll:
+    enabled: true
+    max-level: 8
+    values:
+      gap-sickness-cooldown-seconds: 15
+      gap-cooldown-extra-seconds: 18
+      extra-reduction-level-cap: 8
+
+  oathbound:
+    enabled: true
+    max-level: 5
+    values:
+      weapon-enchant-cap: 14
+      damage-reduction-per-enchant-per-level: 0.004
+      damage-reduction-cap: 0.25
+      minimum-damage-multiplier: 0.45
+      ally-radius: 3.0
+
+  overload:
+    enabled: true
+    max-level: 3
+
+  pellet:
+    enabled: true
+    max-level: 2
+    proc:
+      chance-by-level:
+        base: 1
+        per-level: 1
+        max: 2
+    values:
+      bonus-damage: 4.0
+      knockback-strength: 1.1
+
+  reforged:
+    enabled: true
+    max-level: 10
+    values:
+      save-chance-percent-per-level-mult: 10
+      chance-by-level:
+        base: 10
+        per-level: 10
+        max: 100
+
+  runevein:
+    enabled: true
+    max-level: 2
+    values:
+      axe-proc-bonus-per-level: 2
+
+  siegebreaker:
+    enabled: true
+    max-level: 1
+    proc:
+      activation-chance: 6
+      chance-by-level:
+        base: 6
+        max: 6
+    values:
+      duration-seconds: 7
+      extra-durability-damage: 25
+
+  slingshot:
+    enabled: true
+    max-level: 5
+    proc:
+      chance-by-level:
+        base: 1
+        per-level: 1
+        max: 5
+
+  soulshackle:
+    enabled: true
+    max-level: 2
+    values:
+      lock-seconds-per-level: 3
+
+  triarchsigil:
+    enabled: true
+    max-level: 4
+    values:
+      attacker-self-damage-multiplier: 0.9
+      protected-against-sets:
+        - phantom
+        - yijki
+        - yeti
+      set-damage-reduction-per-level: 0.03
+      set-damage-reduction-cap: 0.12
+
+  trickshot:
+    enabled: true
+    max-level: 1
+    values:
+      headshot-damage-multiplier: 3.0
+
+  trickster:
+    enabled: true
+    max-level: 8
+    proc:
+      chance:
+        base: 4
+        per-level: 1
+        max: 11
+      cooldown-seconds:
+        base: 20
+        max: 20
+    values:
+      motion-prediction-scale: 2.0
+      behind-distance: 1.35
+
+  triggerhappy:
+    enabled: true
+    max-level: 5
+    proc:
+      chance-by-level:
+        base: 2
+        per-level: 2
+        max: 12
+    values:
+      cooldown: 18
+      duration-seconds-per-level: 3
+      duration-seconds-by-level:
+        base: 3
+        per-level: 3
+        max: 15
+      disarmor-chance: 20
+      aoe-radius: 5.0
+      aoe-damage-multiplier: 0.75
+
+  virus:
+    enabled: true
+    max-level: 3
+    proc:
+      chance-by-level:
+        base: 12
+        per-level: 4
+        max: 20
+    values:
+      infection-seconds-by-level:
+        base: 4
+        per-level: 1
+        max: 6
+      damage-multiplier-by-level:
+        base: 1.3
+        per-level: 0.15
+        max: 1.6
+      poison-seconds-by-level:
+        base: 3
+        per-level: 1
+        max: 5
+      poison-amplifier-by-level:
+        base: 0
+        per-level: 1
+        start-level: 3
+        max: 1
+      regeneration-strip-chance-by-level:
+        base: 10
+        per-level: 5
+        max: 20
+
+  warlordstempo:
+    enabled: true
+    max-level: 1
+    values:
+      koth-bonus-level-cap: 8
+      koth-capture-bonus-per-level: 0.02
+    
   heroicarmor:
-    # Heroic Upgrade Crystal success rate (%).
     upgrade-success-chance: 65
-
-    # Independent "heroic armor" baseline (separate from full set bonuses).
-    # Weighted like vanilla slot scaling, tuned to be stronger than diamond.
     helmet-reduction: 0.04
-    chestplate-reduction: 0.10
+    chestplate-reduction: 0.1
     leggings-reduction: 0.08
     boots-reduction: 0.06
     total-reduction-cap: 0.32
-
-    # Virtual durability buffer consumed before real item durability.
-    # Effective durability = vanilla leather durability + heroic buffer.
     helmet-buffer-max: 910
     chestplate-buffer-max: 1000
     leggings-buffer-max: 935
     boots-buffer-max: 686
-
-    # PvP durability reinforcement chances (refund 1 durability on hit).
     helmet-durability-refund-chance: 45
     chestplate-durability-refund-chance: 65
     leggings-durability-refund-chance: 55
     boots-durability-refund-chance: 50
+schema-version: 2
+...

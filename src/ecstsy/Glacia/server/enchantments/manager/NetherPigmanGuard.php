@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\server\enchantments\manager;
 
-use ecstsy\Glacia\entity\envoys\EnvoyZombiePigman;
+use ecstsy\Glacia\entity\HellforgedPigman;
 use ecstsy\Glacia\Loader;
-use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
-use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
 use pocketmine\entity\Location;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\player\Player;
@@ -15,30 +13,31 @@ use pocketmine\scheduler\ClosureTask;
 use pocketmine\world\sound\AnvilUseSound;
 
 /**
- * Nether Warden: strong pigman + enderpearl block in a 5 block radius of the minion.
+ * Nether Warden: strong pigman + victim-specific pearl lock while the minion is alive.
  */
 final class NetherPigmanGuard
 {
-    private const RADIUS = 5.0;
-
-    /** @var list<array{entity: EnvoyZombiePigman, world: string, ownerName: string}> */
+    /** @var list<array{entity: HellforgedPigman, world: string, ownerUuid: string, blockedUuid: string}> */
     private static array $minions = [];
 
-    public static function snapshotBlocking(Player $inWorld): bool
+    public static function snapshotBlocking(Player $player): bool
     {
+        $playerUuid = strtolower($player->getUniqueId()->toString());
         foreach (self::$minions as $i => $row) {
-            $e = $row["entity"];
-            if ($e->isClosed() || !$e->isAlive()) {
+            $entity = $row["entity"];
+            if ($entity->isClosed() || !$entity->isAlive()) {
                 unset(self::$minions[$i]);
                 continue;
             }
-            if ($e->getWorld()->getFolderName() !== $inWorld->getWorld()->getFolderName()) {
-                continue;
-            }
-            if ($e->getPosition()->distanceSquared($inWorld->getPosition()) <= (self::RADIUS * self::RADIUS)) {
+
+            if (
+                $row["blockedUuid"] === $playerUuid &&
+                $entity->getWorld()->getFolderName() === $player->getWorld()->getFolderName()
+            ) {
                 return true;
             }
         }
+
         self::$minions = array_values(self::$minions);
         return false;
     }
@@ -48,19 +47,15 @@ final class NetherPigmanGuard
         Player $attacker,
         int $level
     ): void {
-        $chance = EnchantTuningManager::getLevelInt("netherwarden", "chance-by-level", $level, 5 + $level * 2);
-        if (!ProcLuckManager::roll($victim, "netherwarden", $chance, 2, 8)) {
+        $chance = EnchantTuningManager::getLevelInt("hellforged", "chance-by-level", $level, 5 + $level * 2);
+        if (!ProcLuckManager::roll($victim, "hellforged", $chance, 2, 8)) {
             return;
         }
 
         $pos = $victim->getPosition()->add(((float) (mt_rand(-2, 2)) + 0.5), 0, (float) (mt_rand(-2, 2)) + 0.5);
         $location = new Location($pos->x, $pos->y, $pos->z, $victim->getWorld(), 0.0, 0.0);
-        $pig = new EnvoyZombiePigman($location, CompoundTag::create());
-        $pig->setMaxHealth(80);
-        $pig->setHealth(80.0);
-        $pig->setNameTag("§4§lNether Warden");
-        $pig->setNameTagVisible(true);
-        $pig->setNameTagAlwaysVisible(true);
+        $pig = new HellforgedPigman($location, CompoundTag::create());
+        $pig->setHellforgedData($victim, $attacker, "&4&lNether Warden", 20 * 30, 7.0, 80);
         $pig->spawnToAll();
         $pig->getWorld()->addSound($pig->getPosition(), new AnvilUseSound());
         $victim->sendMessage("§4Nether Warden §7summons a feral pigman. Pearls are dampened nearby.");
@@ -68,7 +63,8 @@ final class NetherPigmanGuard
         self::$minions[] = [
             "entity" => $pig,
             "world" => $victim->getWorld()->getFolderName(),
-            "ownerName" => $victim->getName(),
+            "ownerUuid" => strtolower($victim->getUniqueId()->toString()),
+            "blockedUuid" => strtolower($attacker->getUniqueId()->toString()),
         ];
 
         $id = $pig->getId();

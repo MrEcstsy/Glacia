@@ -133,7 +133,7 @@ final class PlayerVaultCommand extends BaseCommand {
     private function openOtherVault(Player $viewer, int $vaultNumber, string $targetName) : void
     {
         if (!$viewer->hasPermission("glacia.admin")) {
-            $viewer->sendMessage(C::colorize("&r&cYou do not have permission to view other players' vaults."));
+            $viewer->sendMessage(C::colorize("&r&cYou do not have permission to edit other players' vaults."));
             return;
         }
 
@@ -149,12 +149,17 @@ final class PlayerVaultCommand extends BaseCommand {
             return;
         }
 
+        $manager = Loader::getPlayerVaultManager();
+        if (!$manager->claimOpenEditor($session->getUuid()->toString(), $vaultNumber, $viewer)) {
+            $viewer->sendMessage(C::colorize("&r&cThat vault is already open."));
+            return;
+        }
+
         (new PlayerVaultScreen(
             $viewer,
             $session->getUuid()->toString(),
             $session->getUsername(),
-            $vaultNumber,
-            true
+            $vaultNumber
         ))->display($viewer);
     }
 
@@ -214,7 +219,7 @@ final class PlayerVaultCommand extends BaseCommand {
         $player->sendMessage(C::colorize("&r&eUse &f/pv search <query> &r&eto search your accessible vaults."));
         $player->sendMessage(C::colorize("&r&eUse &f/pv list &r&eto see which vaults currently have items."));
         if ($player->hasPermission("glacia.admin")) {
-            $player->sendMessage(C::colorize("&r&eUse &f/pv <number> <player> &r&eto inspect another player's vault."));
+            $player->sendMessage(C::colorize("&r&eUse &f/pv <number> <player> &r&eto edit another player's vault."));
             $player->sendMessage(C::colorize("&r&eUse &f/pv list <player> &r&eto see which of their vaults have items."));
         }
         $player->sendMessage(C::colorize($vaultText));

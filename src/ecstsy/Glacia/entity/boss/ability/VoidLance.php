@@ -8,6 +8,7 @@ use ecstsy\Glacia\entity\boss\BossAbility;
 use ecstsy\Glacia\entity\boss\BossEntity;
 use ecstsy\Glacia\entity\boss\BossParticles;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\utils\CustomParticleEffectManager;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
@@ -62,10 +63,10 @@ final class VoidLance extends BossAbility
             default => 16.0,
         };
         $damage = match ($phase) {
-            1 => 14.0,
-            2 => 19.0,
-            3 => 26.0,
-            default => 14.0,
+            1 => 16.0,
+            2 => 22.0,
+            3 => 29.0,
+            default => 16.0,
         };
         $witherTicks = match ($phase) {
             1 => 60,
@@ -96,7 +97,29 @@ final class VoidLance extends BossAbility
                         $origin,
                         $endPoint,
                         BossParticles::portalParticle(),
-                        (int) ($range * 1.2)
+                        max(8, (int) ($range * 0.65))
+                    );
+                    CustomParticleEffectManager::lineVariants(
+                        $boss->getWorld(),
+                        $origin,
+                        $endPoint,
+                        [
+                            CustomParticleEffectManager::ASTRAL_BEAM,
+                            CustomParticleEffectManager::ASTRAL_BEAM_CORE,
+                            CustomParticleEffectManager::ASTRAL_BEAM_SPARK,
+                        ],
+                        max(16, (int) ($range * 1.3)),
+                        48.0
+                    );
+                    CustomParticleEffectManager::pulse(
+                        $boss->getWorld(),
+                        $origin,
+                        CustomParticleEffectManager::WARNING_RING,
+                        CustomParticleEffectManager::ASTRAL_PULSE,
+                        1.1,
+                        12,
+                        6,
+                        48.0
                     );
                 }
             ), $t);
@@ -123,15 +146,65 @@ final class VoidLance extends BossAbility
                     $origin,
                     $endPoint,
                     BossParticles::portalParticle(),
-                    (int) ($range * 3.0)
+                    max(10, (int) ($range * 0.9))
+                );
+                CustomParticleEffectManager::lineVariants(
+                    $boss->getWorld(),
+                    $origin,
+                    $endPoint,
+                    [
+                        CustomParticleEffectManager::ASTRAL_BEAM,
+                        CustomParticleEffectManager::ASTRAL_BEAM_CORE,
+                        CustomParticleEffectManager::ASTRAL_BEAM_SPARK,
+                        CustomParticleEffectManager::ASTRAL_BEAM_CORE,
+                    ],
+                    max(28, (int) ($range * 2.4)),
+                    56.0
+                );
+                CustomParticleEffectManager::columnVariants(
+                    $boss->getWorld(),
+                    $origin,
+                    [
+                        CustomParticleEffectManager::ASTRAL_PULSE,
+                        CustomParticleEffectManager::ASTRAL_BEAM_SPARK,
+                    ],
+                    2.0,
+                    7,
+                    56.0
                 );
                 BossParticles::burst(
                     $boss->getWorld(),
                     $origin,
                     BossParticles::portalParticle(),
+                    8,
+                    0.35,
+                    0.22
+                );
+                CustomParticleEffectManager::burstVariants(
+                    $boss->getWorld(),
+                    $origin,
+                    [
+                        CustomParticleEffectManager::ASTRAL_BEAM_CORE,
+                        CustomParticleEffectManager::ASTRAL_BEAM_SPARK,
+                        CustomParticleEffectManager::ASTRAL_PULSE,
+                    ],
+                    22,
+                    0.60,
+                    0.48,
+                    56.0
+                );
+                CustomParticleEffectManager::burstVariants(
+                    $boss->getWorld(),
+                    $endPoint,
+                    [
+                        CustomParticleEffectManager::ASTRAL_PULSE,
+                        CustomParticleEffectManager::ASTRAL_BEAM_CORE,
+                        CustomParticleEffectManager::ASTRAL_BEAM_SPARK,
+                    ],
                     20,
-                    0.6,
-                    0.4
+                    0.8,
+                    0.55,
+                    56.0
                 );
 
                 $rangeSq = $range * $range;
@@ -149,7 +222,7 @@ final class VoidLance extends BossAbility
                         continue;
                     }
 
-                    $player->attack(new EntityDamageByEntityEvent($boss, $player, EntityDamageEvent::CAUSE_MAGIC, $damage, [], 0.0, 0.0));
+                    $boss->dealBossTrueDamage($player, $damage);
                     $player->getEffects()->add(new EffectInstance(VanillaEffects::WITHER(), $witherTicks, 1));
 
                     $boss->applyBossMotion($player, new Vector3($forwardX * 0.85, 0.30, $forwardZ * 0.85));

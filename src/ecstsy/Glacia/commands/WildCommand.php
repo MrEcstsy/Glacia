@@ -26,7 +26,7 @@ final class WildCommand extends BaseCommand {
     private const DEFAULT_ATTEMPTS = 120;
     private const DEFAULT_COOLDOWN = 20;
     private const HARD_MAX_RADIUS = 7000;
-    private const NEARBY_LAND_SEARCH_RADIUS = 8;
+    private const NEARBY_LAND_SEARCH_RADIUS = 18;
     private const POPULATION_RETRY_DELAY = 40;
     private const POPULATION_RETRY_ATTEMPTS = 3;
 
@@ -93,10 +93,10 @@ final class WildCommand extends BaseCommand {
             return false;
         }
 
-        $totalAttempts = max(1, $attempts) * 2;
+        $totalAttempts = max(1, $attempts) * 4;
         for ($attempt = 0; $attempt < $totalAttempts; $attempt++) {
             [$x, $z, $distance] = self::pickCandidate($world, $minRadius, $maxRadius);
-            if (self::teleportAtCandidate($player, $world, $minRadius, $x, $z, $distance, true)) {
+            if (self::teleportAtCandidate($player, $world, $minRadius, $maxRadius, $attempts, $x, $z, $distance, true)) {
                 return true;
             }
         }
@@ -105,7 +105,7 @@ final class WildCommand extends BaseCommand {
         return false;
     }
 
-    public static function teleportAtCandidate(Player $player, World $world, int $minRadius, int $x, int $z, int $distance, bool $allowPopulateRetry): bool
+    public static function teleportAtCandidate(Player $player, World $world, int $minRadius, int $maxRadius, int $attempts, int $x, int $z, int $distance, bool $allowPopulateRetry): bool
     {
         if (!$player->isConnected()) {
             return true;
@@ -120,16 +120,18 @@ final class WildCommand extends BaseCommand {
 
             $world->orderChunkPopulation($chunkX, $chunkZ, null);
             Loader::getInstance()->getScheduler()->scheduleDelayedTask(
-                new class($player, $world, $minRadius, $x, $z, $distance) extends Task {
+                new class($player, $world, $minRadius, $maxRadius, $attempts, $x, $z, $distance, self::POPULATION_RETRY_ATTEMPTS) extends Task {
 
                     public function __construct(
                         private Player $player,
                         private World $world,
                         private int $minRadius,
+                        private int $maxRadius,
+                        private int $attempts,
                         private int $x,
                         private int $z,
                         private int $distance,
-                        private int $remainingRetries = 3
+                        private int $remainingRetries
                     ) {}
 
                     public function onRun(): void
@@ -148,6 +150,8 @@ final class WildCommand extends BaseCommand {
                                     $this->player,
                                     $this->world,
                                     $this->minRadius,
+                                    $this->maxRadius,
+                                    $this->attempts,
                                     $this->x,
                                     $this->z,
                                     $this->distance,
@@ -159,10 +163,16 @@ final class WildCommand extends BaseCommand {
                         }
 
                         if (
-                            !WildCommand::teleportAtCandidate($this->player, $this->world, $this->minRadius, $this->x, $this->z, $this->distance, false) &&
+                            !WildCommand::teleportAtCandidate($this->player, $this->world, $this->minRadius, $this->maxRadius, $this->attempts, $this->x, $this->z, $this->distance, false) &&
                             $this->player->isConnected()
                         ) {
-                            $this->player->sendMessage(C::colorize("&r&cFailed to find a safe wilderness location. Try again."));
+                            WildCommand::searchAndTeleport(
+                                $this->player,
+                                $this->world,
+                                $this->minRadius,
+                                $this->maxRadius,
+                                max(12, intdiv($this->attempts, 2))
+                            );
                         }
                     }
                 },
@@ -235,7 +245,7 @@ final class WildCommand extends BaseCommand {
             return $topY + 1;
         }
 
-        for ($y = $topY; $y >= max(1, $topY - 12); --$y) {
+        for ($y = $topY; $y >= max(1, $topY - 24); --$y) {
             $ground = $world->getBlockAt($x, $y, $z);
             if (!$ground->isSolid() || self::isUnsafeGround($ground)) {
                 continue;

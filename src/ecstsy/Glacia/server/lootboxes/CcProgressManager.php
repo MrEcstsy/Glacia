@@ -6,6 +6,7 @@ namespace ecstsy\Glacia\server\lootboxes;
 
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\player\GlaciaPlayer;
+use ecstsy\Glacia\server\etherealcrates\EtherealCrateRepository;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\server\items\GlaciaItems;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
@@ -44,7 +45,7 @@ final class CcProgressManager
 
         GlaciaItemFactory::$definitions[self::ENHANCER_DEFINITION] = [
             "material" => $material,
-            "name" => (string) ($enhancer["name"] ?? "&r&l&dCC Enhancer"),
+            "name" => (string) ($enhancer["name"] ?? "&r&l&dEC Enhancer"),
             "lore" => $lore,
             "nbt" => [
                 "glaciaItem" => self::ENHANCER_DEFINITION,
@@ -101,7 +102,7 @@ final class CcProgressManager
         $rewardLabel = (string) ($pointReward["current-label"] ?? "Monthly CC");
         $rewardId = self::getCurrentRewardId();
         $session->setSetting("cc_points", $current);
-        $player->sendMessage(C::colorize("&r&dCC Points: &f{$current}/{$threshold} &7({$rewardLabel})"));
+        $player->sendMessage(C::colorize("&r&dEC Points: &f{$current}/{$threshold} &7({$rewardLabel})"));
 
         if ($current < $threshold || $rewardId === null) {
             return;
@@ -113,7 +114,7 @@ final class CcProgressManager
         try {
             $reward = GlaciaItemFactory::lootbox($rewardId, $player);
         } catch (\Throwable) {
-            $player->sendMessage(C::colorize("&r&cYour CC point reward is configured to an invalid lootbox."));
+            $player->sendMessage(C::colorize("&r&cYour EC point reward is configured to an invalid lootbox."));
             return;
         }
 
@@ -121,7 +122,7 @@ final class CcProgressManager
             $player->getWorld()->dropItem($player->getPosition(), $leftover);
         }
 
-        $player->sendMessage(C::colorize("&r&aCC Reward unlocked! You received &f{$rewardLabel}&a for free."));
+        $player->sendMessage(C::colorize("&r&aEC Reward unlocked! You received &f{$rewardLabel}&a for free."));
     }
 
     public static function handleEtherealCrateOpened(Player $player, array $crate) : void
@@ -154,7 +155,7 @@ final class CcProgressManager
         $rewardLabel = (string) ($pointReward["current-label"] ?? "Monthly CC");
         $rewardId = self::getCurrentRewardId();
         $session->setSetting("cc_points", $current);
-        $player->sendMessage(C::colorize("&r&dCC Points: &f{$current}/{$threshold} &7({$rewardLabel})"));
+        $player->sendMessage(C::colorize("&r&dEC Points: &f{$current}/{$threshold} &7({$rewardLabel})"));
 
         if ($current < $threshold || $rewardId === null) {
             return;
@@ -166,7 +167,7 @@ final class CcProgressManager
         try {
             $reward = GlaciaItemFactory::lootbox($rewardId, $player);
         } catch (\Throwable) {
-            $player->sendMessage(C::colorize("&r&cYour CC point reward is configured to an invalid lootbox."));
+            $player->sendMessage(C::colorize("&r&cYour EC point reward is configured to an invalid lootbox."));
             return;
         }
 
@@ -174,7 +175,7 @@ final class CcProgressManager
             $player->getWorld()->dropItem($player->getPosition(), $leftover);
         }
 
-        $player->sendMessage(C::colorize("&r&aCC Reward unlocked! You received &f{$rewardLabel}&a for free."));
+        $player->sendMessage(C::colorize("&r&aEC Reward unlocked! You received &f{$rewardLabel}&a for free."));
     }
 
     public static function getCurrentRewardId() : ?string
@@ -193,15 +194,99 @@ final class CcProgressManager
      */
     public static function getOrder() : array
     {
-        return array_values(array_filter(array_map(
-            static fn(mixed $value) : string => strtolower(trim((string) $value)),
-            (array) (self::$config["order"] ?? [])
-        ), static fn(string $value) : bool => $value !== ""));
+        return self::getGlobalOrder();
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function getGlobalOrder() : array
+    {
+        $resolved = [];
+        foreach ((array) (self::$config["order"] ?? []) as $value) {
+            $lookup = trim((string) $value);
+            if ($lookup === "") {
+                continue;
+            }
+
+            $descriptor = self::resolveRewardDescriptor($lookup);
+            $resolved[] = strtolower($descriptor["id"] ?? $lookup);
+        }
+
+        return array_values(array_unique(array_filter($resolved, static fn(string $value) : bool => $value !== "")));
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function getLootboxOrder() : array
+    {
+        return self::resolveConfiguredOrder(
+            (array) (self::$config["order"] ?? []),
+            static fn(string $lookup) : string => strtolower((string) ((LootboxRepository::getBoxByLookup($lookup) ?? [])["id"] ?? $lookup))
+        );
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function getEtherealCrateOrder() : array
+    {
+        $configured = self::$config["ethereal-crate-order"]
+            ?? self::$config["ethereal_crate_order"]
+            ?? self::$config["ethereal-order"]
+            ?? self::$config["ethereal_order"]
+            ?? [];
+
+        return self::resolveConfiguredOrder(
+            (array) $configured,
+            static fn(string $lookup) : string => strtolower((string) ((EtherealCrateRepository::getCrateByLookup($lookup) ?? [])["id"] ?? $lookup))
+        );
+    }
+
+    /**
+     * @param array<int, mixed> $entries
+     * @param \Closure(string): string $resolver
+     * @return string[]
+     */
+    private static function resolveConfiguredOrder(array $entries, \Closure $resolver) : array
+    {
+        $resolved = [];
+        foreach ($entries as $value) {
+            $lookup = trim((string) $value);
+            if ($lookup === "") {
+                continue;
+            }
+
+            $resolved[] = $resolver($lookup);
+        }
+
+        return array_values(array_unique(array_filter($resolved, static fn(string $value) : bool => $value !== "")));
     }
 
     public static function getNextLootboxId(string $currentId) : ?string
     {
-        $order = self::getOrder();
+        return self::getNextRewardId($currentId, "lootbox");
+    }
+
+    public static function getNextEtherealCrateId(string $currentId) : ?string
+    {
+        return self::getNextRewardId($currentId, "ethereal_crate");
+    }
+
+    public static function getNextRewardId(string $currentId, string $type) : ?string
+    {
+        $globalOrder = self::getGlobalOrder();
+        $globalIndex = array_search(strtolower($currentId), $globalOrder, true);
+        if ($globalIndex !== false) {
+            $next = $globalOrder[$globalIndex + 1] ?? null;
+            return is_string($next) && $next !== "" ? $next : null;
+        }
+
+        $order = match (strtolower($type)) {
+            "ethereal_crate", "etherealcrate", "crate" => self::getEtherealCrateOrder(),
+            default => self::getLootboxOrder(),
+        };
         $index = array_search(strtolower($currentId), $order, true);
         if ($index === false) {
             return null;
@@ -209,6 +294,35 @@ final class CcProgressManager
 
         $next = $order[$index + 1] ?? null;
         return is_string($next) && $next !== "" ? $next : null;
+    }
+
+    /**
+     * @return array{id: string, type: string}|null
+     */
+    public static function resolveRewardDescriptor(string $lookup) : ?array
+    {
+        $lookup = strtolower(trim($lookup));
+        if ($lookup === "") {
+            return null;
+        }
+
+        $crate = EtherealCrateRepository::getCrateByLookup($lookup);
+        if ($crate !== null) {
+            return [
+                "id" => strtolower((string) ($crate["id"] ?? $lookup)),
+                "type" => "ethereal_crate",
+            ];
+        }
+
+        $lootbox = LootboxRepository::getBoxByLookup($lookup);
+        if ($lootbox !== null) {
+            return [
+                "id" => strtolower((string) ($lootbox["id"] ?? $lookup)),
+                "type" => "lootbox",
+            ];
+        }
+
+        return null;
     }
 
     private static function isEligibleLootbox(string $boxId) : bool

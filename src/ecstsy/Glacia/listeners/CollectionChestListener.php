@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\listeners;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\collectionchests\CollectionChestManager;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\server\items\trackers\TrackerManager;
 use ecstsy\Glacia\server\factions\claims\ClaimManager;
@@ -34,7 +35,17 @@ final class CollectionChestListener implements Listener {
 
         $item = $event->getItem();
         $glaciaTag = $item->getNamedTag()->getCompoundTag("Glacia");
-        if (!$item instanceof ItemBlock || $glaciaTag === null || $glaciaTag->getString("glaciaItem", "") !== "collection_chest") {
+        if (!$item instanceof ItemBlock || $glaciaTag === null) {
+            return;
+        }
+
+        $glaciaId = $glaciaTag->getString("glaciaItem", "");
+        $chestType = match ($glaciaId) {
+            "collection_chest" => CollectionChestManager::CHEST_TYPE_COLLECTION,
+            "harvester_chest" => CollectionChestManager::CHEST_TYPE_HARVESTER,
+            default => null,
+        };
+        if ($chestType === null) {
             return;
         }
 
@@ -43,7 +54,8 @@ final class CollectionChestListener implements Listener {
         $faction = $session?->getFaction();
         if ($faction === null) {
             $event->cancel();
-            $player->sendMessage(C::colorize("&r&cYou must be in a faction to place a Collection Chest."));
+            $label = $chestType === CollectionChestManager::CHEST_TYPE_HARVESTER ? "Harvester Chest" : "Collection Chest";
+            $player->sendMessage(C::colorize("&r&cYou must be in a faction to place a {$label}."));
             PlayerUtils::playSound($player, "note.bass");
             return;
         }
@@ -53,19 +65,24 @@ final class CollectionChestListener implements Listener {
             $claim = ClaimManager::getInstance()->getClaimAtPosition($position);
             if ($claim === null || $claim->getFactionId() !== $faction->getFactionId()) {
                 $event->cancel();
-                $player->sendMessage(C::colorize("&r&cYou can only place a Collection Chest in your own claim."));
+                $label = $chestType === CollectionChestManager::CHEST_TYPE_HARVESTER ? "Harvester Chest" : "Collection Chest";
+                $player->sendMessage(C::colorize("&r&cYou can only place a {$label} in your own claim."));
                 PlayerUtils::playSound($player, "note.bass");
                 return;
             }
 
-            if (!Loader::getCollectionChestManager()->registerChest($position, $faction->getFactionId())) {
+            if (!Loader::getCollectionChestManager()->registerChest($position, $faction->getFactionId(), $chestType)) {
                 $event->cancel();
-                $player->sendMessage(C::colorize("&r&cThere is already a Collection Chest in this chunk."));
+                $label = $chestType === CollectionChestManager::CHEST_TYPE_HARVESTER ? "Harvester Chest" : "Collection Chest";
+                $player->sendMessage(C::colorize("&r&cThere is already a {$label} in this chunk."));
                 PlayerUtils::playSound($player, "note.bass");
                 return;
             }
 
-            $player->sendMessage(C::colorize("&r&aCollection Chest deployed for this chunk."));
+            $done = $chestType === CollectionChestManager::CHEST_TYPE_HARVESTER
+                ? "&r&aHarvester Chest deployed for this chunk."
+                : "&r&aCollection Chest deployed for this chunk.";
+            $player->sendMessage(C::colorize($done));
             PlayerUtils::playSound($player, "random.levelup");
             return;
         }
@@ -88,7 +105,7 @@ final class CollectionChestListener implements Listener {
         $factionId = Loader::getPlayerManager()->getSession($player)?->getFactionId();
         if ($factionId !== (string) $entry["faction_id"] && !$player->hasPermission("glacia.admin")) {
             $event->cancel();
-            $player->sendMessage(C::colorize("&r&cOnly members of the owning faction can use this Collection Chest."));
+            $player->sendMessage(C::colorize("&r&cOnly members of the owning faction can use this chest."));
             PlayerUtils::playSound($player, "note.bass");
             return;
         }
@@ -110,7 +127,10 @@ final class CollectionChestListener implements Listener {
         }
 
         $player = $event->getPlayer();
-        $event->setDrops($player->getGamemode() === GameMode::CREATIVE() ? [] : [GlaciaItemFactory::create("collection_chest")]);
+        $returnId = ((string) ($removed["chest_type"] ?? CollectionChestManager::CHEST_TYPE_COLLECTION)) === CollectionChestManager::CHEST_TYPE_HARVESTER
+            ? "harvester_chest"
+            : "collection_chest";
+        $event->setDrops($player->getGamemode() === GameMode::CREATIVE() ? [] : [GlaciaItemFactory::create($returnId)]);
 
         foreach (($removed["items"] ?? []) as $stored) {
             $template = \ecstsy\MartianUtilities\utils\ItemUtils::decodeItem((string) $stored["item_data"]);
@@ -132,7 +152,7 @@ final class CollectionChestListener implements Listener {
             $player->getWorld()->dropExperience($player->getPosition(), $storedXp);
         }
 
-        $player->sendMessage(C::colorize("&r&eCollection Chest removed. Stored items and XP were returned."));
+        $player->sendMessage(C::colorize("&r&eChest removed. Stored items and XP were returned."));
     }
 
     public function onEntityDeath(EntityDeathEvent $event): void
@@ -155,6 +175,7 @@ final class CollectionChestListener implements Listener {
                     ? TrackerManager::addProgress($hand, TrackerManager::PLAYER_KILLS)
                     : TrackerManager::addProgress($hand, TrackerManager::MOB_KILLS);
                 $updatedHand = TrackerManager::addProgress($updatedHand, TrackerManager::XP, max(0, $event->getXpDropAmount()));
+                $updatedHand = TrackerManager::addProgress($updatedHand, TrackerManager::SOULS);
 
                 if (!$updatedHand->equalsExact($hand)) {
                     $damager->getInventory()->setItemInHand($updatedHand);
@@ -166,7 +187,7 @@ final class CollectionChestListener implements Listener {
             return;
         }
 
-        if (!Loader::getCollectionChestManager()->addDropsToChunk($entity->getPosition(), $event->getDrops(), $event->getXpDropAmount())) {
+        if (!Loader::getCollectionChestManager()->addDropsToChunk($entity->getPosition(), $event->getDrops(), $event->getXpDropAmount(), CollectionChestManager::CHEST_TYPE_COLLECTION)) {
             return;
         }
 

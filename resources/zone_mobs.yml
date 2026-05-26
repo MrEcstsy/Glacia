@@ -6,6 +6,11 @@ settings:
   default-mobs-per-player: 2
   default-max-alive: 12
   default-anchor-radius: 22
+  # Keep spawned mobs close to spawner Y so they don't end up on tree canopies/map ceiling.
+  anchor-max-spawn-above: 3
+  anchor-max-spawn-below: 8
+  # Retries per spawn tick to find a valid candidate that passes all filters.
+  spawn-position-attempts: 10
   elite-min-kills: 20
   elite-max-kills: 40
   elite-health-multiplier: 1.65
@@ -14,6 +19,11 @@ settings:
   elite-xp-multiplier: 1.75
   elite-loot-multiplier: 1.45
   elite-name-prefix: "&6&lElite &r"
+  streak-broadcast-milestones:
+    - 10
+    - 25
+    - 50
+    - 100
   elite-types:
     - exploding
     - imploding
@@ -34,6 +44,8 @@ zones:
     max-alive: 10
     spawn-batch: 2
     streak-rewards: {}
+    streak-broadcast:
+      message: "&r&a{player} &7is on a &f{count}&7 kill streak in &f{zone}&7."
     mobs:
       meadow_husk:
         entity: husk
@@ -91,11 +103,13 @@ zones:
     max-alive: 12
     spawn-batch: 2
     streak-rewards: {}
+    streak-broadcast:
+      message: "&r&8{player} &7is tearing through &f{zone}&7 with a &f{count}&7 streak."
     elite-broadcast: "&r&6⚠ &fAn elite mob has spawned in &8{zone}&f! Triggered by &b{player}&f."
     mobs:
       cave_stalker:
         entity: spider
-        display: "&8Cave Stalker"
+        display: "&r&l&uCave Stalker &r&7(Tier III)"
         health: 58
         damage: 10
         speed: 0.24
@@ -114,7 +128,7 @@ zones:
             count: "1-3"
       ironbound_guard:
         entity: iron_golem
-        display: "&7Ironbound Guard"
+        display: "&r&l&8Ironbound Guard &r&7(Tier IV)"
         health: 74
         damage: 12
         speed: 0.22
@@ -137,10 +151,12 @@ zones:
     max-alive: 13
     spawn-batch: 2
     streak-rewards: {}
+    streak-broadcast:
+      message: "&r&b{player} &7has survived &f{count}&7 kills inside &f{zone}&7."
     mobs:
       frostbitten:
         entity: zombie
-        display: "&fFrostbitten"
+        display: "&r&l&fFrostbitten &r&7(Tier V)"
         health: 92
         damage: 13
         speed: 0.25
@@ -155,9 +171,13 @@ zones:
             type: item
             id: rimebound_fang
             count: "2-6"
+          - chance: 20
+            type: item
+            id: frostbitten_hide
+            count: "1-2"
       icebound_brute:
         entity: snow_golem
-        display: "&bIcebound Brute"
+        display: "&r&l&bIcebound Brute &r&7(Tier VI)"
         health: 122
         damage: 16
         speed: 0.21
@@ -172,6 +192,11 @@ zones:
             type: item
             id: glacial_heartchip
             count: 1
+            broadcast: "&r&b{player} &7pulled &f{item} &7from &f{mob} &7in &f{zone}&7."
+          - chance: 35
+            type: item
+            id: brutebone_fragment
+            count: "2-4"
 
   infernal_rift:
     enabled: true
@@ -180,19 +205,24 @@ zones:
     max-alive: 14
     spawn-batch: 2
     streak-rewards: {}
+    streak-broadcast:
+      message: "&r&c{player} &7is on a &f{count}&7 kill streak in &f{zone}&7."
     mobs:
       rift_cinder:
         entity: blaze
-        display: "&cRift Cinder"
+        display: "&r&l&cRift Cinder &r&7(Tier VII)"
         health: 155
         damage: 19
         speed: 0.26
         target-range: 22
         attack-reach: 1.8
         melee-cooldown: 13
-        ranged-cooldown: 16
+        ranged-cooldown: 24
         ideal-range-min: 8
         ideal-range-max: 15
+        projectile-type: fireball
+        projectile-speed: 0.82
+        fire-seconds: 5
         strafe-chance: 42
         retreat-when-too-close: true
         allow-melee-when-ranged: false
@@ -200,15 +230,19 @@ zones:
         xp: 125
         weight: 60
         combat-style: ranged
-        weapon: bow
+        weapon: fireball
         rewards:
           - chance: 40
             type: item
             id: rift_ash
             count: "1-3"
+          - chance: 28
+            type: item
+            id: smoldering_powder
+            count: "1-2"
       ember_revenant:
         entity: zombie_pigman
-        display: "&6Ember Revenant"
+        display: "&r&l&6Ember Revenant &r&7(Tier VIII)"
         health: 190
         damage: 22
         speed: 0.24
@@ -223,6 +257,11 @@ zones:
             type: item
             id: emberbrand_scale
             count: "1-2"
+            broadcast: "&r&c{player} &7dragged &f{item} &7out of &f{mob} &7in &f{zone}&7."
+          - chance: 24
+            type: item
+            id: charred_relic
+            count: 1
 
   endfall:
     enabled: true
@@ -231,10 +270,12 @@ zones:
     max-alive: 15
     spawn-batch: 2
     streak-rewards: {}
+    streak-broadcast:
+      message: "&r&d{player} &7has reached a &f{count}&7 kill streak in &f{zone}&7."
     mobs:
       endfall_wraith:
         entity: enderman
-        display: "&dEndfall Wraith"
+        display: "&r&l&dEndfall Wraith &r&7(Tier IX)"
         health: 230
         damage: 26
         speed: 0.28
@@ -249,9 +290,13 @@ zones:
             type: item
             id: voidglass_shard
             count: 1
+          - chance: 24
+            type: item
+            id: fractured_echo
+            count: 1
       voidbound_knight:
         entity: iron_golem
-        display: "&5Voidbound Knight"
+        display: "&r&l&5Voidbound Knight &r&7(Tier X)"
         health: 285
         damage: 30
         speed: 0.23
@@ -265,4 +310,67 @@ zones:
           - chance: 25
             type: item
             id: endfallen_relic
+            count: "1-2"
+            broadcast: "&r&d{player} &7secured &f{item} &7from &f{mob} &7in &f{zone}&7."
+          - chance: 20
+            type: item
+            id: voidsteel_fragment
+            count: 1
+
+  warzone:
+    enabled: false
+    mobs:
+      storm_herald:
+        entity: iron_golem
+        display: "&r&l&bStorm Herald"
+        health: 420
+        damage: 28
+        speed: 0.24
+        target-range: 20
+        attack-reach: 2.8
+        melee-cooldown: 10
+        xp: 260
+        weight: 1
+        rewards:
+          - type: item
+            id: glacial_heartchip
+            count: "3-5"
+          - type: item
+            id: simplebook
+            count: "1-2"
+      astral_revenant:
+        entity: enderman
+        display: "&r&l&5Astral Revenant"
+        health: 500
+        damage: 32
+        speed: 0.31
+        target-range: 22
+        attack-reach: 3.0
+        melee-cooldown: 9
+        xp: 320
+        weight: 1
+        rewards:
+          - type: item
+            id: endfallen_relic
+            count: "2-4"
+          - type: item
+            id: simplebook
+            count: "1-2"
+      ember_colossus:
+        entity: iron_golem
+        display: "&r&l&6Ember Colossus"
+        health: 560
+        damage: 34
+        speed: 0.25
+        target-range: 19
+        attack-reach: 2.9
+        melee-cooldown: 10
+        xp: 340
+        weight: 1
+        rewards:
+          - type: item
+            id: emberbrand_scale
+            count: "3-5"
+          - type: item
+            id: simplebook
             count: "1-2"

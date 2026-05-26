@@ -11,12 +11,17 @@ use pocketmine\world\Position;
 use pocketmine\world\World;
 
 final class FactionClaim {
+    public const TYPE_NORMAL = "normal";
+    public const TYPE_CORE = "core";
+    public const TYPE_RAID = "raid";
+    public const TYPE_PREMIUM = "premium";
 
     public function __construct(
         private string $factionId,
         private int $chunkX,
         private int $chunkZ,
-        private string $worldName
+        private string $worldName,
+        private string $claimType = self::TYPE_NORMAL
     ){}
 
     public function getFactionId(): string {
@@ -35,6 +40,26 @@ final class FactionClaim {
         return $this->worldName;
     }
 
+    public function getClaimType(): string {
+        return $this->claimType;
+    }
+
+    public function setClaimType(string $claimType): void {
+        $this->claimType = self::normalizeType($claimType);
+    }
+
+    public function isCore(): bool {
+        return $this->claimType === self::TYPE_CORE;
+    }
+
+    public function isRaid(): bool {
+        return $this->claimType === self::TYPE_RAID;
+    }
+
+    public function isPremium(): bool {
+        return $this->claimType === self::TYPE_PREMIUM;
+    }
+
     public function getWorld(): ?World {
         return Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
     }
@@ -48,5 +73,14 @@ final class FactionClaim {
 
     public function getFaction(): ?Faction{
         return FactionManager::getInstance()->getFaction($this->factionId);
+    }
+
+    public static function normalizeType(string $claimType): string {
+        return match (strtolower(trim($claimType))) {
+            self::TYPE_CORE => self::TYPE_CORE,
+            self::TYPE_RAID => self::TYPE_RAID,
+            self::TYPE_PREMIUM => self::TYPE_PREMIUM,
+            default => self::TYPE_NORMAL,
+        };
     }
 }

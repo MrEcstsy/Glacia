@@ -16,7 +16,7 @@ final class RuneswellProcBonus
 {
     private const AXE_ENCHANTS = [
         "bleed", "cleave", "berserk", "confusion", "fear", "holy", "pummel", "phantom", "demonicfinisher", "insanity",
-        "jeopardy", "thunderfamine", "runeswell", "supplyscour", "trifoldrend", "discordverdict", "alchemistedge", "ironmuzzle", "bossslayer", "destruction",
+        "jeopardy", "thunderfamine", "runevein", "marauder", "thirdeye", "severance", "alembic", "lockjaw", "bossslayer", "destruction",
     ];
 
     public static function getForRoll(Player $player, string $enchantKey): int
@@ -28,8 +28,8 @@ final class RuneswellProcBonus
         if (!($h instanceof Axe)) {
             return 0;
         }
-        $l = CustomEnchantmentManager::getLevel($h, "runeswell");
-        $per = max(0, EnchantTuningManager::getInt("runeswell", "axe-proc-bonus-per-level", 2));
+        $l = CustomEnchantmentManager::getLevel($h, "runevein");
+        $per = max(0, EnchantTuningManager::getInt("runevein", "axe-proc-bonus-per-level", 2));
         return $l > 0 ? $per * $l : 0;
     }
 }

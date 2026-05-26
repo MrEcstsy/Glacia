@@ -6,6 +6,7 @@ namespace ecstsy\Glacia\server\factions;
 
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\factions\claims\ClaimManager;
+use ecstsy\Glacia\server\factions\guardian\FactionGuardianManager;
 use ecstsy\Glacia\server\factions\relations\RelationManager;
 use ecstsy\Glacia\utils\QueryStmts;
 use pocketmine\Server;
@@ -104,6 +105,7 @@ final class FactionManager {
     }
 
     public function deleteFaction(string $id): void {
+        FactionGuardianManager::deleteFaction($id);
         unset($this->factions[$id]);
 
         Loader::getDatabase()->executeChange(QueryStmts::FACTIONS_DELETE, [
@@ -159,5 +161,10 @@ final class FactionManager {
         foreach ($this->factions as $faction) {
             $faction->recalculateSpawnerWorth();
         }
+    }
+
+    public function resetSeasonState(): void
+    {
+        $this->factions = [];
     }
 }

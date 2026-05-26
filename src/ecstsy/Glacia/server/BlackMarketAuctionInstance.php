@@ -128,6 +128,11 @@ final class BlackMarketAuctionInstance {
         if ($item !== null && $winner !== "") {
             $this->addHistoryEntry($listingName, $item, $winner, $finalBid, $this->startingBid, true);
             BlackMarketAuctionManager::getInstance()->giveAuctionToWinner($winner, $item, $finalBid);
+            $winnerSession = PlayerManager::getInstance()->getSessionByName($winner);
+            if (($winnerPlayer = $winnerSession?->getPlayer()) instanceof Player) {
+                Loader::getQuestBoardManager()->noteBahOutcome($winnerPlayer);
+                Loader::getQuestBoardManager()->resetBahStreakForAllExcept($winnerPlayer->getUniqueId()->toString());
+            }
 
             $message = "&r&l&6BAH &r&8» &e{$winner} &ewon {$listingName} &efor &a$" . number_format($finalBid) . " &7(Starting Bid: &a$" . number_format($this->startingBid) . "&7)";
             BlackMarketAuctionManager::getInstance()->messageAll(TextFormat::colorize(self::sanitizeText($message)));

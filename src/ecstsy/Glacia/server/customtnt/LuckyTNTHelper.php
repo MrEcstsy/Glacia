@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\customtnt;
 
 use ecstsy\Glacia\blocks\tiles\SpawnerTile;
+use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\server\items\GlaciaSpawnerItem;
 use pocketmine\block\MonsterSpawner;
 use pocketmine\data\bedrock\LegacyEntityIdToStringIdMap;
@@ -91,6 +92,12 @@ final class LuckyTNTHelper {
             $drop->setCount(min($total, $maxStackSize));
             $world->dropItem($pos->add(0.5, 0.5, 0.5), $drop);
             $total -= $drop->getCount();
+        }
+
+        if ($tile->getAugmentCount() > 0) {
+            $augment = GlaciaItemFactory::create("spawner_augment");
+            $augment->setCount($tile->getAugmentCount());
+            $world->dropItem($pos->add(0.5, 0.5, 0.5), $augment);
         }
     }
 }

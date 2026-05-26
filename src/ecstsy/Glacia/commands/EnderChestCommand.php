@@ -27,6 +27,6 @@ final class EnderChestCommand extends BaseCommand {
 
     public function getPermission() : string
     {
-        return "glacia.default";
+        return "glacia.command.enderchest";
     }
 }

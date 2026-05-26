@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\utils\screens\blackmarket;
 
 use ecstsy\Glacia\server\blackmarket\BlackMarketAuctionManager;
+use ecstsy\MartianUtilities\utils\PlayerUtils;
 use ecstsy\MartianUtilities\utils\screens\BaseScreen;
 use muqsit\invmenu\InvMenu;
 use muqsit\invmenu\transaction\DeterministicInvMenuTransaction;
@@ -31,12 +32,14 @@ final class BlackMarketLootTableScreen extends BaseScreen {
             $total = count($this->getEntries());
 
             if ($slot === 45 && $this->page > 1) {
+                PlayerUtils::playSound($transaction->getPlayer(), "random.click");
                 $this->page--;
                 $this->build();
                 return;
             }
 
             if ($slot === 49) {
+                PlayerUtils::playSound($transaction->getPlayer(), "random.click");
                 $transaction->getPlayer()->removeCurrentWindow();
                 $transaction->then(function() use ($transaction): void {
                     BlackMarketScreen::display($transaction->getPlayer());
@@ -45,6 +48,7 @@ final class BlackMarketLootTableScreen extends BaseScreen {
             }
 
             if ($slot === 53 && $this->page * self::ITEMS_PER_PAGE < $total) {
+                PlayerUtils::playSound($transaction->getPlayer(), "random.click");
                 $this->page++;
                 $this->build();
             }
@@ -61,6 +65,7 @@ final class BlackMarketLootTableScreen extends BaseScreen {
     public static function display(Player $player): void
     {
         (new self($player))->getMenu()->send($player);
+        PlayerUtils::playSound($player, "random.click", 1.0, 1.05);
     }
 
     private function build(): void

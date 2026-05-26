@@ -346,4 +346,11 @@ final class PlayerVaultManager {
 
         return false;
     }
+
+    public function resetSeasonState() : void
+    {
+        $this->vaults = [];
+        $this->openEditors = [];
+        $this->dirty = false;
+    }
 }

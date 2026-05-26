@@ -1,85 +1,99 @@
+---
 jackpot:
   ticket-price: 10000
   interval: 7200
-
 tax:
-  jackpot: 0.10
-
+  jackpot: 0.1
+  coinflip: 5.0
 settings:
   server:
     auto-inventory:
       enabled: true
-
-tebex:
-  enabled: false
-  # Tebex secret from your Tebex webstore game server page.
-  secret: ""
-  # How often to poll Tebex command queue.
-  poll-seconds: 30
-
-voting:
-  enabled: false
-  # API key from minecraftpocket-servers.com (TopVoter uses this provider).
-  api-key: ""
-  auto-claim-on-join: true
-  # Local anti-duplicate window after a successful claim (default: 24h).
-  claim-cooldown-seconds: 86400
-  vote-sites:
-    - "https://minecraftpocket-servers.com/server/000000/"
-  rewards:
-    items:
-      - type: money_note
-        amount: 100000
-      - type: lootbox
-        id: vote
-    # Console commands executed when a vote is claimed.
-    commands: []
-
+souls:
+  enabled: true
+  tracker-lore: "&r&8> &r&7Souls: {souls}"
+  soulgem:
+    require-matching-book-group: false
+  # tier1 / tier2 / tier3 apply to item types: Soul Gem (Stable), Efficiency Soul Conduit, Overload Soul Conduit.
+  # Older gear merged before conduit types may still use soul-count thresholds until rebound.
+  tiers:
+    tier1:
+      min: 1
+      mode: "Stable"
+      color: "&a"
+      cost-multiplier: 1.0
+    tier2:
+      min: 10000
+      mode: "Efficiency"
+      color: "&6"
+      cost-multiplier: 0.75
+    tier3:
+      min: 25000
+      mode: "Overload"
+      color: "&4"
+      cost-multiplier: 0.5
+      siphon-chance: 20
+      siphon-amount: 1
+  default-costs-by-group:
+    mastery: 6
+    exclusive: 7
+  costs:
+    detonate: 0
+    satanstreat: 0
+# moved to tebex.yml
+# moved to voting.yml
 death-inventory-log:
   enabled: true
   max-entries-per-player: 30
-
-worlds:
-  enabled: true
-  auto-load: true
-  # Definitions here tell Glacia which worlds it should understand and manage.
-  definitions:
-    world:
-      # Supported generators include: normal, flat, vanilla_overworld, vanilla_nether, end
-      generator: vanilla_overworld
-      # Leave blank to use a random seed the first time the world is generated.
-      seed: ""
-      # Most generators can leave this blank unless you intentionally use a custom preset.
-      preset: ""
-      auto-load: true
-      auto-generate: false
-    nether:
-      generator: vanilla_nether
-      seed: ""
-      preset: ""
-      auto-load: true
-      auto-generate: false
-    end:
-      generator: end
-      seed: ""
-      preset: astral_veil
-      auto-load: true
-      auto-generate: false
-
-# JSON line logs under plugin_data/Glacia/logs/ — staff also mirrors Discord webhooks via logAdminAction.
+# moved to redstone.yml
 audit-log:
   staff-enabled: true
   faction-enabled: true
-  # Toggle Discord mirror for staff actions sent via GlaciaUtils::logAdminAction.
   staff-discord-enabled: true
-  # Optional Discord webhook URL for staff audit messages. Leave blank to disable webhook delivery.
   staff-discord-webhook: ""
-  # Keep high-volume actions in file logs but suppress them from Discord webhook.
   staff-discord-muted-actions:
-    - "Give Item"
-  # Rotate audit files before they grow too large.
+  - Give Item
   max-file-mb: 25
-  # Keep at most this many rotated backups per audit file.
   max-backups: 5
-  # Delete rotated backups older than this many days (0 disables age pruning).
   prune-days: 30
+worlds:
+  definitions:
+    world_the_end:
+      generator: end
+      seed: ~
+      preset: ""
+      auto-load: true
+      auto-generate: true
+    crystal_cave:
+      generator: flat
+      seed: ~
+      preset: ""
+      auto-load: true
+      auto-generate: true
+      gamerules:
+        randomtickspeed: 0
+    vedum:
+      generator: flat
+      seed: ~
+      preset: ""
+      auto-load: true
+      auto-generate: true
+      gamerules:
+        randomtickspeed: 0
+    end:
+      generator: normal
+      seed: ~
+      preset: ""
+      auto-load: false
+      auto-generate: false
+      gamerules:
+        dodaylightcycle: false
+    FrostbiteValley:
+      generator: flat
+      seed: ~
+      preset: ""
+      auto-load: true
+      auto-generate: true
+      gamerules:
+        randomtickspeed: 0
+...

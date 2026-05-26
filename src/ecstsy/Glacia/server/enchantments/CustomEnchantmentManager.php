@@ -13,9 +13,14 @@ final class CustomEnchantmentManager
 
     public static function applyEnchantment(Item $item, CustomEnchantment $enchantment, int $level): void
     {
-        $maxLevel = $enchantment->getMaxLevel();
-        if ($level > $maxLevel) {
-            $level = $maxLevel;
+        self::setEnchantmentLevel($item, $enchantment, $level, true);
+    }
+
+    public static function setEnchantmentLevel(Item $item, CustomEnchantment $enchantment, int $level, bool $respectMaxLevel = true): void
+    {
+        $level = max(1, $level);
+        if ($respectMaxLevel) {
+            $level = min($level, $enchantment->getMaxLevel());
         }
 
         $root = $item->getNamedTag();
@@ -69,6 +74,24 @@ final class CustomEnchantmentManager
             }
         }
         return $result;
+    }
+
+    /**
+     * Raw count of entries under {@code GlaciaCES} (includes legacy id keys not mapped by {@see getEnchantments}).
+     */
+    public static function countGlaciaCesEntries(Item $item): int
+    {
+        $enchTag = $item->getNamedTag()->getCompoundTag("GlaciaCES");
+        if ($enchTag === null) {
+            return 0;
+        }
+
+        $n = 0;
+        foreach ($enchTag->getValue() as $_) {
+            $n++;
+        }
+
+        return $n;
     }
 
     public static function hasEnchantment(Item $item, string $enchantName): bool {

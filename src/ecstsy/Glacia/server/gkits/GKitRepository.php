@@ -8,6 +8,7 @@ use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\player\GlaciaPlayer;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
+use ecstsy\Glacia\server\items\pets\PetManager;
 use ecstsy\Glacia\server\kits\KitRepository;
 use ecstsy\Glacia\utils\RewardResolver;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
@@ -102,7 +103,8 @@ final class GKitRepository
             return false;
         }
 
-        $items = self::resolveItemsForLevel($kit, $level);
+        $gkitCharmBonus = PetManager::getGKitUpgradeCharmBonus($player);
+        $items = self::resolveItemsForLevel($kit, $level, $gkitCharmBonus);
         if ($items === []) {
             $player->sendMessage(C::colorize("&r&cThis GKit has no valid items configured."));
             return false;
@@ -119,6 +121,11 @@ final class GKitRepository
         $player->sendMessage(C::colorize("&r&aClaimed &f" . ((string) $kit["display"]) . "&r&a at level &f" . $level . "&a."));
         if ($overflow !== []) {
             $player->sendMessage(C::colorize("&r&eSome items were sent to your collection because your inventory was full."));
+        }
+
+        if ($gkitCharmBonus > 0) {
+            PetManager::consumeGKitUpgradeCharm($player);
+            $player->sendMessage(C::colorize("&r&eCrownspire Kestrel &r&7consumed its GKit empowerment on this pull."));
         }
 
         return true;
@@ -141,7 +148,7 @@ final class GKitRepository
         return true;
     }
 
-    public static function resolveItemsForLevel(array $kit, int $level): array
+    public static function resolveItemsForLevel(array $kit, int $level, int $petGkitEnchantUpgradeBonus = 0): array
     {
         $resolved = [];
         foreach ((array) ($kit["items"] ?? []) as $entry) {
@@ -149,7 +156,7 @@ final class GKitRepository
                 continue;
             }
 
-            $item = RewardResolver::resolveItem(self::applyKitItemDefaults(self::applyLevelScaling($entry, $kit, $level), $kit));
+            $item = RewardResolver::resolveItem(self::applyKitItemDefaults(self::applyLevelScaling($entry, $kit, $level, $petGkitEnchantUpgradeBonus), $kit));
             if ($item !== null) {
                 $resolved[] = $item;
             }
@@ -163,7 +170,7 @@ final class GKitRepository
                 continue;
             }
 
-            $item = RewardResolver::resolveItem(self::applyKitItemDefaults(self::applyLevelScaling($entry, $kit, $level), $kit));
+            $item = RewardResolver::resolveItem(self::applyKitItemDefaults(self::applyLevelScaling($entry, $kit, $level, $petGkitEnchantUpgradeBonus), $kit));
             if ($item !== null) {
                 $resolved[] = $item;
             }
@@ -325,7 +332,7 @@ final class GKitRepository
      * @param array<string, mixed> $kit
      * @return array<string, mixed>
      */
-    private static function applyLevelScaling(array $entry, array $kit, int $gkitLevel): array
+    private static function applyLevelScaling(array $entry, array $kit, int $gkitLevel, int $petUpgradeRollBonus = 0): array
     {
         if (!isset($entry["enchantments"]) || !is_array($entry["enchantments"])) {
             return $entry;
@@ -370,10 +377,14 @@ final class GKitRepository
             // Respect configured min/max as an actual roll range instead of pinning at level 1.
             $finalLevel = $maxLevel > $baseLevel ? mt_rand($baseLevel, $maxLevel) : $baseLevel;
 
-            // Optional "upgrade chance per level" can still add extra upward pressure at higher gkit levels.
-            if ($gkitLevel > 1 && $chancePerLevel > 0 && $finalLevel < $maxLevel) {
-                $extraChance = min(90, ($gkitLevel - 1) * $chancePerLevel);
-                while ($finalLevel < $maxLevel && mt_rand(1, 100) <= $extraChance) {
+            // Optional "upgrade chance per level" plus Crownspire Kestrel (+N% per successful roll tick).
+            if ($finalLevel < $maxLevel) {
+                $extraChance = 0;
+                if ($gkitLevel > 1 && $chancePerLevel > 0) {
+                    $extraChance = min(90, ($gkitLevel - 1) * $chancePerLevel);
+                }
+                $extraChance = min(100, $extraChance + max(0, $petUpgradeRollBonus));
+                while ($finalLevel < $maxLevel && $extraChance > 0 && mt_rand(1, 100) <= $extraChance) {
                     $finalLevel++;
                     $extraChance = max(5, $extraChance - 12);
                 }

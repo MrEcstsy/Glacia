@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\network;
 
+use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\utils\StorageUtils;
 use pocketmine\entity\InvalidSkinException;
 use pocketmine\entity\Skin;
@@ -20,6 +21,9 @@ use pocketmine\network\mcpe\protocol\types\skin\SkinData;
  */
 final class PersonaTolerantSkinAdapter extends LegacySkinAdapter
 {
+    private const FALLBACK_PNG_RESOURCE = "skins/invalid_default.png";
+    private const FALLBACK_RAW_RESOURCE = "skins/invalid_default.rgba";
+
     public function fromSkinData(SkinData $data): Skin
     {
         if (!$data->isPersona()) {
@@ -53,9 +57,69 @@ final class PersonaTolerantSkinAdapter extends LegacySkinAdapter
         }
 
         try {
-            return new Skin('Persona_Fallback', self::neutralHumanoidTexture(), '', 'geometry.humanoid.custom', '');
+            return new Skin('Persona_Fallback', self::loadFallbackTexture(), '', 'geometry.humanoid.custom', '');
         } catch (InvalidSkinException) {
             return parent::fromSkinData($data);
+        }
+    }
+
+    private static function loadFallbackTexture(): string
+    {
+        $pngTexture = self::loadFallbackTextureFromPng();
+        if ($pngTexture !== '') {
+            return $pngTexture;
+        }
+
+        $resourcePath = Loader::getInstance()->getResourcePath(self::FALLBACK_RAW_RESOURCE);
+        $raw = @file_get_contents($resourcePath);
+        if (is_string($raw) && in_array(strlen($raw), Skin::ACCEPTED_SKIN_SIZES, true)) {
+            return $raw;
+        }
+
+        return self::neutralHumanoidTexture();
+    }
+
+    private static function loadFallbackTextureFromPng(): string
+    {
+        if (!function_exists('imagecreatefrompng') || !function_exists('imagecolorat')) {
+            return '';
+        }
+
+        $resourcePath = Loader::getInstance()->getResourcePath(self::FALLBACK_PNG_RESOURCE);
+        if (!is_file($resourcePath)) {
+            return '';
+        }
+
+        try {
+            $image = @imagecreatefrompng($resourcePath);
+            if ($image === false) {
+                return '';
+            }
+
+            $width = imagesx($image);
+            $height = imagesy($image);
+            $expectedLength = $width * $height * 4;
+            if (!in_array($expectedLength, Skin::ACCEPTED_SKIN_SIZES, true)) {
+                imagedestroy($image);
+                return '';
+            }
+
+            $out = '';
+            for ($y = 0; $y < $height; $y++) {
+                for ($x = 0; $x < $width; $x++) {
+                    $argb = imagecolorat($image, $x, $y);
+                    $alpha = ($argb >> 24) & 0x7F;
+                    $red = ($argb >> 16) & 0xFF;
+                    $green = ($argb >> 8) & 0xFF;
+                    $blue = $argb & 0xFF;
+                    $out .= chr($red) . chr($green) . chr($blue) . chr((int) round((127 - $alpha) * 255 / 127));
+                }
+            }
+            imagedestroy($image);
+
+            return $out;
+        } catch (\Throwable) {
+            return '';
         }
     }
 

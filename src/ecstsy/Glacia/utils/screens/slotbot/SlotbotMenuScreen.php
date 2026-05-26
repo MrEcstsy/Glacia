@@ -8,12 +8,12 @@ use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
 use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\Glacia\server\slotbot\SlotbotRewardRepository;
+use ecstsy\Glacia\utils\inventory\CustomSizedInvMenu;
 use ecstsy\Glacia\utils\RewardAnnouncer;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use ecstsy\MartianUtilities\utils\screens\BaseScreen;
 use muqsit\invmenu\InvMenu;
 use muqsit\invmenu\transaction\DeterministicInvMenuTransaction;
-use muqsit\invmenu\type\InvMenuTypeIds;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\block\utils\DyeColor;
 use pocketmine\inventory\Inventory;
@@ -36,6 +36,7 @@ final class SlotbotMenuScreen extends BaseScreen {
     private const TAG_SPIN = "glacia_slotbot_spin";
     private const TAG_HELP = "glacia_slotbot_help";
     private const TAG_ADD_TICKETS = "glacia_slotbot_add_tickets";
+    private const TAG_ADD_ALL_TICKETS = "glacia_slotbot_add_all_tickets";
     private const TAG_EMPTY_SLOT = "glacia_slotbot_empty_slot";
 
     private InvMenu $menu;
@@ -48,7 +49,7 @@ final class SlotbotMenuScreen extends BaseScreen {
 
     public function __construct(private Player $player)
     {
-        $this->menu = InvMenu::create(InvMenuTypeIds::TYPE_DOUBLE_CHEST);
+        $this->menu = CustomSizedInvMenu::create(54);
         $this->menu->setName(C::colorize("&r&l&dSlotbot &8> &r&8Main Menu"));
         $this->rewards = SlotbotRewardRepository::getRewards();
 
@@ -101,6 +102,7 @@ final class SlotbotMenuScreen extends BaseScreen {
             "&r&7View the normal and jackpot loot tables."
         ]));
         $inventory->setItem(8, $this->createAddTicketItem(false));
+        $inventory->setItem(7, $this->createAddAllTicketsItem(false));
         $inventory->setItem(26, $this->createSpinItem(false));
         $inventory->setItem(53, $this->createMenuItem(VanillaItems::BOOK(), "&r&l&bHow To Play", self::TAG_HELP, [
             "&r&d1. &r&7Insert up to 5 slot tickets.",
@@ -125,6 +127,10 @@ final class SlotbotMenuScreen extends BaseScreen {
 
         if ($tag->getTag(self::TAG_ADD_TICKETS) !== null) {
             $this->addTicket($player);
+            return false;
+        }
+        if ($tag->getTag(self::TAG_ADD_ALL_TICKETS) !== null) {
+            $this->addAllTickets($player);
             return false;
         }
 
@@ -200,7 +206,26 @@ final class SlotbotMenuScreen extends BaseScreen {
         $filledCount = count($this->getFilledTicketSlots());
         $this->menu->getInventory()->setItem(26, $this->createSpinItem($filledCount > 0));
         $this->menu->getInventory()->setItem(8, $this->createAddTicketItem($filledCount >= 5));
+        $this->menu->getInventory()->setItem(7, $this->createAddAllTicketsItem($filledCount >= 5));
         PlayerUtils::playSound($player, "random.orb");
+    }
+
+    private function addAllTickets(Player $player): void
+    {
+        $addedAny = false;
+        while ($this->getEmptyTicketSlots() !== []) {
+            $ticketData = $this->findFirstTicket($player);
+            if ($ticketData === null) {
+                break;
+            }
+
+            $this->addTicket($player);
+            $addedAny = true;
+        }
+
+        if (!$addedAny) {
+            PlayerUtils::playSound($player, "note.bass");
+        }
     }
 
     private function removeTicket(Player $player, int $slot): void
@@ -209,15 +234,17 @@ final class SlotbotMenuScreen extends BaseScreen {
             return;
         }
 
+        $ticket = clone $this->menu->getInventory()->getItem($slot);
         $this->menu->getInventory()->setItem($slot, $this->createEmptyTicketSlotItem($slot - 46));
 
-        foreach ($player->getInventory()->addItem($this->createTicketRefund($this->menu->getInventory()->getItem($slot))) as $leftover) {
+        foreach ($player->getInventory()->addItem($this->createTicketRefund($ticket)) as $leftover) {
             $player->getWorld()->dropItem($player->getPosition(), $leftover);
         }
 
         $filledCount = count($this->getFilledTicketSlots());
         $this->menu->getInventory()->setItem(26, $this->createSpinItem($filledCount > 0));
         $this->menu->getInventory()->setItem(8, $this->createAddTicketItem($filledCount >= 5));
+        $this->menu->getInventory()->setItem(7, $this->createAddAllTicketsItem($filledCount >= 5));
         PlayerUtils::playSound($player, "random.fizz");
     }
 
@@ -268,7 +295,7 @@ final class SlotbotMenuScreen extends BaseScreen {
                 PlayerUtils::playSound($player, "random.orb");
                 $ticks += 5;
             }
-        ), 5);
+        ), 3);
     }
 
     private function animateColumns(array $filledSlots): void
@@ -320,16 +347,29 @@ final class SlotbotMenuScreen extends BaseScreen {
         }
 
         $session = Loader::getPlayerManager()->getSession($this->player);
-        if ($session !== null) {
-            foreach ($this->player->getInventory()->addItem(...$rewards) as $leftover) {
+        $recipient = $session?->getPlayer();
+        if ($recipient instanceof Player && $recipient->isConnected()) {
+            Loader::getQuestBoardManager()->recordProgress($recipient, "slotbot_tickets_rolled", count($filledSlots));
+            foreach ($recipient->getInventory()->addItem(...$rewards) as $leftover) {
                 $session->addItemToCollection($leftover);
             }
+        } elseif ($session !== null) {
+            foreach ($rewards as $reward) {
+                $session->addItemToCollection($reward);
+            }
+        }
 
+        if ($session !== null) {
             $session->addSlotCredits(count($rewards));
         }
 
         $savedTickets = 0;
-        if (!$forced && RuneManager::hasPassiveRune($this->player, "slotkeeper")) {
+        if (
+            !$forced &&
+            $recipient instanceof Player &&
+            $recipient->isConnected() &&
+            RuneManager::hasPassiveRune($recipient, "slotkeeper")
+        ) {
             foreach ($filledSlots as $slot) {
                 if (mt_rand(1, 100) > RuneManager::getPassiveChance("slotkeeper", 20)) {
                     continue;
@@ -337,14 +377,16 @@ final class SlotbotMenuScreen extends BaseScreen {
 
                 $savedTickets++;
                 $refund = $this->createTicketRefund($this->menu->getInventory()->getItem($slot));
-                foreach ($this->player->getInventory()->addItem($refund) as $leftover) {
+                foreach ($recipient->getInventory()->addItem($refund) as $leftover) {
                     $session?->addItemToCollection($leftover);
                 }
             }
         }
 
-        RewardAnnouncer::announce($this->player, "Slotbot", "Slotbot", $rewards);
-        PlayerUtils::playSound($this->player, "random.levelup");
+        if ($recipient instanceof Player && $recipient->isConnected()) {
+            RewardAnnouncer::announce($recipient, "Slotbot", "Slotbot", $rewards);
+            PlayerUtils::playSound($recipient, "random.levelup");
+        }
 
         $this->status = self::STATUS_DONE;
         $this->pendingRewards = [];
@@ -380,6 +422,19 @@ final class SlotbotMenuScreen extends BaseScreen {
 
         return $this->createMenuItem(VanillaItems::DYE()->setColor(DyeColor::LIME()), "&r&l&aAdd Tickets", self::TAG_ADD_TICKETS, [
             "&r&7Click here to insert one slot ticket."
+        ]);
+    }
+
+    private function createAddAllTicketsItem(bool $full): Item
+    {
+        if ($full) {
+            return $this->createMenuItem(VanillaItems::DYE()->setColor(DyeColor::YELLOW()), "&r&l&eAdd All &r&7(Full)", self::TAG_ADD_ALL_TICKETS, [
+                "&r&7All ticket slots are already filled."
+            ]);
+        }
+
+        return $this->createMenuItem(VanillaItems::DYE()->setColor(DyeColor::YELLOW()), "&r&l&eAdd All", self::TAG_ADD_ALL_TICKETS, [
+            "&r&7Fill every open slot with tickets from your inventory."
         ]);
     }
 

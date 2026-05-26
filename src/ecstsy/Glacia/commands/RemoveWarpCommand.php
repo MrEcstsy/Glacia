@@ -23,17 +23,17 @@ final class RemoveWarpCommand extends BaseCommand {
         $warpName = isset($args["warp"]) ? $args["warp"] : null;
 
         if ($warpName === null || trim($warpName) === "") {
-            $sender->sendMessage(C::RED . "Usage: /removewarp <warp>");
+            $sender->sendMessage(C::colorize("&cUsage: /removewarp <warp>"));
             return;
         }
 
         $warp = Loader::getWarpManager()->getWarp($warpName);
         if ($warp !== null) {
             Loader::getWarpManager()->deleteWarp($warp);
-            $sender->sendMessage(C::DARK_RED . "Warp '{$warpName}' has been deleted.");
+            $sender->sendMessage(C::colorize("&4Warp '{$warpName}' has been deleted."));
             return;
         }
-        $sender->sendMessage(C::RED . "Warp '{$warpName}' does not exist.");
+        $sender->sendMessage(C::colorize("&cWarp '{$warpName}' does not exist."));
     }
 
     public function getPermission(): string {

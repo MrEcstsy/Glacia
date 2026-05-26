@@ -1,0 +1,230 @@
+---
+enabled: true
+request-expire-seconds: 30
+default-duration-seconds: 180
+duration-options-seconds:
+- 60
+- 120
+- 180
+- 240
+- 300
+max-wager: 100000000
+allowed-commands:
+- duel
+- heal
+- feed
+- bless
+- msg
+- r
+- reply
+- tell
+- w
+- whisper
+arena:
+  world: world
+  center:
+    world: world
+    x: 225.552
+    "y": 202
+    z: 142.461
+    yaw: 82.777
+    pitch: 76.089
+  radius: 32
+  spawn1:
+    world: world
+    x: 206.533
+    "y": 202
+    z: 142.515
+    yaw: 269.508
+    pitch: 7.494
+  spawn2:
+    world: world
+    x: 244.503
+    "y": 202
+    z: 142.502
+    yaw: 94.101
+    pitch: 89.9
+  cleanup-radius-padding: 4
+  min-y: 202
+  max-y: 221
+loadouts:
+  allowed-gkits:
+    - soulrender
+    - nightreign
+    - skywarden
+    - kyrostellar
+    - astralmancer
+    - gravebound
+    - everfrost
+  preset-sets:
+    nodebuff:
+      display: "&b&lNoDebuff"
+      effects:
+        - effect: speed
+          level: 2
+        - effect: fire_resistance
+          level: 1
+      fill-empty:
+        material: strong_healing_splash_potion
+
+      items:
+        - material: diamond_sword
+          enchants:
+            - enchant: sharpness
+              level: 5
+            - enchant: unbreaking
+              level: 3
+            - enchant: fire_aspect
+              level: 2
+
+        - material: diamond_helmet
+          enchants:
+            - enchant: protection
+              level: 4
+            - enchant: unbreaking
+              level: 3
+
+        - material: diamond_chestplate
+          enchants:
+            - enchant: protection
+              level: 4
+            - enchant: unbreaking
+              level: 3
+
+        - material: diamond_leggings
+          enchants:
+            - enchant: protection
+              level: 4
+            - enchant: unbreaking
+              level: 3
+
+        - material: diamond_boots
+          enchants:
+            - enchant: protection
+              level: 4
+            - enchant: unbreaking
+              level: 3
+
+        - material: ender_pearl
+          count: 16
+
+        - material: cooked_beef
+          count: 32
+    gapple:
+      display: "&6&lGapple"
+
+      items:
+        - material: diamond_sword
+          enchants:
+            - enchant: sharpness
+              level: 5
+            - enchant: fire_aspect
+              level: 2
+
+        - material: diamond_helmet
+          enchants:
+            - enchant: protection
+              level: 4
+
+        - material: diamond_chestplate
+          enchants:
+            - enchant: protection
+              level: 4
+
+        - material: diamond_leggings
+          enchants:
+            - enchant: protection
+              level: 4
+
+        - material: diamond_boots
+          enchants:
+            - enchant: protection
+              level: 4
+
+        - material: enchanted_golden_apple
+          count: 16
+
+        - material: ender_pearl
+          count: 16
+    heroic:
+      display: "&d&lHeroic PvP"
+
+      custom-set: dreadveil
+
+      items:
+        - custom: dreadveil_helmet
+        - custom: dreadveil_shroud
+        - custom: dreadveil_leggings
+        - custom: dreadveil_boots
+
+        - custom: dreadveil_sword
+
+        - material: ender_pearl
+          count: 16
+
+        - material: cooked_beef
+          count: 32
+    frostbound:
+      display: "&b&lFrostbound"
+
+      custom-set: frostbound
+
+      items:
+        - custom: frostbound_maul
+
+        - material: ender_pearl
+          count: 16
+
+        - material: cooked_beef
+          count: 32
+    stormcaller:
+      display: "&3&lStormcaller"
+
+      custom-set: stormcaller
+
+      items:
+        - custom: stormcaller_worldsplitter
+
+        - material: ender_pearl
+          count: 16
+
+        - material: cooked_beef
+          count: 32
+    combo:
+      display: "&a&lCombo"
+
+      effects:
+        - effect: speed
+          level: 2
+
+      items:
+        - material: diamond_sword
+          enchants:
+            - enchant: sharpness
+              level: 2
+
+        - material: diamond_helmet
+        - material: diamond_chestplate
+        - material: diamond_leggings
+        - material: diamond_boots
+    archer:
+      display: "&e&lArcher"
+
+      effects:
+        - effect: speed
+          level: 2
+
+      items:
+        - material: bow
+          enchants:
+            - enchant: power
+              level: 5
+            - enchant: infinity
+              level: 1
+
+        - material: arrow
+
+        - material: diamond_sword
+max-wager-money: 100000000
+max-wager-xp: 1000000
+...

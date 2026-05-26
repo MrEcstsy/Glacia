@@ -29,20 +29,12 @@ final class AstralFracture extends BossAbility {
 
         foreach ($boss->getPlayersInRange(5) as $player) {
             $damage = match ($boss->getPhase()) {
-                1 => 4.0,
-                2 => 6.5,
-                3 => 9.0,
+                1 => 10.0,
+                2 => 16.0,
+                3 => 22.0,
             };
 
-            $player->attack(new EntityDamageByEntityEvent(
-                $boss,
-                $player,
-                EntityDamageEvent::CAUSE_MAGIC,
-                $damage,
-                [],
-                0.0,
-                0.0
-            ));
+            $boss->dealBossTrueDamage($player, $damage);
         }
     }
 }

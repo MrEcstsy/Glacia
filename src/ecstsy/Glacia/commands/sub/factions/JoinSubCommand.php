@@ -27,7 +27,7 @@ final class JoinSubCommand extends BaseSubCommand {
 
         $factionName = $args["faction"] ?? null;
         if ($factionName === null) {
-            $sender->sendMessage(C::RED . "Usage: /f join <faction>");
+            $sender->sendMessage(C::colorize("&cUsage: /f join <faction>"));
             return;
         }
 

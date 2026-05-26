@@ -9,103 +9,71 @@ broadcasts:
   start: "&r&l&bEnvoy &8| &r&f{count} envoy crates have landed in &bWarzone&f for &b{time}&f."
   end: "&r&l&bEnvoy &8| &r&7The envoy event has ended."
 
+special-event:
+  enabled: true
+  interval: "8h"
+  initial-delay: "3h"
+  duration: "1h"
+  crate-count-multiplier: 0.6
+  broadcasts:
+    start: "&r&l&dWorld Event &8| &r&fFor the next &d{time}&f, envoys will only spawn as &dExotic&f, &6Legendary&f, or &5Godly&f crates, with fewer crates than usual."
+    end: "&r&l&dWorld Event &8| &r&7The exotic envoy surge has ended."
+  types:
+    exotic: 45
+    legendary: 35
+    godly: 20
+
 types:
   simple:
     enabled: true
-    chance: 35
+    chance: 33
     reward-count: 1
     rewards:
-      - chance: 40
+      - chance: 100
         type: item
-        id: "simplebook"
-      - chance: 20
-        type: item
-        id: "simpledust"
-        percent: "{3-8}"
-        count: "{2-4}"
-      - chance: 20
-        type: item
-        id: "bank_note"
-        amount: "{25000-60000}"
-      - chance: 20
-        type: item
-        id: "xpnote"
-        amount: "{5000-12000}"
+        id: "ethereal_simple_chest"
 
   unique:
     enabled: true
-    chance: 25
+    chance: 22
     reward-count: 1
     rewards:
-      - chance: 35
+      - chance: 100
         type: item
-        id: "uniquebook"
-      - chance: 20
-        type: item
-        id: "whitescroll"
-      - chance: 20
-        type: item
-        id: "bank_note"
-        amount: "{75000-125000}"
-      - chance: 25
-        type: item
-        id: "xpnote"
-        amount: "{10000-20000}"
+        id: "ethereal_unique_chest"
 
   elite:
     enabled: true
-    chance: 18
+    chance: 17
     reward-count: 1
     rewards:
-      - chance: 30
+      - chance: 100
         type: item
-        id: "elitebook"
-      - chance: 20
+        id: "ethereal_elite_chest"
+
+  exotic:
+    enabled: true
+    chance: 11
+    reward-count: 1
+    rewards:
+      - chance: 100
         type: item
-        id: "blackscroll"
-        success: "{85-100}"
-      - chance: 20
-        type: item
-        id: "mysterymobspawner"
-      - chance: 30
-        type: item
-        id: "bank_note"
-        amount: "{150000-350000}"
+        id: "ethereal_exotic_chest"
 
   legendary:
     enabled: true
-    chance: 15
-    reward-count: 2
+    chance: 12
+    reward-count: 1
     rewards:
-      - chance: 30
+      - chance: 100
         type: item
-        id: "legendarybook"
-      - chance: 15
-        type: item
-        id: "heroic_mysterymobspawner"
-      - chance: 25
-        type: item
-        id: "chunk_buster"
-      - chance: 30
-        type: item
-        id: "bank_note"
-        amount: "{500000-1000000}"
+        id: "ethereal_legendary_chest"
 
-  heroic:
-    enabled: true
-    chance: 7
-    reward-count: 2
+  godly:
+    enabled: false
+    chance: 5
+    reward-count: 1
     rewards:
-      - chance: 30
+      - chance: 100
         type: item
-        id: "heroic_slot_ticket"
-      - chance: 20
-        type: item
-        id: "heroic_mysterymobspawner"
-      - chance: 20
-        type: item
-        id: "collection_chest"
-      - chance: 30
-        type: item
-        id: "bank_note"
-        amount: "{1000000-2500000}"
+        id: "ethereal_godly_chest"

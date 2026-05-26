@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\entity\zones;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\staff\HiddenStaffTargeting;
+use ecstsy\Glacia\server\zones\ZoneManager;
 use ecstsy\Glacia\server\zones\ZoneMobManager;
 use ecstsy\MartianUtilities\entity\BaseHostileEntity;
 use pocketmine\entity\Entity;
@@ -25,6 +27,10 @@ use pocketmine\player\Player;
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\utils\TextFormat as C;
 use pocketmine\world\Position;
+use pocketmine\world\particle\FlameParticle;
+use pocketmine\world\particle\HugeExplodeParticle;
+use pocketmine\world\particle\LavaParticle;
+use pocketmine\world\particle\PortalParticle;
 use pocketmine\world\sound\ExplodeSound;
 
 class ZoneMob extends BaseHostileEntity {
@@ -32,6 +38,7 @@ class ZoneMob extends BaseHostileEntity {
     private string $zoneId = "";
     private string $mobId = "";
     private string $displayName = "Zone Mob";
+    private int $tier = 1;
     private float $configuredDamage = 4.0;
     private float $configuredSpeed = 0.19;
     private float $configuredTargetRange = 15.0;
@@ -47,6 +54,10 @@ class ZoneMob extends BaseHostileEntity {
     private float $attackReach = 2.0;
     private float $idealRangeMin = 6.0;
     private float $idealRangeMax = 13.0;
+    private string $projectileType = "arrow";
+    private float $projectileSpeed = 1.15;
+    private float $aimQuality = -1.0;
+    private int $fireSeconds = 4;
     private int $strafeChance = 35;
     private bool $retreatWhenTooClose = true;
     private bool $allowMeleeWhenRanged = false;
@@ -55,6 +66,11 @@ class ZoneMob extends BaseHostileEntity {
     private int $pendingAttackTicks = 0;
     private int $nextChargedBurstTick = 0;
     private int $nextGraviticPulseTick = 0;
+    private int $eventTeleportChance = 0;
+    private string $worldEventId = "";
+    private string $worldEventName = "";
+    /** @var array<int, array{item: Item, entry: array<string, mixed>}> */
+    private array $lastDropResults = [];
 
     protected int $aiInterval = 1;
 
@@ -65,6 +81,7 @@ class ZoneMob extends BaseHostileEntity {
         $this->zoneId = strtolower($nbt->getString("zone_id", ""));
         $this->mobId = strtolower($nbt->getString("zone_mob_id", ""));
         $this->displayName = $nbt->getString("zone_mob_name", "Zone Mob");
+        $this->tier = max(1, $nbt->getInt("zone_mob_tier", 1));
         $this->configuredDamage = max(1.0, $nbt->getFloat("zone_mob_damage", 4.0));
         $this->configuredSpeed = max(0.08, min(0.34, $nbt->getFloat("zone_mob_speed", 0.19)));
         $this->configuredTargetRange = max(8.0, min(28.0, $nbt->getFloat("zone_mob_target_range", 15.0)));
@@ -80,10 +97,25 @@ class ZoneMob extends BaseHostileEntity {
         $this->attackReach = max(1.4, min(3.6, $nbt->getFloat("zone_mob_attack_reach", 2.0)));
         $this->idealRangeMin = max(4.0, min(18.0, $nbt->getFloat("zone_mob_ideal_range_min", 6.0)));
         $this->idealRangeMax = max($this->idealRangeMin + 1.0, min(28.0, $nbt->getFloat("zone_mob_ideal_range_max", 13.0)));
+        $this->projectileType = $this->normalizeProjectileType($nbt->getString("zone_mob_projectile_type", $this->weapon));
+        $this->projectileSpeed = max(0.2, min(3.0, $nbt->getFloat("zone_mob_projectile_speed", 0.0)));
+        $this->aimQuality = $nbt->getFloat("zone_mob_aim_quality", -1.0);
+        $this->fireSeconds = max(0, min(20, $nbt->getInt("zone_mob_fire_seconds", 4)));
         $this->strafeChance = max(0, min(100, $nbt->getInt("zone_mob_strafe_chance", 35)));
         $this->retreatWhenTooClose = $nbt->getByte("zone_mob_retreat_when_too_close", 1) === 1;
         $this->allowMeleeWhenRanged = $nbt->getByte("zone_mob_allow_melee_when_ranged", 0) === 1;
         $this->hordeSeparationStrength = max(0.05, min(0.75, $nbt->getFloat("zone_mob_horde_separation", 0.26)));
+        $this->eventTeleportChance = max(0, min(100, $nbt->getInt("zone_mob_event_teleport_chance", 0)));
+        $this->worldEventId = strtolower($nbt->getString("zone_mob_world_event_id", ""));
+        $this->worldEventName = $nbt->getString("zone_mob_world_event_name", "");
+        if ($this->projectileSpeed <= 0.2001) {
+            $this->projectileSpeed = $this->projectileType === "fireball" ? 0.92 : 1.15;
+        }
+        if ($this->aimQuality < 0.0) {
+            $this->aimQuality = $this->resolveDefaultAimQuality();
+        } else {
+            $this->aimQuality = max(0.0, min(1.0, $this->aimQuality));
+        }
 
         $health = max(10, $nbt->getInt("zone_mob_health", 30));
         $this->setMaxHealth($health);
@@ -101,6 +133,7 @@ class ZoneMob extends BaseHostileEntity {
         $nbt->setString("zone_id", $this->zoneId);
         $nbt->setString("zone_mob_id", $this->mobId);
         $nbt->setString("zone_mob_name", $this->displayName);
+        $nbt->setInt("zone_mob_tier", $this->tier);
         $nbt->setFloat("zone_mob_damage", $this->configuredDamage);
         $nbt->setFloat("zone_mob_speed", $this->configuredSpeed);
         $nbt->setFloat("zone_mob_target_range", $this->configuredTargetRange);
@@ -117,10 +150,17 @@ class ZoneMob extends BaseHostileEntity {
         $nbt->setFloat("zone_mob_attack_reach", $this->attackReach);
         $nbt->setFloat("zone_mob_ideal_range_min", $this->idealRangeMin);
         $nbt->setFloat("zone_mob_ideal_range_max", $this->idealRangeMax);
+        $nbt->setString("zone_mob_projectile_type", $this->projectileType);
+        $nbt->setFloat("zone_mob_projectile_speed", $this->projectileSpeed);
+        $nbt->setFloat("zone_mob_aim_quality", $this->aimQuality);
+        $nbt->setInt("zone_mob_fire_seconds", $this->fireSeconds);
         $nbt->setInt("zone_mob_strafe_chance", $this->strafeChance);
         $nbt->setByte("zone_mob_retreat_when_too_close", $this->retreatWhenTooClose ? 1 : 0);
         $nbt->setByte("zone_mob_allow_melee_when_ranged", $this->allowMeleeWhenRanged ? 1 : 0);
         $nbt->setFloat("zone_mob_horde_separation", $this->hordeSeparationStrength);
+        $nbt->setInt("zone_mob_event_teleport_chance", $this->eventTeleportChance);
+        $nbt->setString("zone_mob_world_event_id", $this->worldEventId);
+        $nbt->setString("zone_mob_world_event_name", $this->worldEventName);
         return $nbt;
     }
 
@@ -134,11 +174,22 @@ class ZoneMob extends BaseHostileEntity {
             return parent::entityBaseTick($tickDiff);
         }
 
+        if ($this->isInsideZoneSafeArea()) {
+            $this->clearPendingAttack();
+            $this->clearTarget();
+            $this->flagForDespawn();
+            return parent::entityBaseTick($tickDiff);
+        }
+
         $hasUpdate = parent::entityBaseTick($tickDiff);
 
         $this->tickPendingAttack($tickDiff);
         if (($this->ticksLived % 5) === 0) {
             $this->tickEliteAmbientAbilities();
+        }
+
+        if (($this->ticksLived % 20) === 0) {
+            $this->tickWorldEventAbilities();
         }
 
         if (($this->ticksLived % 10) === 0) {
@@ -229,7 +280,19 @@ class ZoneMob extends BaseHostileEntity {
      */
     public function getDrops(): array
     {
-        return ZoneMobManager::rollDrops($this->zoneId, $this->mobId, $this->elite, $this->lootMultiplier);
+        $this->lastDropResults = ZoneMobManager::rollDropResults($this->zoneId, $this->mobId, $this->elite, $this->lootMultiplier);
+        return array_map(
+            static fn(array $result): Item => $result["item"],
+            $this->lastDropResults
+        );
+    }
+
+    /**
+     * @return array<int, array{item: Item, entry: array<string, mixed>}>
+     */
+    public function getLastDropResults(): array
+    {
+        return $this->lastDropResults;
     }
 
     public function getLevelXpDropAmount(): int
@@ -299,6 +362,16 @@ class ZoneMob extends BaseHostileEntity {
             $this->clearTarget();
             return;
         }
+        if (HiddenStaffTargeting::isUntargetable($this->target)) {
+            $this->clearTarget();
+            $this->clearPendingAttack();
+            return;
+        }
+        if ($this->isPlayerProtectedBySafeArea($this->target)) {
+            $this->clearTarget();
+            $this->clearPendingAttack();
+            return;
+        }
 
         $targetPos = $this->target->getPosition();
         $this->lookAt($targetPos->add(0, $this->target->getEyeHeight(), 0));
@@ -308,7 +381,7 @@ class ZoneMob extends BaseHostileEntity {
         $speed = $this->getMoveSpeed();
 
         if ($distanceSq >= $idealMinSq && $distanceSq <= $idealMaxSq && $this->attackCooldown <= 0) {
-            $this->shootArrowAt($this->target);
+            $this->shootProjectileAt($this->target);
         }
 
         if ($distanceSq < $idealMinSq && $this->retreatWhenTooClose) {
@@ -344,7 +417,7 @@ class ZoneMob extends BaseHostileEntity {
         }
 
         if ($this->shouldJumpAhead() || $this->requiresJumpTowardElevatedNearbyTarget()) {
-            $this->motion->y = max($this->motion->y, 0.42);
+            $this->motion->y = max($this->motion->y, $this->getAdaptiveJumpVelocity());
             $this->pathCooldown = 0;
         }
 
@@ -353,6 +426,10 @@ class ZoneMob extends BaseHostileEntity {
 
     public function attackPlayer(Player $player): void
     {
+        if (HiddenStaffTargeting::isUntargetable($player) || $this->isPlayerProtectedBySafeArea($player)) {
+            return;
+        }
+
         if ($this->pendingAttackTarget !== null || $this->attackCooldown > 0) {
             return;
         }
@@ -425,7 +502,9 @@ class ZoneMob extends BaseHostileEntity {
             !$target->isAlive() ||
             !$target->isOnline() ||
             $target->isClosed() ||
-            $target->getWorld()->getFolderName() !== $this->getWorld()->getFolderName()
+            HiddenStaffTargeting::isUntargetable($target) ||
+            $target->getWorld()->getFolderName() !== $this->getWorld()->getFolderName() ||
+            $this->isPlayerProtectedBySafeArea($target)
         ) {
             $this->clearPendingAttack();
             return;
@@ -455,6 +534,10 @@ class ZoneMob extends BaseHostileEntity {
 
     private function deliverAttackTo(Player $player): void
     {
+        if (HiddenStaffTargeting::isUntargetable($player) || $this->isPlayerProtectedBySafeArea($player)) {
+            return;
+        }
+
         $event = new EntityDamageByEntityEvent(
             $this,
             $player,
@@ -482,22 +565,27 @@ class ZoneMob extends BaseHostileEntity {
         switch ($this->eliteType) {
             case "molten":
                 $player->setOnFire(4);
+                $this->spawnEffectBurst($player->getPosition()->add(0, 1.0, 0), "molten");
                 break;
 
             case "frost":
                 $player->getEffects()->add(new EffectInstance(VanillaEffects::SLOWNESS(), 60, 1, false));
+                $this->spawnEffectBurst($player->getPosition()->add(0, 1.0, 0), "frost");
                 break;
 
             case "leeching":
                 $this->setHealth(min($this->getMaxHealth(), $this->getHealth() + max(1.0, $this->configuredDamage * 0.35)));
+                $this->spawnEffectBurst($this->getPosition()->add(0, 1.0, 0), "leeching");
                 break;
 
             case "corrupted":
                 $this->applyRandomCorruptedDebuff($player);
+                $this->spawnEffectBurst($player->getPosition()->add(0, 1.0, 0), "corrupted");
                 break;
 
             case "gravitic":
                 self::pullLivingToward($player, $this->getPosition(), 0.26, 0.08);
+                $this->spawnEffectBurst($player->getPosition()->add(0, 1.0, 0), "gravitic");
                 break;
         }
     }
@@ -530,13 +618,14 @@ class ZoneMob extends BaseHostileEntity {
         switch ($this->eliteType) {
             case "charged":
                 if ($this->ticksLived >= $this->nextChargedBurstTick) {
-                    $boostSpeed = min(0.34, $this->getMoveSpeed() * 1.45);
+                    $boostSpeed = min(0.50, $this->getMoveSpeed() * 1.45);
                     $burst = $this->buildMovementToward($this->target->getPosition(), $boostSpeed);
                     $this->motion->x = $burst->x;
                     $this->motion->z = $burst->z;
-                    if ($this->onGround && (($this->target->getPosition()->y - $this->getPosition()->y) > 0.5 || $this->stuckTicks >= 4)) {
-                        $this->motion->y = max($this->motion->y, 0.42);
+                    if ($this->isGroundedForStepHop() && (($this->target->getPosition()->y - $this->getPosition()->y) > 0.5 || $this->stuckTicks >= 4)) {
+                        $this->motion->y = max($this->motion->y, $this->getAdaptiveJumpVelocity());
                     }
+                    $this->spawnEffectBurst($this->getPosition()->add(0, 1.0, 0), "charged");
                     $this->nextChargedBurstTick = $this->ticksLived + mt_rand(28, 50);
                 }
                 break;
@@ -544,6 +633,7 @@ class ZoneMob extends BaseHostileEntity {
             case "gravitic":
                 if ($this->ticksLived >= $this->nextGraviticPulseTick) {
                     self::pullNearbyTargets($this->getPosition(), 4.8, 0.10, 0.04);
+                    $this->spawnEffectBurst($this->getPosition()->add(0, 1.0, 0), "gravitic");
                     $this->nextGraviticPulseTick = $this->ticksLived + mt_rand(10, 16);
                 }
                 break;
@@ -564,18 +654,67 @@ class ZoneMob extends BaseHostileEntity {
 
         switch ($this->eliteType) {
             case "exploding":
+                $this->spawnEffectBurst($center, "exploding");
                 self::detonateAt($center, 4.2, $burstDamage);
                 break;
 
             case "imploding":
+                $this->spawnEffectBurst($center, "imploding");
                 self::pullNearbyTargets($center, 5.2, 0.22, 0.08);
                 Loader::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($center, $burstDamage): void {
+                    $center->getWorld()->addParticle($center, new HugeExplodeParticle());
                     self::detonateAt($center, 4.4, $burstDamage);
                 }), 8);
                 break;
 
             case "splitter":
+                $this->spawnEffectBurst($center, "splitter");
                 ZoneMobManager::spawnSplitterOffspring($this, 2);
+                break;
+        }
+    }
+
+    private function spawnEffectBurst(Vector3 $center, string $type): void
+    {
+        $world = $this->getWorld();
+        switch ($type) {
+            case "molten":
+                for ($i = 0; $i < 10; $i++) {
+                    $world->addParticle($center->add(mt_rand(-8, 8) / 10, mt_rand(0, 10) / 10, mt_rand(-8, 8) / 10), new FlameParticle());
+                    $world->addParticle($center->add(mt_rand(-8, 8) / 10, mt_rand(0, 8) / 10, mt_rand(-8, 8) / 10), new LavaParticle());
+                }
+                $world->addSound($center, new ExplodeSound());
+                break;
+
+            case "frost":
+                for ($i = 0; $i < 9; $i++) {
+                    $world->addParticle($center->add(mt_rand(-8, 8) / 10, mt_rand(0, 8) / 10, mt_rand(-8, 8) / 10), new PortalParticle());
+                }
+                break;
+
+            case "charged":
+                for ($i = 0; $i < 8; $i++) {
+                    $world->addParticle($center->add(mt_rand(-7, 7) / 10, mt_rand(0, 12) / 10, mt_rand(-7, 7) / 10), new PortalParticle());
+                }
+                break;
+
+            case "leeching":
+                for ($i = 0; $i < 8; $i++) {
+                    $world->addParticle($center->add(mt_rand(-6, 6) / 10, mt_rand(0, 8) / 10, mt_rand(-6, 6) / 10), new PortalParticle());
+                }
+                break;
+
+            case "corrupted":
+            case "gravitic":
+            case "imploding":
+            case "splitter":
+                for ($i = 0; $i < 10; $i++) {
+                    $world->addParticle($center->add(mt_rand(-9, 9) / 10, mt_rand(0, 12) / 10, mt_rand(-9, 9) / 10), new PortalParticle());
+                }
+                break;
+
+            case "exploding":
+                $world->addParticle($center, new HugeExplodeParticle());
                 break;
         }
     }
@@ -669,6 +808,23 @@ class ZoneMob extends BaseHostileEntity {
         $this->motion->z = ($forward->z * $forwardBias) + (($forward->x) * $side * 0.85);
     }
 
+    private function isPlayerProtectedBySafeArea(Player $player): bool
+    {
+        $zone = ZoneManager::getZone($this->zoneId);
+        return $zone !== null && ZoneManager::isInsideSafeArea($player->getPosition(), $zone);
+    }
+
+    private function isInsideZoneSafeArea(?Position $position = null): bool
+    {
+        $zone = ZoneManager::getZone($this->zoneId);
+        if ($zone === null) {
+            return false;
+        }
+
+        $position ??= $this->getPosition();
+        return ZoneManager::isInsideSafeArea($position, $zone);
+    }
+
     private function performZoneSoftRecovery(): void
     {
         if ($this->target === null) {
@@ -677,35 +833,145 @@ class ZoneMob extends BaseHostileEntity {
 
         $forward = $this->buildMovementToward($this->target->getPosition(), max(0.12, $this->getMoveSpeed()));
         $this->applyRandomStrafeImpulse($forward, 0.35);
-        $this->motion->y = max($this->motion->y, 0.42);
+        $this->motion->y = max($this->motion->y, $this->getAdaptiveJumpVelocity());
         $this->pathCooldown = 0;
         $this->recalculatePath();
     }
 
-    private function shootArrowAt(Entity $target): void
+    private function tickWorldEventAbilities(): void
     {
-        $shooterPos = $this->getPosition()->add(0, $this->getEyeHeight(), 0);
-        $targetPos = $target->getPosition()->add(0, $target->getEyeHeight() * 0.85, 0);
-        $dx = $targetPos->x - $shooterPos->x;
-        $dy = $targetPos->y - $shooterPos->y;
-        $dz = $targetPos->z - $shooterPos->z;
-        $len = sqrt(($dx * $dx) + ($dy * $dy) + ($dz * $dz));
-        if ($len <= 0.0001) {
+        if ($this->eventTeleportChance <= 0 || $this->target === null || !$this->target->isAlive()) {
             return;
         }
 
+        if (mt_rand(1, 100) > $this->eventTeleportChance) {
+            return;
+        }
+
+        $targetPos = $this->target->getPosition();
+        $x = $targetPos->getFloorX() + mt_rand(-3, 3);
+        $z = $targetPos->getFloorZ() + mt_rand(-3, 3);
+        $y = max($targetPos->getFloorY(), $this->getPosition()->getFloorY() - 1);
+
+        $feet = $this->getWorld()->getBlockAt($x, $y, $z);
+        $head = $this->getWorld()->getBlockAt($x, $y + 1, $z);
+        if (!$feet->canBeReplaced() || !$head->canBeReplaced()) {
+            return;
+        }
+
+        $destination = new Position($x + 0.5, $y, $z + 0.5, $this->getWorld());
+        if ($this->isInsideZoneSafeArea($destination)) {
+            return;
+        }
+
+        $origin = $this->getPosition();
+        for ($i = 0; $i < 8; $i++) {
+            $this->getWorld()->addParticle($origin->add(mt_rand(-7, 7) / 10, mt_rand(0, 14) / 10, mt_rand(-7, 7) / 10), new PortalParticle());
+        }
+
+        $this->teleport(new Location($destination->x, $destination->y, $destination->z, $this->getWorld(), $this->location->yaw, $this->location->pitch));
+
+        for ($i = 0; $i < 8; $i++) {
+            $this->getWorld()->addParticle($this->getPosition()->add(mt_rand(-7, 7) / 10, mt_rand(0, 14) / 10, mt_rand(-7, 7) / 10), new PortalParticle());
+        }
+    }
+
+    private function shootProjectileAt(Entity $target): void
+    {
+        $direction = $this->buildRangedAimDirection($target);
+        if ($direction === null) {
+            return;
+        }
+
+        if ($this->projectileType === "fireball") {
+            $this->shootFireball($direction);
+        } else {
+            $this->shootArrow($direction);
+        }
+    }
+
+    private function shootArrow(Vector3 $direction): void
+    {
         $arrow = $this->createArrowProjectile();
         if (!$arrow instanceof Arrow) {
             return;
         }
 
-        $speed = 1.15;
-        $arrow->setMotion($arrow->getMotion()->add(($dx / $len) * $speed, ($dy / $len) * $speed, ($dz / $len) * $speed));
+        $arrow->setMotion($direction->multiply($this->projectileSpeed));
         if (method_exists($arrow, "setBaseDamage")) {
             $arrow->setBaseDamage(max(1.0, $this->configuredDamage));
         }
         $arrow->spawnToAll();
         $this->attackCooldown = $this->rangedCooldownTicks;
+    }
+
+    private function shootFireball(Vector3 $direction): void
+    {
+        $spawn = $this->getPosition()->add(0, $this->getEyeHeight() * 0.9, 0)->addVector($direction->multiply(0.9));
+        $projectile = new ZoneMobFireball(
+            Location::fromObject($spawn, $this->getWorld(), $this->location->yaw, $this->location->pitch),
+            $this,
+            CompoundTag::create()->setInt("zone_fireball_fire_seconds", $this->fireSeconds)
+        );
+        $projectile->setBaseDamage(max(1.0, $this->configuredDamage));
+        $projectile->setFireSeconds($this->fireSeconds);
+        $projectile->setMotion($direction->multiply($this->projectileSpeed));
+        $projectile->spawnToAll();
+        $this->attackCooldown = $this->rangedCooldownTicks;
+    }
+
+    private function buildRangedAimDirection(Entity $target): ?Vector3
+    {
+        $shooterPos = $this->getPosition()->add(0, $this->getEyeHeight(), 0);
+        $targetPos = $target->getPosition()->add(0, $target->getEyeHeight() * 0.85, 0);
+        $delta = $targetPos->subtractVector($shooterPos);
+        $distance = $delta->length();
+        if ($distance <= 0.0001) {
+            return null;
+        }
+
+        $quality = max(0.0, min(1.0, $this->aimQuality));
+        $travelTime = min(1.75, max(0.12, $distance / max(0.2, $this->projectileSpeed * 11.0)));
+        $leadScale = 0.18 + ($quality * 0.92);
+        $predictedTarget = $targetPos->addVector($target->getMotion()->multiply($travelTime * $leadScale));
+
+        $verticalBias = ($this->projectileType === "fireball" ? 0.035 : 0.015) + ($quality * 0.02);
+        $predictedTarget = $predictedTarget->add(0, min(0.45, $distance * $verticalBias), 0);
+
+        $aimVector = $predictedTarget->subtractVector($shooterPos);
+        if ($aimVector->lengthSquared() <= 0.0001) {
+            return null;
+        }
+
+        $baseDirection = $aimVector->normalize();
+        $spread = max(0.0, (1.0 - $quality) * ($this->projectileType === "fireball" ? 0.09 : 0.055));
+        if ($spread <= 0.0001) {
+            return $baseDirection;
+        }
+
+        $xOffset = (mt_rand(-1000, 1000) / 1000) * $spread;
+        $pitchOffset = (mt_rand(-1000, 1000) / 1000) * ($spread * 0.6);
+        $zOffset = (mt_rand(-1000, 1000) / 1000) * $spread;
+
+        return (new Vector3(
+            $baseDirection->x + $xOffset,
+            $baseDirection->y + $pitchOffset,
+            $baseDirection->z + $zOffset
+        ))->normalize();
+    }
+
+    private function normalizeProjectileType(string $projectileType): string
+    {
+        $normalized = strtolower(trim($projectileType));
+        return match ($normalized) {
+            "fireball", "blaze_fireball", "ember" => "fireball",
+            default => "arrow",
+        };
+    }
+
+    private function resolveDefaultAimQuality(): float
+    {
+        return max(0.32, min(0.94, 0.34 + (($this->tier - 1) * 0.07)));
     }
 
     private function createArrowProjectile(): ?Arrow

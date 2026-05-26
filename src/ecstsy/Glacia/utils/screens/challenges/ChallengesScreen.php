@@ -18,7 +18,7 @@ final class ChallengesScreen extends BaseScreen {
         $rows = $manager->getChallengeView($player);
         $timeRemaining = $rows !== [] ? max(0, (int) ($rows[0]["timeRemaining"] ?? 0)) : 0;
 
-        $form = new SimpleForm(function(Player $player, ?int $data) use ($manager): void {
+        $form = new SimpleForm(function(Player $player, ?int $data) use ($manager, $rows): void {
             if ($data === null) {
                 return;
             }
@@ -31,7 +31,15 @@ final class ChallengesScreen extends BaseScreen {
                 }
 
                 $player->sendMessage(C::colorize("&r&aClaimed &f" . number_format($claimed) . " &achallenge rewards."));
+                return;
             }
+
+            $rowIndex = $data - 1;
+            if (!isset($rows[$rowIndex]) || !is_array($rows[$rowIndex])) {
+                return;
+            }
+
+            self::displayChallengeBreakdown($player, $rows[$rowIndex]);
         });
 
         $form->setTitle(C::colorize("&r&8Challenges"));
@@ -58,6 +66,49 @@ final class ChallengesScreen extends BaseScreen {
         $player->sendForm($form);
     }
 
+    /**
+     * @param array<string, mixed> $row
+     */
+    private static function displayChallengeBreakdown(Player $player, array $row): void
+    {
+        $form = new SimpleForm(function(Player $player, ?int $data): void {
+            if ($data === 0) {
+                self::display($player);
+            }
+        });
+
+        $challengeName = self::stripFormattingCodes((string) ($row["display"] ?? "Challenge"));
+        $leaders = is_array($row["leaders"] ?? null) ? $row["leaders"] : [];
+
+        $content = [
+            "&r&7Top factions for &f" . $challengeName . "&7:",
+            "",
+        ];
+
+        if ($leaders === []) {
+            $content[] = "&r&8No factions have placed yet.";
+        } else {
+            foreach ($leaders as $index => $leader) {
+                if (!is_array($leader)) {
+                    continue;
+                }
+
+                $place = $index + 1;
+                $name = (string) ($leader["name"] ?? "Unknown");
+                $value = number_format((int) ($leader["value"] ?? 0));
+                $contributors = self::formatNameList($leader["contributors"] ?? []);
+                $content[] = "&r&f#" . $place . " &b" . $name . " &7- &f" . $value;
+                $content[] = "&r&7Contributors: &f" . $contributors;
+                $content[] = "";
+            }
+        }
+
+        $form->setTitle(C::colorize("&r&8" . $challengeName));
+        $form->setContent(C::colorize(implode("\n", $content)));
+        $form->addButton(C::colorize("&r&8Back"));
+        $player->sendForm($form);
+    }
+
     private static function stripFormattingCodes(string $text): string
     {
         $text = C::clean($text);
@@ -73,5 +124,22 @@ final class ChallengesScreen extends BaseScreen {
             3 => "3rd Place",
             default => "Unranked",
         };
+    }
+
+    /**
+     * @param mixed $names
+     */
+    private static function formatNameList(mixed $names): string
+    {
+        if (!is_array($names)) {
+            return "None";
+        }
+
+        $clean = array_values(array_filter(array_map(
+            static fn(mixed $name): string => trim((string) $name),
+            $names
+        ), static fn(string $name): bool => $name !== ""));
+
+        return $clean === [] ? "None" : implode(", ", $clean);
     }
 }

@@ -49,9 +49,43 @@ final class RankCommand extends BaseCommand {
     }
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void {
-        $sender->sendMessage(C::colorize(
-            "&r&cUsage: /glaciaranks <create|delete|list|set|setdisplay|setchat|setnametag|setparent|addperm|removeperm|perms|userperm|removeuserperm|listuserperms|clearuserperms>"
-        ));
+        $this->sendRankHelp($sender, $aliasUsed);
+    }
+
+    protected function sendUsage(): void
+    {
+        $this->sendRankHelp($this->currentSender, "ranks");
+    }
+
+    private function sendRankHelp(CommandSender $sender, string $aliasUsed): void
+    {
+        $cmd = "/" . ($aliasUsed !== "" ? $aliasUsed : "ranks");
+
+        $sender->sendMessage(C::colorize("&r&d&lRank Commands"));
+        $sender->sendMessage(C::colorize("&r&8Manage rank setup, player ranks, and permissions."));
+        $sender->sendMessage(C::colorize("&r&7"));
+        $sender->sendMessage(C::colorize("&r&dBasics"));
+        $sender->sendMessage(C::colorize("&r&7- &f{$cmd} list &8- &7Show all ranks"));
+        $sender->sendMessage(C::colorize("&r&7- &f{$cmd} create <key> <display> &8- &7Create a rank"));
+        $sender->sendMessage(C::colorize("&r&7- &f{$cmd} delete <rank> &8- &7Delete a rank"));
+        $sender->sendMessage(C::colorize("&r&7- &f{$cmd} set <rank> <player> &8- &7Set a player's rank"));
+        $sender->sendMessage(C::colorize("&r&7"));
+        $sender->sendMessage(C::colorize("&r&dRank Appearance"));
+        $sender->sendMessage(C::colorize("&r&7- &f{$cmd} setdisplay <rank> <display>"));
+        $sender->sendMessage(C::colorize("&r&7- &f{$cmd} setchat <rank> <format> &8- &7Must include &f{name} &7and &f{message}"));
+        $sender->sendMessage(C::colorize("&r&7- &f{$cmd} setnametag <rank> <format> &8- &7Must include &f{name}"));
+        $sender->sendMessage(C::colorize("&r&7- &f{$cmd} setparent <rank> <parent|none>"));
+        $sender->sendMessage(C::colorize("&r&7"));
+        $sender->sendMessage(C::colorize("&r&dRank Permissions"));
+        $sender->sendMessage(C::colorize("&r&7- &f{$cmd} addperm <rank> <permission>"));
+        $sender->sendMessage(C::colorize("&r&7- &f{$cmd} removeperm <rank> <permission>"));
+        $sender->sendMessage(C::colorize("&r&7- &f{$cmd} perms <rank>"));
+        $sender->sendMessage(C::colorize("&r&7"));
+        $sender->sendMessage(C::colorize("&r&dPlayer Permissions"));
+        $sender->sendMessage(C::colorize("&r&7- &f{$cmd} userperm <permission> <player>"));
+        $sender->sendMessage(C::colorize("&r&7- &f{$cmd} removeuserperm <permission> <player>"));
+        $sender->sendMessage(C::colorize("&r&7- &f{$cmd} listuserperms <player>"));
+        $sender->sendMessage(C::colorize("&r&7- &f{$cmd} clearuserperms <player>"));
     }
 
     public function getPermission(): string {

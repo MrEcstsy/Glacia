@@ -7,6 +7,8 @@ namespace ecstsy\Glacia\server\enchantments\enchants\pickaxe;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\BlockBreakEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantProcManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use pocketmine\event\block\BlockBreakEvent;
 
 final class LuckyEnchant implements BlockBreakEnchantmentHandler {
@@ -24,11 +26,22 @@ final class LuckyEnchant implements BlockBreakEnchantmentHandler {
             return;
         }
 
-        $chance = 8 * $level; // 8%, 16%, 24%
-        $xpGain = mt_rand(2, 4) * $level; 
-
-        if (mt_rand(1, 100) <= $chance) {
-            $player->getXpManager()->addXp($xpGain);
+        $chance = EnchantTuningManager::chance("lucky", $level, 8.0 * $level);
+        $result = EnchantProcManager::attempt(
+            $player,
+            "lucky",
+            $level,
+            $chance,
+            EnchantTuningManager::cooldownSeconds("lucky", $level, 0)
+        );
+        if (!$result->success) {
+            return;
         }
+
+        $xpGain = max(0, EnchantTuningManager::valueInt("lucky", "xp-gain", $level, $level * 3));
+        $player->getXpManager()->addXp($xpGain);
+        EnchantProcManager::debugAppliedValues($player, $result, [
+            "xp_gain" => $xpGain,
+        ]);
     }
 }

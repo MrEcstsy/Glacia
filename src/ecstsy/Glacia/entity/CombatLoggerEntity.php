@@ -26,6 +26,7 @@ final class CombatLoggerEntity extends Zombie {
     protected array $storedInventory = [];
     /** @var Item[] snapshot of armor */
     protected array $storedArmor = [];
+    protected ?Item $storedOffhand = null;
     protected int $storedXp = 0;
     protected string $ownerUuid = "";
 
@@ -65,6 +66,15 @@ final class CombatLoggerEntity extends Zombie {
                 if ($item instanceof Item && !$item->isNull()) {
                     $this->storedArmor[(int) $slot] = $item;
                 }
+            }
+        }
+
+        $this->storedOffhand = null;
+        $offhandEncoded = $nbt->getString("storedOffhand", "");
+        if ($offhandEncoded !== "") {
+            $item = ItemUtils::decodeItem($offhandEncoded);
+            if ($item instanceof Item && !$item->isNull()) {
+                $this->storedOffhand = $item;
             }
         }
 
@@ -113,6 +123,10 @@ final class CombatLoggerEntity extends Zombie {
         }
         $nbt->setTag("storedArmor", $armorTag);
 
+        if ($this->storedOffhand instanceof Item && !$this->storedOffhand->isNull()) {
+            $nbt->setString("storedOffhand", ItemUtils::encodeItem($this->storedOffhand));
+        }
+
         return $nbt;
     }
 
@@ -138,6 +152,9 @@ final class CombatLoggerEntity extends Zombie {
         foreach ($player->getArmorInventory()->getContents() as $slot => $item) {
             $this->storedArmor[$slot] = clone $item;
         }
+
+        $offhand = $player->getOffHandInventory()->getItem(0);
+        $this->storedOffhand = $offhand->isNull() ? null : clone $offhand;
 
         $this->setMaxHealth(50);
         $this->setHealth(50);
@@ -170,6 +187,11 @@ final class CombatLoggerEntity extends Zombie {
      */
     public function getStoredArmor(): array {
         return $this->storedArmor;
+    }
+
+    public function getStoredOffhand(): ?Item
+    {
+        return $this->storedOffhand;
     }
 
 

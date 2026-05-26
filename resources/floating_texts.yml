@@ -1,0 +1,515 @@
+schema-version: 1
+
+settings:
+  refresh-interval-seconds: 15
+
+templates:
+  main_welcome:
+    type: static
+    lines:
+      - "&r&b&lGLACIA"
+      - "&r&7Frozen factions. Real pressure."
+      - "&r&fBuild up, claim land, and hold your ground."
+      - " "
+      - "&r&7Use &f/f create &7to start your faction."
+
+  warzone_warning:
+    type: static
+    lines:
+      - "&r&c&lWARZONE"
+      - "&r&7You are leaving the safety of spawn."
+      - "&r&fDrop below to enter active PvP."
+
+  warzone_info:
+    type: static
+    lines:
+      - "&r&c&lWARZONE INFO"
+      - "&r&7Spawn protection is disabled below."
+      - "&r&7Prepare your inventory before descending."
+      - "&r&7Envoy {envoy_status}: &f{envoy_timer}"
+
+  endfall_spawn_info:
+    type: static
+    lines:
+      - "&r&d&lASTRAL VEIL"
+      - "&r&7Endgame PvE and PvP zone."
+      - "&r&7This building is a &fsafe pocket&7."
+      - "&r&7PvP is enabled once you leave it."
+      - "&r&7Disabled here: &fender pearls, building, flight"
+      - "&r&7Exit Portal: &f-97, -14"
+
+  endfall_exit_info:
+    type: static
+    lines:
+      - "&r&d&lASTRAL GATE"
+      - "&r&7This is the only safe exit from Astral Veil."
+      - "&r&7Portal Coords: &f-97, -14"
+      - "&r&7Stand inside to begin extraction."
+      - "&r&7XP lowers your escape channel time."
+
+  black_market:
+    type: static
+    lines:
+      - "&r&b&lGLACIA &r&fBlack Market"
+      - "&r&7Rotating stock. Limited offers."
+      - "&r&fRight-click to &eopen the black market"
+
+  shop_hub:
+    type: static
+    lines:
+      - "&r&b&lGLACIA &r&fShop"
+      - "&r&7Buy gear, blocks, and supplies."
+      - "&r&fRight-click to &aopen the shop"
+
+  sell_shop:
+    type: static
+    lines:
+      - "&r&b&lGLACIA &r&fSell Shop"
+      - "&r&7Sell resources fast."
+      - "&r&fTurn grinding into upgrades."
+
+  farming_area:
+    type: static
+    lines:
+      - "&r&b&lGLACIA &r&fFarming Area"
+      - "&r&7Harvest crops and stack progress."
+      - "&r&fBetter tools mean better returns."
+
+  quest_board:
+    type: static
+    lines:
+      - "&r&d&lQUEST BOARD"
+      - "&r&7Pick up rotating objectives."
+      - "&r&fUse &d/quest &fto start."
+      - "&r&fOpen the shop with &d/quest shop"
+
+  enchanting_hub:
+    type: static
+    lines:
+      - "&r&5&lENCHANTING"
+      - "&r&7Custom books, conduits, gems,"
+      - "&r&7and upgrade paths all start here."
+      - "&r&fUse &d/ce &for visit the enchanter NPC."
+
+  ethereal_showcase:
+    type: static
+    lines:
+      - "&r&b&lETHEREAL"
+      - "&r&7High-end loot and progression lives here."
+      - "&r&fCrates, fragments, and rare upgrades."
+
+  duel_arena:
+    type: static
+    lines:
+      - "&r&c&lDUEL ARENA"
+      - "&r&7Settle fights without losing spawn flow."
+      - "&r&fUse &c/duel <player> &fto challenge someone."
+
+  fixall_station:
+    type: static
+    lines:
+      - "&r&a&lREPAIR STATION"
+      - "&r&7A perfect spot for a Fix All NPC."
+      - "&r&fUse &a/fixall &for interact here."
+
+  slotbot_corner:
+    type: static
+    lines:
+      - "&r&e&lSLOT BOT"
+      - "&r&7Try your luck for stacked rewards."
+      - "&r&fUse &e/slotbot &for talk to the dealer NPC."
+
+  guide_hub:
+    type: static
+    lines:
+      - "&r&b&lNEW HERE?"
+      - "&r&7Faction start, economy, quests, and PvP."
+      - "&r&fUse &b/guide &ffor the full walkthrough."
+
+  spawn_tips:
+    type: static
+    lines:
+      - "&r&fQuick Start"
+      - "&r&7Create a faction, claim land, and stack value."
+      - "&r&7Check quests, shop, and the enchanting wing."
+
+  progress_route:
+    type: static
+    lines:
+      - "&r&6&lPROGRESSION ROUTE"
+      - "&r&7Quests -> Shop -> Enchants -> PvP"
+      - "&r&fEverything around spawn feeds that loop."
+
+  grind_route:
+    type: static
+    lines:
+      - "&r&a&lGRIND ROUTE"
+      - "&r&7Farm, sell, level up, and reinvest."
+      - "&r&fUse &a/shop&f, &a/sellall&f, and &a/level"
+
+  online_info:
+    type: static
+    lines:
+      - "&r&b&lGLACIA &r&fStatus"
+      - "&r&7Online: &f{online}&7/&f{max_online}"
+      - "&r&7Date: &f{date}"
+      - "&r&7Time: &f{time}"
+
+  baltop:
+    type: leaderboard
+    provider: players
+    metric: balance
+    limit: 10
+    title:
+      - "&r&b&lGLACIA &r&fBal Top"
+      - "&r&7Richest players right now"
+      - " "
+    entry-format: "&r&7#{rank} &f{name} &7- &b{value}"
+    empty-line: "&r&7No balance data yet."
+
+  kill_top:
+    type: leaderboard
+    provider: players
+    metric: kills
+    limit: 10
+    title:
+      - "&r&b&lGLACIA &r&fKill Top"
+      - "&r&7Most eliminations"
+      - " "
+    entry-format: "&r&7#{rank} &f{name} &7- &b{value}"
+    empty-line: "&r&7No kill data yet."
+
+  kdr_top:
+    type: leaderboard
+    provider: players
+    metric: kdr
+    limit: 10
+    min-kills: 10
+    title:
+      - "&r&b&lGLACIA &r&fKDR Top"
+      - "&r&7Best ratios with 10+ kills"
+      - " "
+    entry-format: "&r&7#{rank} &f{name} &7- &b{ratio}"
+    empty-line: "&r&7No KD data yet."
+
+  level_top:
+    type: leaderboard
+    provider: players
+    metric: level
+    limit: 10
+    title:
+      - "&r&b&lGLACIA &r&fLevel Top"
+      - "&r&7Highest progression"
+      - " "
+    entry-format: "&r&7#{rank} &f{name} &7- &bLvl {value}"
+    empty-line: "&r&7No level data yet."
+
+  playtime_top:
+    type: leaderboard
+    provider: players
+    metric: playtime
+    limit: 10
+    title:
+      - "&r&b&lGLACIA &r&fPlaytime Top"
+      - "&r&7Most active players"
+      - " "
+    entry-format: "&r&7#{rank} &f{name} &7- &b{value}"
+    empty-line: "&r&7No playtime data yet."
+
+  spawn_cycle_top:
+    type: leaderboard
+    provider: players
+    metric: balance
+    limit: 10
+    title:
+      - "&r&b&lPLAYER TOP &r&7({cycle_label})"
+      - "&r&7A rotating look at server leaders"
+      - " "
+    entry-format: "&r&7#{rank} &f{name} &7- &b{value}"
+    empty-line: "&r&7No player data yet."
+    cycle:
+      interval-seconds: 20
+      states:
+        - metric: balance
+          label: Balance
+          entry-format: "&r&7#{rank} &f{name} &7- &b{value}"
+        - metric: level
+          label: Levels
+          entry-format: "&r&7#{rank} &f{name} &7- &bLvl {value}"
+        - metric: kills
+          label: Kills
+          entry-format: "&r&7#{rank} &f{name} &7- &b{value}"
+        - metric: playtime
+          label: Playtime
+          entry-format: "&r&7#{rank} &f{name} &7- &b{value}"
+
+  faction_top:
+    type: leaderboard
+    provider: factions
+    metric: value
+    limit: 10
+    title:
+      - "&r&b&lFACTION TOP &r&7({cycle_label})"
+      - "&r&7Top factions across Glacia"
+      - " "
+    entry-format: "&r&7#{rank} &f{name} &7- &b{value}"
+    empty-line: "&r&7No faction data yet."
+    cycle:
+      interval-seconds: 25
+      states:
+        - metric: value
+          label: Value
+          entry-format: "&r&7#{rank} &f{name} &7- &b{value}"
+        - metric: contribution
+          label: Points
+          entry-format: "&r&7#{rank} &f{name} &7- &b{contribution}"
+        - metric: power
+          label: Power
+          entry-format: "&r&7#{rank} &f{name} &7- &b{power}"
+        - metric: claims
+          label: Claims
+          entry-format: "&r&7#{rank} &f{name} &7- &b{claims}"
+        - metric: members
+          label: Members
+          entry-format: "&r&7#{rank} &f{name} &7- &b{members}"
+
+  faction_top_value:
+    type: leaderboard
+    provider: factions
+    metric: value
+    limit: 10
+    title:
+      - "&r&b&lFACTION TOP &r&7(Value)"
+      - "&r&7Top factions across Glacia"
+      - " "
+    entry-format: "&r&7#{rank} &f{name} &7- &b{value}"
+    empty-line: "&r&7No faction data yet."
+
+  faction_top_power:
+    type: leaderboard
+    provider: factions
+    metric: power
+    limit: 10
+    title:
+      - "&r&b&lFACTION TOP &r&7(Power)"
+      - "&r&7Top factions across Glacia"
+      - " "
+    entry-format: "&r&7#{rank} &f{name} &7- &b{power}"
+    empty-line: "&r&7No faction data yet."
+
+  faction_top_contribution:
+    type: leaderboard
+    provider: factions
+    metric: contribution
+    limit: 10
+    title:
+      - "&r&b&lFACTION TOP &r&7(Points)"
+      - "&r&7Top factions across Glacia"
+      - " "
+    entry-format: "&r&7#{rank} &f{name} &7- &b{contribution}"
+    empty-line: "&r&7No faction data yet."
+
+instances:
+  main_welcome:
+    template: main_welcome
+    enabled: true
+    world: world
+    x: 247.5
+    y: 80.5
+    z: 253.5
+
+  warzone_north:
+    template: warzone_warning
+    enabled: true
+    world: world
+    x: 250.5
+    y: 78.5
+    z: 140.5
+
+  warzone_west:
+    template: warzone_warning
+    enabled: true
+    world: world
+    x: 140.5
+    y: 78.5
+    z: 250.5
+
+  warzone_south:
+    template: warzone_warning
+    enabled: true
+    world: world
+    x: 250.5
+    y: 78.5
+    z: 360.5
+
+  warzone_east:
+    template: warzone_warning
+    enabled: true
+    world: world
+    x: 360.5
+    y: 78.5
+    z: 250.5
+
+  warzone_info_north:
+    template: warzone_info
+    enabled: true
+    refresh-interval-seconds: 1
+    world: world
+    x: 250.5
+    y: 76.2
+    z: 140.5
+
+  warzone_info_west:
+    template: warzone_info
+    enabled: true
+    refresh-interval-seconds: 1
+    world: world
+    x: 140.5
+    y: 76.2
+    z: 250.5
+
+  warzone_info_south:
+    template: warzone_info
+    enabled: true
+    refresh-interval-seconds: 1
+    world: world
+    x: 250.5
+    y: 76.2
+    z: 360.5
+
+  warzone_info_east:
+    template: warzone_info
+    enabled: true
+    refresh-interval-seconds: 1
+    world: world
+    x: 360.5
+    y: 76.2
+    z: 250.5
+
+  black_market:
+    template: black_market
+    enabled: true
+    world: world
+    x: 210.5
+    y: 73.5
+    z: 264.5
+
+  sell_shop:
+    template: sell_shop
+    enabled: true
+    world: world
+    x: 199.5
+    y: 76.5
+    z: 300.5
+
+  farming_area:
+    template: farming_area
+    enabled: true
+    world: world
+    x: 302.5
+    y: 76.5
+    z: 198.5
+
+  endfall_spawn_info:
+    template: endfall_spawn_info
+    enabled: true
+    world: end
+    x: 0.5
+    y: 68.2
+    z: 0.5
+
+  endfall_exit_info:
+    template: endfall_exit_info
+    enabled: true
+    world: end
+    x: -96.5
+    y: 68.2
+    z: -13.5
+
+  sample_quest_board:
+    template: quest_board
+    enabled: false
+    world: world
+    x: 0.5
+    y: 80.5
+    z: 0.5
+
+  sample_enchanting_hub:
+    template: enchanting_hub
+    enabled: false
+    world: world
+    x: 0.5
+    y: 80.5
+    z: 0.5
+
+  sample_ethereal_showcase:
+    template: ethereal_showcase
+    enabled: false
+    world: world
+    x: 0.5
+    y: 80.5
+    z: 0.5
+
+  sample_duel_arena:
+    template: duel_arena
+    enabled: false
+    world: world
+    x: 0.5
+    y: 80.5
+    z: 0.5
+
+  sample_fixall_station:
+    template: fixall_station
+    enabled: false
+    world: world
+    x: 0.5
+    y: 80.5
+    z: 0.5
+
+  sample_slotbot_corner:
+    template: slotbot_corner
+    enabled: false
+    world: world
+    x: 0.5
+    y: 80.5
+    z: 0.5
+
+  sample_guide_hub:
+    template: guide_hub
+    enabled: false
+    world: world
+    x: 0.5
+    y: 80.5
+    z: 0.5
+
+  sample_spawn_tips:
+    template: spawn_tips
+    enabled: false
+    world: world
+    x: 0.5
+    y: 80.5
+    z: 0.5
+
+  sample_progress_route:
+    template: progress_route
+    enabled: false
+    world: world
+    x: 0.5
+    y: 80.5
+    z: 0.5
+
+  sample_grind_route:
+    template: grind_route
+    enabled: false
+    world: world
+    x: 0.5
+    y: 80.5
+    z: 0.5
+
+  sample_spawn_cycle_top:
+    template: spawn_cycle_top
+    enabled: false
+    world: world
+    x: 0.5
+    y: 80.5
+    z: 0.5

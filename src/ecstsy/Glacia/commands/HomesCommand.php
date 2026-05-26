@@ -30,13 +30,18 @@ final class HomesCommand extends BaseCommand {
         $homes = Loader::getHomeManager()->getHomeList($sender->getUniqueId());
 
         if (empty($homes)) {
-            $sender->sendMessage(C::RED . "You have no homes.");
+            $sender->sendMessage(C::colorize("&cYou have no homes."));
             return;
         } else {
-            $sender->sendMessage(C::GOLD . "Your homes:");
+            $sender->sendMessage(C::colorize("&6Your homes:"));
             foreach ($homes as $home) {
-                $phome = Loader::getHomeManager()->getPlayerHome($sender->getUniqueId(), $home->getName());
-                $sender->sendMessage(C::GREEN . "- " . $home->getName() . ": " . $phome->getPosition()->getFloorX() . ", " . $phome->getPosition()->getFloorY() . ", " . $phome->getPosition()->getFloorZ() . " (" . $phome->getWorld()->getFolderName() . ")");
+                $position = $home->getPosition();
+                if ($position !== null) {
+                    $sender->sendMessage(C::colorize("&a- " . $home->getName() . ": " . $position->getFloorX() . ", " . $position->getFloorY() . ", " . $position->getFloorZ() . " (" . $position->getWorld()->getFolderName() . ")"));
+                    continue;
+                }
+
+                $sender->sendMessage(C::colorize("&a- " . $home->getName() . ": " . $home->x . ", " . $home->y . ", " . $home->z . "&c (world unavailable: " . $home->world_name . ")"));
             }
         }
 
@@ -45,10 +50,13 @@ final class HomesCommand extends BaseCommand {
         if ($homeName !== null) {
             $home = Loader::getHomeManager()->getPlayerHome($sender->getUniqueId(), $homeName);
             if ($home !== null) {
-                $home->teleport($sender);
-                $sender->sendMessage(C::GREEN . "Teleported to home '{$homeName}'.");
+                if ($home->teleport($sender)) {
+                    $sender->sendMessage(C::colorize("&aTeleported to home '{$homeName}'."));
+                } else {
+                    $sender->sendMessage(C::colorize("&cHome '{$homeName}' could not be loaded right now."));
+                }
             } else {
-                $sender->sendMessage(C::RED . "Home '{$homeName}' does not exist.");
+                $sender->sendMessage(C::colorize("&cHome '{$homeName}' does not exist."));
             }
         } 
     }

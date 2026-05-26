@@ -14,6 +14,7 @@ use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\projectile\Projectile;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\event\entity\EntityDamageByChildEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\player\Player;
 
@@ -30,16 +31,19 @@ final class VirusEnchant implements EntityDamageByEntityEnchantmentHandler {
 
         $victim = $event->getEntity();
         $damager = $event->getDamager();
+        $projectile = $damager instanceof Projectile
+            ? $damager
+            : (($event instanceof EntityDamageByChildEntityEvent && $event->getChild() instanceof Projectile) ? $event->getChild() : null);
 
         if (!$victim instanceof Living) {
             return;
         }
 
-        if (!$damager instanceof Projectile) {
+        if (!$projectile instanceof Projectile) {
             return;
         }
 
-        $owner = $damager->getOwningEntity();
+        $owner = $projectile->getOwningEntity();
         if (!$owner instanceof Player) {
             return;
         }

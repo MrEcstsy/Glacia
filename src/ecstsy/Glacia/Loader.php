@@ -7,6 +7,7 @@ namespace ecstsy\Glacia;
 use CortexPE\Commando\PacketHooker;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\auctionhouse\AuctionHouseManager;
+use ecstsy\Glacia\server\boosters\ZoneBoosterManager;
 use ecstsy\Glacia\server\BountyManager;
 use ecstsy\Glacia\server\collectionchests\CollectionChestManager;
 use ecstsy\Glacia\server\capture\CaptureManager;
@@ -21,7 +22,9 @@ use ecstsy\Glacia\server\envoys\EnvoyManager;
 use ecstsy\Glacia\server\GlobalFundManager;
 use ecstsy\Glacia\server\factions\FactionManager;
 use ecstsy\Glacia\server\factions\claims\ClaimManager;
+use ecstsy\Glacia\server\factions\claims\CoreChunkRaidManager;
 use ecstsy\Glacia\server\factions\FactionXpBoosterManager;
+use ecstsy\Glacia\server\factions\guardian\FactionGuardianManager;
 use ecstsy\Glacia\server\factions\relations\RelationManager;
 use ecstsy\Glacia\server\factions\audit\FactionAuditFeed;
 use ecstsy\Glacia\server\factions\contribution\FactionContributionManager;
@@ -35,12 +38,18 @@ use ecstsy\Glacia\server\regions\RegionManager;
 use ecstsy\Glacia\server\tebex\TebexManager;
 use ecstsy\Glacia\server\trade\TradeManager;
 use ecstsy\Glacia\server\itemflip\ItemFlipManager;
+use ecstsy\Glacia\server\items\runes\PassiveRunePouchManager;
+use ecstsy\Glacia\server\quests\QuestBoardManager;
+use ecstsy\Glacia\server\duels\DuelManager;
 use ecstsy\Glacia\server\vaults\PlayerVaultManager;
 use ecstsy\Glacia\server\vote\VoteManager;
+use ecstsy\Glacia\server\watchdogs\ChunkWatchdogManager;
 use ecstsy\Glacia\server\warps\WarpManager;
 use ecstsy\Glacia\server\zones\ZoneMobManager;
+use ecstsy\Glacia\server\redstone\RedstoneManager;
 use ecstsy\Glacia\server\world\WorldManagerService;
 use ecstsy\Glacia\server\world\generator\EndGenerator;
+use ecstsy\Glacia\tasks\PlaytimeFlushTask;
 use ecstsy\Glacia\tasks\PowerRegenTask;
 use ecstsy\Glacia\utils\ExtraVanillaBlocks;
 use ecstsy\Glacia\utils\GlaciaUtils;
@@ -74,6 +83,7 @@ final class Loader extends PluginBase {
     private static PlayerManager $playerManager;
     private static FactionManager $factionManager;
     private static FactionXpBoosterManager $factionXpBoosterManager;
+    private static ZoneBoosterManager $zoneBoosterManager;
     private static RankManager $rankManager;
     private static RelationManager $relationManager;
     private static FactionRoleManager $factionRoleManager;
@@ -98,6 +108,8 @@ final class Loader extends PluginBase {
     private static VoteManager $voteManager;
     private static DeathInventoryLogManager $deathInventoryLogManager;
     private static ChallengeManager $challengeManager;
+    private static QuestBoardManager $questBoardManager;
+    private static PassiveRunePouchManager $passiveRunePouchManager;
     private static WorldManagerService $worldManagerService;
     private static BlockData $blockData;
 
@@ -131,6 +143,8 @@ final class Loader extends PluginBase {
         self::$connector->executeGeneric(QueryStmts::AUCTION_HOUSE_LISTINGS_INIT);
         self::$connector->executeGeneric(QueryStmts::AUCTION_HOUSE_COLLECTION_INIT);
         self::$connector->executeGeneric(QueryStmts::PLAYER_VAULTS_INIT);
+        self::$connector->executeGeneric(QueryStmts::PLAYER_QUESTS_INIT);
+        self::$connector->executeGeneric(QueryStmts::QUEST_SHOP_STATE_INIT);
         self::$connector->waitAll();
         SchemaMigrationManager::migrate($this);
 
@@ -138,16 +152,17 @@ final class Loader extends PluginBase {
         self::$playerManager = new PlayerManager($this);
         self::$factionManager = new FactionManager();
         self::$factionXpBoosterManager = new FactionXpBoosterManager();
+        self::$zoneBoosterManager = new ZoneBoosterManager();
         self::$relationManager = new RelationManager();
         self::$factionRoleManager = new FactionRoleManager();
         self::$factionUpgradeManager = new FactionUpgradeManager();
         ClaimManager::getInstance();
         self::$connector->waitAll();
         self::$rankManager = new RankManager();
-        self::$homeManager = new HomeManager($this, 3);
+        self::$homeManager = new HomeManager($this, 5);
         self::$warpManager = new WarpManager($this);
         self::$graceInstance = new GraceInstance();
-        self::$blackMarketAuctionInstance = new BlackMarketAuctionInstance($this);
+        self::$blackMarketAuctionInstance = new BlackMarketAuctionInstance();
         self::$combatManager = new CombatManagerInstance();
         self::$jackpotInstance = new JackpotInstance();
         self::$coinFlipInstance = new CoinFlipInstance($this);
@@ -163,10 +178,16 @@ final class Loader extends PluginBase {
         self::$voteManager = new VoteManager();
         self::$deathInventoryLogManager = new DeathInventoryLogManager();
         self::$challengeManager = new ChallengeManager();
+        self::$questBoardManager = new QuestBoardManager();
+        self::$passiveRunePouchManager = new PassiveRunePouchManager();
         self::$worldManagerService = new WorldManagerService($this);
         self::$worldManagerService->loadFromConfig();
+        DuelManager::init($this);
         FactionAuditFeed::init($this);
         FactionContributionManager::init($this);
+        CoreChunkRaidManager::init($this);
+        FactionGuardianManager::init($this);
+        ChunkWatchdogManager::init($this);
 
         GlaciaUtils::initAll($this);
 
@@ -181,12 +202,15 @@ final class Loader extends PluginBase {
         GlaciaUtils::initDispenserMenu();
 
         $this->getScheduler()->scheduleRepeatingTask(new PowerRegenTask(), 20 * 60);
+        $this->getScheduler()->scheduleRepeatingTask(new PlaytimeFlushTask(), 20 * 300);
         
         $this->registerCustomMenuActorIdentifier();
 
         self::$blockData = BlockData::create($this);
 
         $worldStats = self::$worldManagerService->ensureConfiguredWorlds();
+
+        RedstoneManager::schedulePostBootDispenserWarmup($this);
 
         ZoneMobManager::beginColdBootZoneMobPurging(20 * 120);
         ZoneMobManager::flagAllSpawnedZoneMobsForDespawn();
@@ -266,6 +290,12 @@ final class Loader extends PluginBase {
 
         FactionAuditFeed::save();
         FactionContributionManager::save();
+        CoreChunkRaidManager::save();
+        FactionGuardianManager::save();
+        ChunkWatchdogManager::save();
+        if (DuelManager::isInitialized()) {
+            DuelManager::getInstance()->save();
+        }
         \ecstsy\Glacia\server\staff\ModerationManager::getInstance()->save();
 
         if (isset(self::$connector)) {
@@ -301,6 +331,10 @@ final class Loader extends PluginBase {
 
     public static function getFactionXpBoosterManager(): FactionXpBoosterManager {
         return self::$factionXpBoosterManager;
+    }
+
+    public static function getZoneBoosterManager(): ZoneBoosterManager {
+        return self::$zoneBoosterManager;
     }
 
     public static function getRelationManager(): RelationManager {
@@ -403,6 +437,16 @@ final class Loader extends PluginBase {
     public static function getChallengeManager() : ChallengeManager
     {
         return self::$challengeManager;
+    }
+
+    public static function getQuestBoardManager() : QuestBoardManager
+    {
+        return self::$questBoardManager;
+    }
+
+    public static function getPassiveRunePouchManager() : PassiveRunePouchManager
+    {
+        return self::$passiveRunePouchManager;
     }
 
     public static function getWorldManagerService(): WorldManagerService

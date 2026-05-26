@@ -21,6 +21,13 @@ final class EnderChestScreen
         $player->sendMessage(C::colorize(MessageTemplates::render("enderchest.opened.self")));
     }
 
+    public static function displayEditable(Player $viewer, Player $target): void
+    {
+        $menu = InvMenu::create(InvMenuTypeIds::TYPE_CHEST, $target->getEnderInventory());
+        $menu->setName(C::colorize(MessageTemplates::render("enderchest.title.other", ["player" => $target->getName()])));
+        $menu->send($viewer);
+    }
+
     public static function displayReadonly(Player $viewer, Player $target): void
     {
         $menu = InvMenu::create(InvMenuTypeIds::TYPE_CHEST, $target->getEnderInventory());

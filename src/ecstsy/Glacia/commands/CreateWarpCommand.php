@@ -37,7 +37,12 @@ final class CreateWarpCommand extends BaseCommand {
         $warpManager = Loader::getWarpManager();
     
         if ($warpManager->getWarp($warpName) === null) {
-            $warpManager->createWarp($sender, $warpName);
+            try {
+                $warpManager->createWarp($sender, $warpName);
+            } catch (\RuntimeException $exception) {
+                $sender->sendMessage(C::colorize("&r&c" . $exception->getMessage()));
+                return;
+            }
             $sender->sendMessage(GlaciaUtils::format("warp.created", ["warp" => $warpName], "success"));
         } else {
             $sender->sendMessage(GlaciaUtils::format("warp.exists", ["warp" => $warpName], "error"));

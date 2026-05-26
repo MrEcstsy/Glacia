@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\utils\screens\kits;
 
 use ecstsy\Glacia\server\gkits\GKitRepository;
+use ecstsy\Glacia\utils\inventory\CustomSizedInvMenu;
 use ecstsy\MartianUtilities\utils\screens\BaseScreen;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use muqsit\invmenu\InvMenu;
@@ -21,7 +22,7 @@ final class GKitScreen extends BaseScreen
 
     public function __construct()
     {
-        $this->invMenu = InvMenu::create(InvMenu::TYPE_CHEST);
+        $this->invMenu = CustomSizedInvMenu::create(27);
         $this->invMenu->setName(C::colorize("&r&8Glacial GKits"));
         $this->build();
 

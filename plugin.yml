@@ -1,23 +1,41 @@
 name: GlaciaExo
 main: ecstsy\Glacia\Loader
 api: 5.3.0
+mcpe-protocol:
+  - 975
 version: 1.0.0
 author: ecstsylove
 softdepend:
   - Customies
+  - DummyItemsBlocks
 
 permissions:
   glacia.default:
     description: Default Glacia permission
     default: true
+  glacia.playtime.others:
+    description: View another player's total server playtime (/playtime name)
+    default: op
   glacia.admin:
     description: Admin Glacia permission
+    default: op
+  glacia.farming.bypass:
+    description: Bypass Glacia farming level requirements (place, harvest, berry pick)
     default: op
   glacia.boss.bypasscooldown:
     description: Bypass boss summoning cooldowns for testing
     default: op
+  glacia.command.ratelimit.bypass:
+    description: Bypass misc.yml menu command rate-limit (shop, pv, etc.)
+    default: op
   glacia.staff.see-hidden:
-    description: See staff in /list and tab when they are in staff mode
+    description: See vanished staff in /list and tab
+    default: op
+  glacia.vanish:
+    description: Use /vanish
+    default: op
+  glacia.vanish.other:
+    description: Toggle vanish for other online players
     default: op
   glacia.sponge.use:
     description: Allows use of ocean busters in claimed territory
@@ -84,6 +102,9 @@ permissions:
   glacia.dupe:
     description: Permission to use /dupe command
     default: op
+  glacia.filltnt:
+    description: Permission to use /filltnt (fill dispenser/dropper with TNT)
+    default: op
   glacia.fly:
     description: Permission to use /fly command
     default: op
@@ -131,6 +152,12 @@ permissions:
     default: op
   glacia.staff.warn:
     description: Permission to warn players with escalation
+    default: op
+  glacia.anticheat.command:
+    description: Manage Glacia anti-cheat alerts and violation views
+    default: op
+  glacia.anticheat.alerts:
+    description: Receive Glacia anti-cheat alerts
     default: op
   glacia.staff.history:
     description: Permission to view staff moderation history
@@ -195,6 +222,24 @@ permissions:
   glacia.disguise.*:
     description: Access all disguise unlock permissions
     default: op
+  glacia.disguise.pig:
+    description: Unlock the pig disguise
+    default: false
+  glacia.disguise.wolf:
+    description: Unlock the wolf disguise
+    default: false
+  glacia.disguise.spider:
+    description: Unlock the spider disguise
+    default: false
+  glacia.disguise.blaze:
+    description: Unlock the blaze disguise
+    default: false
+  glacia.disguise.snowman:
+    description: Unlock the snowman disguise
+    default: false
+  glacia.disguise.mega_knight:
+    description: Unlock the mega knight disguise
+    default: false
   glacia.title.*:
     description: Access all title unlock permissions
     default: op
@@ -212,19 +257,70 @@ permissions:
     default: op
   glacia.ah.fee.0_75:
     description: Reduced auction house listing fee tier
-    default: op
+    default: false
   glacia.ah.listings.2:
     description: Auction house listing slot tier (2)
-    default: op
+    default: false
   glacia.ah.listings.3:
     description: Auction house listing slot tier (3)
-    default: op
+    default: false
+  glacia.ah.listings.4:
+    description: Auction house listing slot tier (4)
+    default: false
   glacia.ah.listings.5:
     description: Auction house listing slot tier (5)
-    default: op
+    default: false
   glacia.ah.listings.6:
     description: Auction house listing slot tier (6)
-    default: op
+    default: false
+  glacia.ah.listings.7:
+    description: Auction house listing slot tier (7)
+    default: false
+  glacia.ah.listings.8:
+    description: Auction house listing slot tier (8)
+    default: false
+  glacia.ah.listings.9:
+    description: Auction house listing slot tier (9)
+    default: false
+  glacia.ah.listings.10:
+    description: Auction house listing slot tier (10)
+    default: false
+  glacia.ah.listings.11:
+    description: Auction house listing slot tier (11)
+    default: false
+  glacia.ah.listings.12:
+    description: Auction house listing slot tier (12)
+    default: false
+  glacia.ah.tax_reduction.5:
+    description: Reduce auction house tax by 5 percent of the base rate
+    default: false
+  glacia.ah.tax_reduction.10:
+    description: Reduce auction house tax by 10 percent of the base rate
+    default: false
+  glacia.ah.tax_reduction.15:
+    description: Reduce auction house tax by 15 percent of the base rate
+    default: false
+  glacia.ah.tax_reduction.20:
+    description: Reduce auction house tax by 20 percent of the base rate
+    default: false
+  glacia.ah.tax_reduction.25:
+    description: Reduce auction house tax by 25 percent of the base rate
+    default: false
+  glacia.cf.tax_reduction.2:
+    description: Reduce coinflip tax by 2 percent of the base rate
+    default: false
+  glacia.cf.tax_reduction.4:
+    description: Reduce coinflip tax by 4 percent of the base rate
+    default: false
+  glacia.cf.tax_reduction.6:
+    description: Reduce coinflip tax by 6 percent of the base rate
+    default: false
+  glacia.cf.tax_reduction.8:
+    description: Reduce coinflip tax by 8 percent of the base rate
+    default: false
+  glacia.cf.tax_reduction.10:
+    description: Reduce coinflip tax by 10 percent of the base rate
+    default: false
   glacia.vault.*:
     description: Grant all player vault tiers
     default: op
@@ -234,6 +330,66 @@ permissions:
   glacia.home.increaser.use:
     description: Use home cap increaser item/features
     default: op
+  glacia.home.limit.6:
+    description: Set home limit to 6
+    default: false
+  glacia.home.limit.7:
+    description: Set home limit to 7
+    default: false
+  glacia.home.limit.8:
+    description: Set home limit to 8
+    default: false
+  glacia.home.limit.9:
+    description: Set home limit to 9
+    default: false
+  glacia.home.limit.10:
+    description: Set home limit to 10
+    default: false
+  glacia.home.limit.11:
+    description: Set home limit to 11
+    default: false
+  glacia.home.limit.12:
+    description: Set home limit to 12
+    default: false
+  glacia.enchant.limit.10:
+    description: Raise non-fishing custom enchant limit to 10
+    default: false
+  glacia.enchant.limit.11:
+    description: Raise non-fishing custom enchant limit to 11
+    default: false
+  glacia.enchant.limit.12:
+    description: Raise non-fishing custom enchant limit to 12
+    default: false
+  glacia.enchant.limit.13:
+    description: Raise non-fishing custom enchant limit to 13
+    default: false
+  glacia.enchant.limit.14:
+    description: Raise non-fishing custom enchant limit to 14
+    default: false
+  glacia.enchant.limit.15:
+    description: Raise non-fishing custom enchant limit to 15
+    default: false
+  glacia.enchant.limit.16:
+    description: Raise non-fishing custom enchant limit to 16
+    default: false
+  glacia.vote.bonus_reward:
+    description: Receive the configured bonus vote reward
+    default: false
+  glacia.slotbot.jackpot_bonus.1:
+    description: Adds 1 percent to slotbot jackpot odds
+    default: false
   glacia.warp.others:
     description: Permission to warp other players
     default: op
+  glacia.command.near:
+    default: op
+    description: Permission to run near command
+  glacia.command.nick:
+    default: op
+    description: Permission to run nick command
+  glacia.command.realname:
+    default: true
+    description: Permission to run realname command
+  glacia.command.enderchest:
+    default: op
+    description: Permission to open your ender chest with a command

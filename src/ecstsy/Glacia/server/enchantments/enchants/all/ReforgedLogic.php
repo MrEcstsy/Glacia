@@ -7,6 +7,7 @@ namespace ecstsy\Glacia\server\enchantments\enchants\all;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantments;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use pocketmine\item\Durable;
 use pocketmine\player\Player;
 
@@ -35,7 +36,8 @@ final class ReforgedLogic {
             return false;
         }
 
-        $chance = $level * 10;
+        $fallbackChance = max(0, min(100, $level * EnchantTuningManager::getInt("reforged", "save-chance-percent-per-level-mult", 10)));
+        $chance = max(0, min(100, EnchantTuningManager::getLevelInt("reforged", "chance-by-level", $level, $fallbackChance)));
 
         if (mt_rand(1, 100) > $chance) {
             return false; 

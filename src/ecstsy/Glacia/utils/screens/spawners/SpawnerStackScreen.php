@@ -5,10 +5,15 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\utils\screens\spawners;
 
 use ecstsy\Glacia\blocks\tiles\SpawnerTile;
+use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\MartianUtilities\utils\screens\BaseScreen;
 use pocketmine\player\Player;
 use Vecnavium\FormsUI\SimpleForm;
 use pocketmine\utils\TextFormat as C;
+use function number_format;
+use function str_replace;
+use function trim;
+use function ucwords;
 
 final class SpawnerStackScreen extends BaseScreen {
 
@@ -67,20 +72,31 @@ final class SpawnerStackScreen extends BaseScreen {
             }
         });
 
-        $entity = $tile->getEntityTypeId();
         $stack = $tile->getStackCount();
         $max = $tile->getMaxStack();
-        $delay = $tile->getDelay();
-        $baseCount = $tile->getStackCount();
+        $delayTicks = $tile->getDelay();
+        $delaySeconds = max(0.05, $delayTicks / 20.0);
+        $minCycle = $tile->getEstimatedSpawnMinPerCycle();
+        $avgCycle = $tile->getEstimatedSpawnAveragePerCycle();
+        $maxCycle = $tile->getEstimatedSpawnMaxPerCycle();
+        $minMinute = $tile->getEstimatedSpawnMinPerMinute();
+        $avgMinute = $tile->getEstimatedSpawnAveragePerMinute();
+        $maxMinute = $tile->getEstimatedSpawnMaxPerMinute();
+        $valueEach = $tile->getSpawnerValue();
+        $augmentCount = $tile->getAugmentCount();
+        $augmentBonus = $tile->getAugmentWorthBonus();
+        $totalValue = $tile->getFactionWorthContribution();
+        $mob = self::formatSpawnerName($tile);
 
-        $parts = explode(":", $entity);
-        $mob = $parts[1]; 
-
-        $this->form->setTitle(C::colorize("&r&l&8" . ucfirst($mob) . " Spawner"));
+        $this->form->setTitle(C::colorize("&r&l&8{$mob} Spawner"));
         $content = "";
         $content .= C::colorize("&r&fStack: &7{$stack} &f/ &7{$max}\n");
-        $content .= C::colorize("&r&fDelay: &7{$delay} ticks\n");
-        $content .= C::colorize("&r&fBase spawn count: &7{$baseCount}");
+        $content .= C::colorize("&r&fDelay: &7{$delayTicks} ticks &8(&7" . number_format($delaySeconds, 2) . "s&8)\n");
+        $content .= C::colorize("&r&fSpawn / cycle: &7{$minCycle}&8-&7{$maxCycle} &8(&7avg " . number_format($avgCycle, 1) . "&8)\n");
+        $content .= C::colorize("&r&fSpawn / minute: &7{$minMinute}&8-&7{$maxMinute} &8(&7avg " . number_format($avgMinute, 1) . "&8)\n");
+        $content .= C::colorize("&r&fSpawner value: &7$" . number_format($valueEach) . " each\n");
+        $content .= C::colorize("&r&fAugmented: &7{$augmentCount}&f/&7{$stack} &8(&7+$" . number_format($augmentBonus) . "&8)\n");
+        $content .= C::colorize("&r&fStack value: &7$" . number_format($totalValue));
         $this->form->setContent($content);
 
         $this->form->addButton(C::colorize("&r&aAdd 1"));
@@ -124,5 +140,18 @@ final class SpawnerStackScreen extends BaseScreen {
             return 0;
         }
         return (int) $this->tile->removeFromStackToPlayer($player, $count);
+    }
+
+    private static function formatSpawnerName(SpawnerTile $tile): string
+    {
+        $legacyId = $tile->getLegacyEntityId();
+        $short = $legacyId > 0 ? GlaciaUtils::convertMobIdToName($legacyId) : "";
+        if ($short !== "") {
+            return ucwords(str_replace("_", " ", trim($short)));
+        }
+
+        $parts = explode(":", $tile->getEntityTypeId(), 2);
+        $fallback = $parts[1] ?? $parts[0] ?? "Mob";
+        return ucwords(str_replace("_", " ", trim($fallback)));
     }
 }

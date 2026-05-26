@@ -6,6 +6,7 @@ namespace ecstsy\Glacia\server\fishing;
 
 use pocketmine\block\Air;
 use pocketmine\entity\Entity;
+use pocketmine\entity\Living;
 use pocketmine\entity\EntitySizeInfo;
 use pocketmine\entity\Location;
 use pocketmine\entity\NeverSavedWithChunkEntity;
@@ -167,6 +168,7 @@ final class GlaciaFishingHook extends Projectile implements NeverSavedWithChunkE
     public function reelLine() : void{
         $player = $this->getOwningEntity();
         if($player instanceof Player){
+            FishingManager::clearHookFor($player, $this);
             if($this->caught){
                 FishingManager::grantCatchFromHook($player);
             }else{
@@ -189,7 +191,19 @@ final class GlaciaFishingHook extends Projectile implements NeverSavedWithChunkE
             }
 
             if($this->getTargetEntity() !== null){
-                $this->getTargetEntity()->setMotion($player->getDirectionVector()->multiply(-1));
+                $target = $this->getTargetEntity();
+                if ($target instanceof Living) {
+                    $dx = $player->getPosition()->x - $target->getPosition()->x;
+                    $dy = ($player->getPosition()->y + 0.8) - $target->getPosition()->y;
+                    $dz = $player->getPosition()->z - $target->getPosition()->z;
+                    $len = sqrt(($dx * $dx) + ($dy * $dy) + ($dz * $dz));
+                    if ($len > 0.0001) {
+                        $pull = 1.15;
+                        $target->setMotion(new Vector3(($dx / $len) * $pull, max(0.22, ($dy / $len) * $pull), ($dz / $len) * $pull));
+                    }
+                } else {
+                    $target->setMotion($player->getDirectionVector()->multiply(-1));
+                }
             }
         }
         $this->flagForDespawn();
@@ -207,21 +221,30 @@ final class GlaciaFishingHook extends Projectile implements NeverSavedWithChunkE
             $this->fish->z + ($position->z - $this->fish->z) * $multiply
         );
         $this->getWorld()->addParticle($this->fish, new WaterParticle());
+        $this->getWorld()->addParticle($this->fish->add(0, 0.08, 0), new BubbleParticle());
         $dist = abs(sqrt($position->x * $position->x + $position->z * $position->z) - sqrt($this->fish->x * $this->fish->x + $this->fish->z * $this->fish->z));
         return $dist < 0.15;
     }
 
     public function fishBites() : void{
         NetworkBroadcastUtils::broadcastPackets($this->getViewers(), [
-            ActorEventPacket::create($this->getId(), ActorEvent::FISH_HOOK_HOOK, 0),
-            ActorEventPacket::create($this->getId(), ActorEvent::FISH_HOOK_BUBBLE, 0),
-            ActorEventPacket::create($this->getId(), ActorEvent::FISH_HOOK_TEASE, 0),
+            ActorEventPacket::create($this->getId(), ActorEvent::FISH_HOOK_HOOK, 0, null),
+            ActorEventPacket::create($this->getId(), ActorEvent::FISH_HOOK_BUBBLE, 0, null),
+            ActorEventPacket::create($this->getId(), ActorEvent::FISH_HOOK_TEASE, 0, null),
         ]);
 
         $random = new Random();
         $position = $this->getPosition();
-        for($i = 0; $i < 5; $i++){
-            $this->getWorld()->addParticle($position->withComponents($position->x + $random->nextFloat() * 0.5 - 0.25, $this->getWaterHeight(), $position->z + $random->nextFloat() * 0.5 - 0.25), new BubbleParticle());
+        for($i = 0; $i < 10; $i++){
+            $bubblePos = $position->withComponents(
+                $position->x + $random->nextFloat() * 0.7 - 0.35,
+                $this->getWaterHeight(),
+                $position->z + $random->nextFloat() * 0.7 - 0.35
+            );
+            $this->getWorld()->addParticle($bubblePos, new BubbleParticle());
+            if($i % 2 === 0){
+                $this->getWorld()->addParticle($bubblePos->add(0, 0.08, 0), new WaterParticle());
+            }
         }
         --$this->motion->y;
     }
@@ -236,15 +259,19 @@ final class GlaciaFishingHook extends Projectile implements NeverSavedWithChunkE
 
     public static function cast(Player $player) : bool{
         $existing = FishingManager::getPlayerHook($player);
-        if($existing !== null && !$existing->isFlaggedForDespawn()){
-            return false;
+        if($existing !== null){
+            if($existing->isFlaggedForDespawn()){
+                FishingManager::clearHookFor($player, $existing);
+            }else{
+                return false;
+            }
         }
 
         $eye = $player->getEyePos();
         $loc = Location::fromObject($eye, $player->getWorld(), $player->getLocation()->getYaw(), $player->getLocation()->getPitch());
         $nbt = CompoundTag::create();
         $hook = new GlaciaFishingHook($loc, $player, $nbt);
-        $hook->setMotion($player->getDirectionVector()->multiply(0.7));
+        $hook->setMotion($player->getDirectionVector()->multiply(0.9));
 
         $ev = new \pocketmine\event\entity\ProjectileLaunchEvent($hook);
         $ev->call();

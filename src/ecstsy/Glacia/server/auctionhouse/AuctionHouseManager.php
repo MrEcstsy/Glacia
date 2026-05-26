@@ -6,6 +6,7 @@ namespace ecstsy\Glacia\server\auctionhouse;
 
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\player\GlaciaPlayer;
+use ecstsy\Glacia\utils\PermissionTierUtils;
 use ecstsy\Glacia\utils\QueryStmts;
 use ecstsy\Glacia\utils\StorageUtils;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
@@ -149,11 +150,13 @@ final class AuctionHouseManager {
 
     public function getSellFeePercentFor(Player $player): float
     {
+        $basePercent = $this->getSellFeePercent();
+        $reduction = PermissionTierUtils::getHighestIntPermission($player, "glacia.ah.tax_reduction.", 0, 100);
         if ($player->hasPermission("glacia.ah.fee.0_75")) {
-            return 0.75;
+            $reduction = max($reduction, 25);
         }
 
-        return $this->getSellFeePercent();
+        return max(0.0, $basePercent * (1 - ($reduction / 100)));
     }
 
     public function getMaxPrice(): int
@@ -174,23 +177,7 @@ final class AuctionHouseManager {
 
     public function getMaxListingsFor(Player $player): int
     {
-        if ($player->hasPermission("glacia.ah.listings.6")) {
-            return 6;
-        }
-
-        if ($player->hasPermission("glacia.ah.listings.5")) {
-            return 5;
-        }
-
-        if ($player->hasPermission("glacia.ah.listings.3")) {
-            return 3;
-        }
-
-        if ($player->hasPermission("glacia.ah.listings.2")) {
-            return 2;
-        }
-
-        return 1;
+        return PermissionTierUtils::getHighestIntPermission($player, "glacia.ah.listings.", 3, 100);
     }
 
     public function canCreateListing(Player $player): bool
@@ -495,5 +482,13 @@ final class AuctionHouseManager {
         StorageUtils::writeJsonFile($this->watchlistFile, [
             "watchlists" => $this->watchlists
         ], "auction watchlists");
+    }
+
+    public function resetSeasonState(): void
+    {
+        $this->listings = [];
+        $this->collection = [];
+        $this->watchlists = [];
+        $this->saveWatchlists();
     }
 }

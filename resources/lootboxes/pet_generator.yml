@@ -25,11 +25,11 @@ rolls:
 rewards:
   - chance: 25
     type: item
-    id: "purity_wisp"
+    id: "puritywisp"
 
   - chance: 25
     type: item
-    id: "gale_fox"
+    id: "galefox"
 
   - chance: 25
     type: item
@@ -64,11 +64,11 @@ rolls:
 rewards:
   - chance: 25
     type: item
-    id: "purity_wisp"
+    id: "puritywisp"
 
   - chance: 25
     type: item
-    id: "gale_fox"
+    id: "galefox"
 
   - chance: 25
     type: item

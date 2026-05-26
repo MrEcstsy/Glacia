@@ -32,6 +32,8 @@ final class LootboxRepository {
                 continue;
             }
 
+            $data = self::normalizeBoxData($data);
+
             $id = strtolower((string) pathinfo($file, PATHINFO_FILENAME));
             $data["id"] = strtolower((string) ($data["id"] ?? $id));
             $data["name"] = (string) ($data["name"] ?? self::formatId($id));
@@ -128,9 +130,13 @@ final class LootboxRepository {
     public static function rollRewards(array $box, ?Player $player = null): array
     {
         $results = [];
+        $explicitJackpotRoll = false;
+        /** @var array<string, array<string, true>> $usedFingerprintsByPool */
+        $usedFingerprintsByPool = [];
 
         foreach (self::getRollDefinitions($box) as $roll) {
-            $pool = self::getPool($box, (string) ($roll["pool"] ?? "rewards"));
+            $poolName = self::normalizePoolName((string) ($roll["pool"] ?? "rewards"));
+            $pool = self::getPool($box, $poolName);
             if ($pool === []) {
                 continue;
             }
@@ -140,11 +146,21 @@ final class LootboxRepository {
                 continue;
             }
 
+            if ($poolName === "jackpot-rewards") {
+                $explicitJackpotRoll = true;
+            }
+
             $mode = strtolower((string) ($roll["mode"] ?? "random"));
             if ($mode === "all") {
                 foreach ($pool as $entry) {
+                    $fingerprint = RewardResolver::fingerprintLootEntry($entry);
+                    if (isset($usedFingerprintsByPool[$poolName][$fingerprint])) {
+                        continue;
+                    }
+
                     $item = RewardResolver::resolveItem($entry, $player);
                     if ($item !== null) {
+                        $usedFingerprintsByPool[$poolName][$fingerprint] = true;
                         $results[] = $item;
                     }
                 }
@@ -153,7 +169,7 @@ final class LootboxRepository {
 
             $count = max(0, GeneralUtils::parseRandomNumber($roll["count"] ?? 1));
             for ($i = 0; $i < $count; $i++) {
-                $entry = RewardResolver::rollEntry($pool);
+                $entry = self::rollUniqueEntry($pool, $usedFingerprintsByPool[$poolName]);
                 if ($entry === null) {
                     continue;
                 }
@@ -165,9 +181,18 @@ final class LootboxRepository {
             }
         }
 
+        $jackpotPool = self::getPool($box, "jackpot-rewards");
+        if ($jackpotPool !== [] && !$explicitJackpotRoll) {
+            $entry = self::rollUniqueEntry($jackpotPool, $usedFingerprintsByPool["jackpot-rewards"]);
+            $item = $entry !== null ? RewardResolver::resolveItem($entry, $player) : null;
+            if ($item !== null) {
+                $results[] = $item;
+            }
+        }
+
         if ($results === []) {
             $fallbackPool = self::getPool($box, "rewards");
-            $fallback = RewardResolver::rollEntry($fallbackPool);
+            $fallback = self::rollUniqueEntry($fallbackPool, $usedFingerprintsByPool["rewards"]);
             $fallbackItem = $fallback !== null ? RewardResolver::resolveItem($fallback, $player) : null;
             if ($fallbackItem !== null) {
                 $results[] = $fallbackItem;
@@ -251,15 +276,20 @@ final class LootboxRepository {
      */
     private static function getPool(array $box, string $pool): array
     {
-        $key = match (strtolower($pool)) {
-            "reward", "rewards", "main", "main-rewards" => "rewards",
-            "jackpot", "jackpot-rewards" => "jackpot-rewards",
-            "bonus", "bonus-rewards" => "bonus-rewards",
-            default => $pool
-        };
+        $key = self::normalizePoolName($pool);
 
         $entries = $box[$key] ?? [];
         return is_array($entries) ? array_values(array_filter($entries, static fn(mixed $entry): bool => is_array($entry))) : [];
+    }
+
+    private static function normalizePoolName(string $pool): string
+    {
+        return match (strtolower($pool)) {
+            "reward", "rewards", "main", "main-rewards" => "rewards",
+            "jackpot", "jackpot-rewards" => "jackpot-rewards",
+            "bonus", "bonus-rewards" => "bonus-rewards",
+            default => $pool,
+        };
     }
 
     private static function formatId(string $id): string
@@ -289,5 +319,94 @@ final class LootboxRepository {
     private static function normalizeIdentifier(string $value): string
     {
         return strtolower(str_replace([' ', '_', '-'], '', trim($value)));
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $pool
+     * @param array<string, true>|null $usedFingerprints
+     * @return array<string, mixed>|null
+     */
+    private static function rollUniqueEntry(array &$pool, ?array &$usedFingerprints): ?array
+    {
+        $usedFingerprints ??= [];
+        while ($pool !== []) {
+            $entry = RewardResolver::rollEntryRemove($pool);
+            if ($entry === null) {
+                return null;
+            }
+
+            $fingerprint = RewardResolver::fingerprintLootEntry($entry);
+            if (isset($usedFingerprints[$fingerprint])) {
+                continue;
+            }
+
+            $usedFingerprints[$fingerprint] = true;
+            return $entry;
+        }
+
+        return null;
+    }
+
+    /**
+     * Repairs common pool-entry mistakes such as putting `- jackpot-rewards:`
+     * on an entry inside the main `rewards:` list.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private static function normalizeBoxData(array $data): array
+    {
+        $poolMarkers = [
+            "rewards" => "rewards",
+            "reward" => "rewards",
+            "jackpot-rewards" => "jackpot-rewards",
+            "jackpot_rewards" => "jackpot-rewards",
+            "jackpot" => "jackpot-rewards",
+            "bonus-rewards" => "bonus-rewards",
+            "bonus_rewards" => "bonus-rewards",
+            "bonus" => "bonus-rewards",
+        ];
+
+        $normalizedPools = [
+            "rewards" => [],
+            "jackpot-rewards" => [],
+            "bonus-rewards" => [],
+        ];
+
+        foreach (array_keys($normalizedPools) as $poolName) {
+            $entries = $data[$poolName] ?? [];
+            if (!is_array($entries)) {
+                continue;
+            }
+
+            foreach ($entries as $entry) {
+                if (!is_array($entry)) {
+                    continue;
+                }
+
+                $targetPool = $poolName;
+                foreach ($poolMarkers as $marker => $mappedPool) {
+                    if (!array_key_exists($marker, $entry)) {
+                        continue;
+                    }
+
+                    $targetPool = $mappedPool;
+                    unset($entry[$marker]);
+                    break;
+                }
+
+                if ($entry === []) {
+                    continue;
+                }
+
+                $normalizedPools[$targetPool][] = $entry;
+            }
+        }
+
+        foreach ($normalizedPools as $poolName => $entries) {
+            $data[$poolName] = $entries;
+        }
+
+        return $data;
     }
 }

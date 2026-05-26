@@ -63,7 +63,13 @@ final class Home
      */
     public function getWorld(): ?World
     {
-        return Server::getInstance()->getWorldManager()->getWorldByName($this->world_name);
+        $worldManager = Server::getInstance()->getWorldManager();
+        $world = $worldManager->getWorldByName($this->world_name);
+        if ($world === null && $this->world_name !== "" && $worldManager->loadWorld($this->world_name)) {
+            $world = $worldManager->getWorldByName($this->world_name);
+        }
+
+        return $world;
     }
 
     /**
@@ -80,14 +86,14 @@ final class Home
      * Utility function to teleport player directly from the home call
      *
      * @param Player $player
-     * @return void
-     * @throws \RuntimeException
+     * @return bool
      */
-    public function teleport(Player $player): void
+    public function teleport(Player $player): bool
     {
         if (($pos = $this->getPosition()) === null) {
-            throw new \RuntimeException("The target world is not available for teleport. Perhaps the world isn't loaded?");
+            return false;
         }
         $player->teleport($pos);
+        return true;
     }
 }

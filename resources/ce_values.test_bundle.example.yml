@@ -1,0 +1,165 @@
+---
+# Test bundle for the cleaner enchant tuning format.
+# This file is a reference snippet and is not loaded automatically.
+# Copy the enchant blocks you want into ce_values.yml under `enchants:`.
+# New-style `proc:` enchants do not use legacy proc caps/gates/bonuses unless you opt in:
+# proc:
+#   legacy:
+#     weapon-proc-gate: true
+#     weapon-proc-cap: true
+#     additive-base-chance: true
+#     proc-luck: true
+#     rune-bonus: true
+#     combat-bonus: true
+#     runeswell-bonus: true
+#     soul-gem-cost: true
+# Quick tuning rule:
+# - valueInt() fields round decimals, so don't use floats for amplifier/ticks/count/radius/cooldown.
+# - value() fields keep decimals, so floats are good for heal/damage/multiplier/fraction/percent.
+
+settings:
+  debug:
+    enabled: true
+    console: true
+    owner: false
+    owner-targets-only: false
+    staff-permission: glacia.admin
+    targets:
+      - ecstsy
+
+enchants:
+  vampire:
+    enabled: true
+    max-level: 3
+    trigger: attack
+    proc:
+      chance:
+        base: 1
+        per-level: 0
+        max: 1
+      cooldown-seconds: 0
+    values:
+      heal:
+        base: 2
+        per-level: 0.5
+        max: 3
+
+  lifesteal:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    proc:
+      chance:
+        base: 1
+        per-level: 0.25
+        max: 2
+      cooldown-seconds: 0
+    values:
+      heal:
+        base: 2
+        per-level: 1.5
+        max: 8
+      damage:
+        base: 1
+        per-level: 0.5
+        max: 3
+
+  stormlash:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    proc:
+      chance:
+        base: 1
+        per-level: 0.5
+        max: 3
+      cooldown-seconds: 4
+    values:
+      damage:
+        base: 2
+        per-level: 0
+        max: 2
+
+  satanstreat:
+    enabled: true
+    max-level: 5
+    trigger: block-break
+    proc:
+      chance:
+        base: 1
+        per-level: 1
+    reward-item-id: legendarybook
+
+  angelic:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    proc:
+      chance:
+        base: 10
+        per-level: 10
+        max: 95
+      cooldown-seconds: 8
+    values:
+      heal-per-pulse:
+        base: 0.5
+        per-level: 0.25
+        max: 1.5
+      duration-seconds:
+        base: 2
+        max: 2
+      pulse-interval-ticks:
+        base: 20
+        max: 20
+        # int-only
+
+  enlighted:
+    enabled: true
+    max-level: 3
+    trigger: damaged
+    proc:
+      chance:
+        base: 4
+        per-level: 3
+        max: 10
+    values:
+      heal:
+        base: 1.5
+        per-level: 0.5
+        max: 2.5
+        # decimal-safe
+
+  armored:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    values:
+      damage-reduction-fraction:
+        base: 0.0075
+        per-level: 0.0075
+        max: 0.0375
+
+  tank:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    values:
+      damage-reduction-fraction:
+        base: 0.0085
+        per-level: 0.0085
+        max: 0.0425
+
+  valor:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    proc:
+      chance:
+        base: 4
+        per-level: 4.25
+        max: 21
+    values:
+      damage-reduction-percent:
+        base: 4.5
+        per-level: 4.5
+        max: 22.5

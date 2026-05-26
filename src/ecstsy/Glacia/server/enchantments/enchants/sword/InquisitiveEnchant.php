@@ -6,6 +6,8 @@ namespace ecstsy\Glacia\server\enchantments\enchants\sword;
 
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\handler\EntityDeathEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantProcManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDeathEvent;
 use pocketmine\player\Player;
@@ -16,32 +18,23 @@ final class InquisitiveEnchant implements EntityDeathEnchantmentHandler {
     {
         $entity = $event->getEntity();
         $cause = $entity->getLastDamageCause();
-
-        if ($cause === null) {
-            return;
-        }
-
         if (!$cause instanceof EntityDamageByEntityEvent) {
             return;
         }
 
         $damager = $cause->getDamager();
-        
         if (!$damager instanceof Player) {
-            return; 
+            return;
         }
 
-        $multiplier = 1.0 + ($level * 0.25);
-
-        $chance = match($level) {
-            1 => 30,
-            2 => 35,
-            3 => 40,
-            4 => 45,
-            default => 0
-        };
-
-        if (mt_rand(1, 100) > $chance) {
+        $result = EnchantProcManager::attempt(
+            $damager,
+            "inquisitive",
+            $level,
+            EnchantTuningManager::chance("inquisitive", $level, 30.0),
+            EnchantTuningManager::cooldownSeconds("inquisitive", $level, 0)
+        );
+        if (!$result->success) {
             return;
         }
 
@@ -50,7 +43,13 @@ final class InquisitiveEnchant implements EntityDeathEnchantmentHandler {
             return;
         }
 
-        $bonus = (int)floor($xp * $multiplier);
+        $multiplier = max(0.0, EnchantTuningManager::value("inquisitive", "xp-multiplier", $level, 1.25));
+        $bonus = (int) floor($xp * $multiplier);
         $event->setXpDropAmount($bonus);
+        EnchantProcManager::debugAppliedValues($damager, $result, [
+            "xp_before" => $xp,
+            "xp_after" => $bonus,
+            "xp_multiplier" => $multiplier,
+        ]);
     }
 }

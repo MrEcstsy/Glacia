@@ -12,8 +12,8 @@ use pocketmine\inventory\Inventory;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
 
-final class PlayerVaultScreen {
-
+final class PlayerVaultScreen
+{
     private InvMenu $menu;
 
     public function __construct(
@@ -24,7 +24,9 @@ final class PlayerVaultScreen {
         private bool $readonly = false
     ) {
         $this->menu = InvMenu::create(InvMenuTypeIds::TYPE_DOUBLE_CHEST);
-        $this->menu->setName(C::colorize($readonly ? "&r&8{$ownerName}'s Vault #{$vaultNumber}" : "&r&8Player Vault #{$vaultNumber}"));
+        $isOwnerView = $this->viewer->getUniqueId()->toString() === $this->ownerUuid;
+        $title = $isOwnerView ? "&r&8Player Vault #{$vaultNumber}" : "&r&8{$ownerName}'s Vault #{$vaultNumber}";
+        $this->menu->setName(C::colorize($title));
 
         Loader::getPlayerVaultManager()->populateInventory($this->menu->getInventory(), $this->ownerUuid, $this->vaultNumber);
 
@@ -37,7 +39,7 @@ final class PlayerVaultScreen {
 
         $this->menu->setInventoryCloseListener(function(Player $player, Inventory $inventory) : void {
             Loader::getPlayerVaultManager()->releaseOpenEditor($this->ownerUuid, $this->vaultNumber, $inventory);
-            $player->sendMessage(C::colorize("&r&aSaved vault &f#" . $this->vaultNumber . "&a."));
+            $player->sendMessage(C::colorize("&r&aSaved {$this->ownerName}'s vault &f#" . $this->vaultNumber . "&a."));
         });
     }
 

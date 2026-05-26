@@ -1,8 +1,11 @@
+# Bump schema-version whenever you ship new default pet keys — existing servers get a safe merge only.
+schema-version: 3
+
 pets:
-  purity_wisp:
+  puritywisp:
     cooldown: "10s"
 
-  gale_fox:
+  galefox:
     cooldown: "5m"
     speed-level: 5
     duration: "10s"
@@ -18,34 +21,105 @@ pets:
     food: 20
     saturation: 20
 
-  ironclad_wyrm:
+  ironcladwyrm:
     cooldown: "1h"
 
-  aegis_ram:
+  aegisram:
     cooldown: "20m"
     duration: "10s"
     boss-horizontal-multiplier: 0.0
     boss-vertical-multiplier: 0.0
 
-  rift_viper:
+  riftviper:
     cooldown: "20m"
     duration: "6s"
 
-  sunscorch_jackal:
+  sunscorchjackal:
     cooldown: "45m"
     duration: "10s"
 
-  runesage_owl:
+  runesageowl:
     cooldown: "12h"
     duration: "5m"
+    surge-bonus-percent: 5
 
-  stormcore_behemoth:
+  stormcorebehemoth:
     cooldown: "10m"
 
   veilmoth:
     cooldown: "10m"
     duration: "1m"
 
-  blastforge_hound:
+  blastforgehound:
     cooldown: "15m"
     duration: "7s"
+
+  gildedmoth:
+    cooldown: "5d"
+    duration: "10m"
+
+  rafflefinch:
+    cooldown: "4h"
+    bonus-tickets: 1000
+
+  oathbondbeetle:
+    cooldown: "24h"
+    duration: "10m"
+
+  murmurloft:
+    cooldown: "30m"
+    duration: "7s"
+    radius: 3
+    holy-white-negate-chance: 50
+
+  patchworksprite:
+    cooldown: "10m"
+
+  renderscalewyrm:
+    cooldown: "30m"
+    duration: "8s"
+    damage-bonus-percent: 5
+
+  skycourierdrake:
+    cooldown: "4h"
+    duration: "30m"
+    upgrade-chance: 10
+
+  inkwellfinch:
+    cooldown: "4h"
+    duration: "10m"
+
+  terracrestjackal:
+    cooldown: "2h"
+    duration: "5m"
+    multiplier-tenths: 25
+
+  soulsurge:
+    cooldown: "6h"
+    duration: "20m"
+
+  ruinspiremoth:
+    cooldown: "4d"
+    target-search-radius-blocks: 12
+    debuff-radius-blocks: 11
+    debuff-effect-duration-ticks: 45
+
+  bellforgecustodian:
+    cooldown: "30m"
+    strength-duration: "8s"
+    no-knockback-duration: "6s"
+    heal-interval-ticks: 40
+    heal-hp-tenths: 10
+
+  arcbindercodex:
+    cooldown: "3h"
+    apply-boost-duration: "30m"
+    apply-bonus-percent: 5
+
+  crownspirekestrel:
+    cooldown: "6h"
+    claim-window: "1h"
+    upgrade-roll-bonus-percent: 20
+
+  shadebrokercrow:
+    cooldown: "1d"

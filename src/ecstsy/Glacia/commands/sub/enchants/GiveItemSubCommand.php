@@ -17,11 +17,13 @@ use pocketmine\utils\TextFormat as C;
 final class GiveItemSubCommand extends BaseSubCommand {
 
     private array $availableItems = [
-        'whitescroll', 'holywhitescroll', 'blackscroll', 'renametag', 'transmog',
+        'essence',
+        'whitescroll', 'holywhitescroll', 'blackscroll', 'holyblackscroll', 'renametag', 'transmog',
         'heroicupgrade',
+        'disarmorring', 'lifestealring', 'guardianring',
         'charmshard', 'charmdust',
         'mystery', 'magic', 'randomizer', 'secret',
-        'blocktrak', 'mobtrak', 'killtrak', 'xptrak',
+        'blocktrak', 'mobtrak', 'killtrak', 'xptrak', 'soultrak', 'soulgem',
         'slotticket', 'heroicslotticket',
         'orb',
     ];
@@ -89,14 +91,28 @@ final class GiveItemSubCommand extends BaseSubCommand {
     private function buildItem(CommandSender $sender, string $aliasUsed, string $itemKey, int $amount, array $args): ?Item
     {
         switch ($itemKey) {
+            case 'essence':
+                if (!isset($args["extra1"])) {
+                    $sender->sendMessage(C::colorize("&cUsage: /{$aliasUsed} <player> essence <amount> <essence_id> [success 1-100]"));
+                    return null;
+                }
+                $sid = strtolower(trim((string) $args["extra1"]));
+                if ($sid === "" || !GlaciaItemFactory::hasDefinition("essence_" . $sid)) {
+                    $sender->sendMessage(C::colorize("&cUnknown essence id. Check essences.yml / gi menu → essences."));
+                    return null;
+                }
+                $succ = isset($args["extra2"]) ? max(1, min(100, (int) $args["extra2"])) : null;
+
+                return GlaciaItemFactory::enchantEssence($sid, $succ);
+
             case 'orb':
                 if (!isset($args["extra1"], $args["extra2"], $args["extra3"])) {
-                    $sender->sendMessage(C::colorize("&cUsage: /$aliasUsed <player> orb <amount> <weapon|armor|tool> <max> <success>"));
+                    $sender->sendMessage(C::colorize("&cUsage: /$aliasUsed <player> orb <amount> <weapon|armor|tool|fishing> <max> <success>"));
                     return null;
                 }
                 $orbType = strtolower((string) $args["extra1"]);
-                if (!in_array($orbType, ["weapon", "armor", "tool"], true)) {
-                    $sender->sendMessage(C::colorize("&cInvalid orb type. Use: weapon, armor, or tool."));
+                if (!in_array($orbType, ["weapon", "armor", "tool", "fishing"], true)) {
+                    $sender->sendMessage(C::colorize("&cInvalid orb type. Use: weapon, armor, tool, or fishing."));
                     return null;
                 }
                 return GlaciaItemFactory::enchantOrb($orbType, (int) $args["extra2"], $amount, (int) $args["extra3"]);
@@ -104,6 +120,9 @@ final class GiveItemSubCommand extends BaseSubCommand {
             case 'blackscroll':
                 $success = isset($args["extra1"]) ? (int) $args["extra1"] : null;
                 return GlaciaItemFactory::blackscroll($success);
+            case 'holyblackscroll':
+                $success = isset($args["extra1"]) ? (int) $args["extra1"] : null;
+                return GlaciaItemFactory::holyBlackscroll($success);
 
             case 'magic':
                 if (!isset($args["extra1"])) {
@@ -144,6 +163,15 @@ final class GiveItemSubCommand extends BaseSubCommand {
 
             case 'heroicupgrade':
                 return GlaciaItemFactory::heroicUpgrade(null);
+            case 'disarmorring':
+                $success = isset($args["extra1"]) ? (int) $args["extra1"] : null;
+                return GlaciaItemFactory::ring("disarmor", $success);
+            case 'lifestealring':
+                $success = isset($args["extra1"]) ? (int) $args["extra1"] : null;
+                return GlaciaItemFactory::ring("lifesteal", $success);
+            case 'guardianring':
+                $success = isset($args["extra1"]) ? (int) $args["extra1"] : null;
+                return GlaciaItemFactory::ring("guardian", $success);
             case 'charmshard':
                 return GlaciaItemFactory::charmShard(null);
             case 'charmdust':
@@ -160,6 +188,13 @@ final class GiveItemSubCommand extends BaseSubCommand {
 
             case 'xptrak':
                 return GlaciaItemFactory::create("xp_tracker");
+
+            case 'soultrak':
+                return GlaciaItemFactory::create("soul_tracker");
+
+            case 'soulgem':
+                $souls = isset($args["extra1"]) ? max(1, (int) $args["extra1"]) : 1;
+                return GlaciaItemFactory::soulGem($souls);
 
             case 'slotticket':
                 return GlaciaItemFactory::slotTicket();

@@ -49,9 +49,6 @@ final class ShopScreen extends BaseScreen {
         $specialtyCategory = StringToItemParser::getInstance()->parse("ender_eye")->setCustomName(C::colorize("&r&l&eSpecialty Items"))->setLore([
             C::colorize("&r&7Click to view this category.")
         ]);
-        $brewingCategory = VanillaBlocks::BREWING_STAND()->asItem()->setCustomName(C::colorize("&r&l&eBrewing"))->setLore([
-            C::colorize("&r&7Click to view this category.")
-        ]);
         $woolCategory = VanillaBlocks::WOOL()->asItem()->setCustomName(C::colorize("&r&l&eWool"))->setLore([
             C::colorize("&r&7Click to view this category.")
         ]);
@@ -72,11 +69,9 @@ final class ShopScreen extends BaseScreen {
         $inv->setItem(5, $foodFarmingCategory);
         $inv->setItem(6, $mobDropsCategory);
         $inv->setItem(7, $specialtyCategory);
-        $inv->setItem(8, $brewingCategory);
-        $inv->setItem(12, $woolCategory);
-
-        $inv->setItem(13, $glassCategory);
-        $inv->setItem(14, $baseGrindCategory);
+        $inv->setItem(8, $woolCategory);
+        $inv->setItem(12, $glassCategory);
+        $inv->setItem(13, $baseGrindCategory);
 
         $this->invMenu->setListener(InvMenu::readonly(function(DeterministicInvMenuTransaction $transaction): void {
             $slot = $transaction->getAction()->getSlot();
@@ -91,10 +86,9 @@ final class ShopScreen extends BaseScreen {
                 5 => "food",
                 6 => "drops",
                 7 => "special",
-                8 => "brewing",
-                12 => "wool",
-                13 => "glass",
-                14 => "base"
+                8 => "wool",
+                12 => "glass",
+                13 => "base"
             ];
 
             if (!isset($categories[$slot])) return;

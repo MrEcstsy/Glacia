@@ -9,6 +9,8 @@ use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\factions\Faction;
+use ecstsy\Glacia\server\factions\contribution\FactionContributionManager;
+use ecstsy\Glacia\server\factions\guardian\FactionGuardianManager;
 use pocketmine\command\CommandSender;
 use pocketmine\utils\TextFormat as C;
 
@@ -25,7 +27,7 @@ final class TopSubCommand extends BaseSubCommand {
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void
     {
-        $category = strtolower((string) ($args["category"] ?? "value"));
+        $category = strtolower((string) ($args["category"] ?? "points"));
         $page = max(1, (int) ($args["page"] ?? 1));
 
         $label = match ($category) {
@@ -33,15 +35,22 @@ final class TopSubCommand extends BaseSubCommand {
             "power" => "Power",
             "claims", "claimscount" => "Claims",
             "members", "membercount" => "Members",
+            "contribution", "contrib", "points" => "Contribution",
             default => null,
         };
 
         if ($label === null) {
-            $sender->sendMessage(C::colorize("&r&cUsage: /f top [value|power|claims|members] [page]"));
+            $sender->sendMessage(C::colorize("&r&cUsage: /f top [points|value|power|claims|members] [page]"));
             return;
         }
 
         $factions = Loader::getFactionManager()->getAllFactions();
+        if (FactionGuardianManager::shouldRequireForFtop()) {
+            $factions = array_values(array_filter(
+                $factions,
+                static fn(Faction $faction): bool => FactionGuardianManager::hasPlacedGuardian($faction->getFactionId())
+            ));
+        }
         usort($factions, function(Faction $a, Faction $b) use ($category): int {
             $aStat = $this->getFactionStat($a, $category);
             $bStat = $this->getFactionStat($b, $category);
@@ -71,6 +80,7 @@ final class TopSubCommand extends BaseSubCommand {
             "power" => $faction->getFactionPower(),
             "claims", "claimscount" => $faction->getClaimCount(),
             "members", "membercount" => count($faction->getMembers()),
+            "contribution", "contrib", "points" => FactionContributionManager::getFactionPoints($faction->getFactionId()),
             default => 0,
         };
     }
@@ -82,6 +92,7 @@ final class TopSubCommand extends BaseSubCommand {
             "power" => number_format($faction->getFactionPower()),
             "claims", "claimscount" => (string) $faction->getClaimCount(),
             "members", "membercount" => (string) count($faction->getMembers()),
+            "contribution", "contrib", "points" => number_format(FactionContributionManager::getFactionPoints($faction->getFactionId())),
             default => "0",
         };
     }

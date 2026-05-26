@@ -11,7 +11,9 @@ use ecstsy\Glacia\entity\boss\ability\HydraRiftFireball;
 use ecstsy\Glacia\entity\boss\ability\HydraTailSweep;
 use ecstsy\Glacia\entity\boss\ability\HydraVoidPull;
 use ecstsy\Glacia\entity\boss\BossEntity;
+use ecstsy\Glacia\entity\boss\minions\BossMinionStray;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\utils\CustomParticleEffectManager;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\entity\Attribute;
 use pocketmine\entity\EntitySizeInfo;
@@ -46,6 +48,59 @@ final class GlacialHydra extends BossEntity
         return "Glacial Hydra";
     }
 
+    protected function getBossDefaultConfig(): array
+    {
+        return [
+            "stats" => [
+                "max-health" => 5800.0,
+                "melee-reach" => 2.85,
+                "target-range" => 30.0,
+                "follow-range" => 36.0,
+                "knockback-resistance" => 0.95,
+                "movement-speed" => [
+                    "phase-1" => 0.26,
+                    "phase-2" => 0.33,
+                    "phase-3" => 0.40,
+                ],
+                "melee-damage" => [
+                    "phase-1" => 14.0,
+                    "phase-2" => 19.0,
+                    "phase-3" => 24.0,
+                ],
+            ],
+            "minions" => [
+                "phase-2" => [
+                    "name" => "&r&fHydra Whelp",
+                    "health" => 120,
+                    "damage" => 8.0,
+                    "speed" => 0.25,
+                    "target-range" => 24.0,
+                    "attack-reach" => 2.15,
+                    "attack-cooldown" => 12,
+                ],
+                "phase-3" => [
+                    "name" => "&r&bHydra Frostspawn",
+                    "health" => 150,
+                    "damage" => 10.0,
+                    "speed" => 0.28,
+                    "target-range" => 24.0,
+                    "attack-reach" => 2.15,
+                    "attack-cooldown" => 10,
+                ],
+            ],
+            "rewards" => [
+                "top-damagers" => 5,
+                "ranks" => [
+                    1 => ["money" => 450000, "items" => []],
+                    2 => ["money" => 275000, "items" => []],
+                    3 => ["money" => 150000, "items" => []],
+                    4 => ["money" => 60000, "items" => []],
+                    5 => ["money" => 60000, "items" => []],
+                ],
+            ],
+        ];
+    }
+
     protected function getInitialSizeInfo(): EntitySizeInfo
     {
         return new EntitySizeInfo(3.2, 1.6);
@@ -55,13 +110,14 @@ final class GlacialHydra extends BossEntity
     {
         parent::initEntity($nbt);
 
-        $this->setMaxHealth(5800);
-        $this->setHealth(5800);
+        $maxHealth = (int) round($this->getConfiguredMaxHealth(5800.0));
+        $this->setMaxHealth($maxHealth);
+        $this->setHealth($maxHealth);
 
         $attr = $this->getAttributeMap();
-        $attr->get(Attribute::MOVEMENT_SPEED)->setValue(0.26);
-        $attr->get(Attribute::FOLLOW_RANGE)->setValue(36);
-        $attr->get(Attribute::KNOCKBACK_RESISTANCE)->setValue(0.95);
+        $attr->get(Attribute::MOVEMENT_SPEED)->setValue($this->getConfiguredMovementSpeed(1, 0.26));
+        $attr->get(Attribute::FOLLOW_RANGE)->setValue($this->getConfiguredFollowRange(36.0));
+        $attr->get(Attribute::KNOCKBACK_RESISTANCE)->setValue($this->getConfiguredKnockbackResistance(0.95));
 
         $this->heads = [
             self::HEAD_FROST => ["hp" => 760.0, "max" => 760.0, "regen_until" => 0],
@@ -103,7 +159,7 @@ final class GlacialHydra extends BossEntity
 
     protected function getBossBarTitle(): string
     {
-        return "&r&l" . $this->getBossName() . " &r&7[" . $this->getActiveHeadCount() . "/3 heads]";
+        return $this->decorateBossBarTitle("&r&l" . $this->getBossName() . " &r&7[" . $this->getActiveHeadCount() . "/3 heads]");
     }
 
     public function getBossName(): string
@@ -127,7 +183,7 @@ final class GlacialHydra extends BossEntity
 
     protected function getMeleeReach(): float
     {
-        return 2.85;
+        return $this->getConfiguredMeleeReach(2.85);
     }
 
     protected function getCloseRangeOrbitBuffer(): float
@@ -137,12 +193,11 @@ final class GlacialHydra extends BossEntity
 
     protected function getMeleeDamage(): float
     {
-        return match ($this->phase) {
-            1 => 12.0,
-            2 => 16.0,
-            3 => 20.0,
-            default => 12.0,
-        };
+        return $this->getConfiguredMeleeDamage([
+            1 => 14.0,
+            2 => 19.0,
+            3 => 24.0,
+        ]);
     }
 
     protected function getTargetLockTicks(): int
@@ -163,13 +218,22 @@ final class GlacialHydra extends BossEntity
     public function getPressureDamageMultiplier(): float
     {
         $extraPlayers = max(0, $this->getEngagedPlayerCount(16.0) - 1);
-        $multiplier = 1.0 + min(0.30, $extraPlayers * 0.10);
-        $multiplier += ($this->phase - 1) * 0.06;
+        $multiplier = 1.0 + min(0.24, $extraPlayers * 0.08);
+        $multiplier += ($this->phase - 1) * 0.05;
         if ($this->isOverloaded()) {
-            $multiplier += 0.10;
+            $multiplier += 0.08;
         }
 
         return $multiplier;
+    }
+
+    protected function getMinimumUnmitigatedDamage(float $baseDamage, int $cause): float
+    {
+        return match ($cause) {
+            EntityDamageEvent::CAUSE_ENTITY_ATTACK => min(6.5, max(1.2, $baseDamage * 0.24)),
+            EntityDamageEvent::CAUSE_MAGIC => min(5.25, max(0.9, $baseDamage * 0.18)),
+            default => min(3.5, max(0.5, $baseDamage * 0.12)),
+        };
     }
 
     protected function doMeleeAttack(): void
@@ -193,13 +257,7 @@ final class GlacialHydra extends BossEntity
                 $damage *= 0.74;
             }
 
-            $event = new EntityDamageByEntityEvent(
-                $this,
-                $victim,
-                EntityDamageByEntityEvent::CAUSE_ENTITY_ATTACK,
-                $damage
-            );
-            $victim->attack($event);
+            $event = $this->dealBossTrueDamage($victim, $damage);
 
             if ($event->isCancelled()) {
                 continue;
@@ -233,11 +291,11 @@ final class GlacialHydra extends BossEntity
 
         match ($phase) {
             2 => [
-                $attr->get(Attribute::MOVEMENT_SPEED)->setValue(0.33),
+                $attr->get(Attribute::MOVEMENT_SPEED)->setValue($this->getConfiguredMovementSpeed(2, 0.33)),
                 PlayerUtils::playSound($this, "mob.wither.spawn"),
             ],
             3 => [
-                $attr->get(Attribute::MOVEMENT_SPEED)->setValue(0.40),
+                $attr->get(Attribute::MOVEMENT_SPEED)->setValue($this->getConfiguredMovementSpeed(3, 0.40)),
                 PlayerUtils::playSound($this, "mob.enderdragon.growl"),
             ],
             default => null,
@@ -247,8 +305,27 @@ final class GlacialHydra extends BossEntity
     protected function entityBaseTick(int $tickDiff = 1): bool
     {
         $this->tickHeads();
-        $this->tickCrushingPresence();
+        if (($this->ticksLived % 10) === 0) {
+            $this->emitHydraAura();
+        }
+        if (!$this->isMinionIntermissionActive()) {
+            $this->tickCrushingPresence();
+        }
         return parent::entityBaseTick($tickDiff);
+    }
+
+    protected function getMinionIntermissionSpec(int $phase): array
+    {
+        return $this->getConfiguredMinionSpec($phase, [
+            "class" => BossMinionStray::class,
+            "name" => $phase >= 3 ? "&r&bHydra Frostspawn" : "&r&fHydra Whelp",
+            "health" => $phase >= 3 ? 150 : 120,
+            "damage" => $phase >= 3 ? 10.0 : 8.0,
+            "speed" => $phase >= 3 ? 0.28 : 0.25,
+            "target_range" => 24.0,
+            "attack_reach" => 2.15,
+            "attack_cooldown" => $phase >= 3 ? 10 : 12,
+        ]);
     }
 
     public function attack(EntityDamageEvent $source): void
@@ -336,21 +413,13 @@ final class GlacialHydra extends BossEntity
 
             $this->crushExposure[$id] = 0;
             $damage = match ($this->phase) {
-                1 => 8.5,
-                2 => 12.5,
-                3 => 17.0,
-                default => 8.5,
+                1 => 7.0,
+                2 => 10.0,
+                3 => 13.5,
+                default => 7.0,
             } * $this->getPressureDamageMultiplier();
 
-            $player->attack(new EntityDamageByEntityEvent(
-                $this,
-                $player,
-                EntityDamageEvent::CAUSE_ENTITY_ATTACK,
-                $damage,
-                [],
-                0.0,
-                0.0
-            ));
+            $this->dealBossTrueDamage($player, $damage);
 
             $delta = $player->getPosition()->subtractVector($this->getPosition());
             $this->applyBossKnockback($player, $delta->x, $delta->z, 0.72, 0.24);
@@ -374,35 +443,80 @@ final class GlacialHydra extends BossEntity
         };
     }
 
+    private function emitHydraAura(): void
+    {
+        $center = $this->getPosition()->asVector3()->add(0, 0.2, 0);
+
+        CustomParticleEffectManager::stackedRing(
+            $this->getWorld(),
+            $center,
+            1.9,
+            CustomParticleEffectManager::HYDRA_WARNING,
+            2,
+            14,
+            0.20,
+            44.0
+        );
+        CustomParticleEffectManager::ringVariants(
+            $this->getWorld(),
+            $center,
+            1.45,
+            [
+                CustomParticleEffectManager::HYDRA_WARNING,
+                CustomParticleEffectManager::HYDRA_WARNING_ARC,
+            ],
+            12,
+            0.12,
+            44.0
+        );
+
+        if ($this->hasHeadActive(self::HEAD_FROST)) {
+            CustomParticleEffectManager::burst(
+                $this->getWorld(),
+                $center->add(-0.85, 1.55, 0.15),
+                CustomParticleEffectManager::HYDRA_FROST,
+                7,
+                0.28,
+                0.36,
+                44.0
+            );
+        }
+
+        if ($this->hasHeadActive(self::HEAD_VOID)) {
+            CustomParticleEffectManager::column(
+                $this->getWorld(),
+                $center->add(0.0, 1.1, 0.0),
+                CustomParticleEffectManager::HYDRA_VOID,
+                1.35,
+                5,
+                44.0
+            );
+        }
+
+        if ($this->hasHeadActive(self::HEAD_RAGE)) {
+            CustomParticleEffectManager::burst(
+                $this->getWorld(),
+                $center->add(0.85, 1.45, -0.1),
+                CustomParticleEffectManager::HYDRA_WARNING,
+                6,
+                0.24,
+                0.28,
+                44.0
+            );
+        }
+    }
+
     protected function rewardPlayers(): void
     {
-        $top = $this->getTopDamagers(5);
-        if ($top === []) {
-            return;
-        }
-
-        $rank = 1;
-        foreach ($top as $playerId => $damage) {
-            $player = $this->getWorld()->getServer()->getPlayerExact($playerId);
-            if (!$player instanceof Player) {
-                continue;
-            }
-
-            $coins = match ($rank) {
-                1 => 450000,
-                2 => 275000,
-                3 => 150000,
-                default => 60000,
-            };
-            Loader::getPlayerManager()->getSession($player)?->addBalance($coins);
-            $player->sendMessage(C::colorize("&r&l&a[Boss] &r&aYou placed #{$rank} on the &bGlacial Hydra &aand earned &f$" . number_format($coins)));
-            PlayerUtils::playSound($player, "random.levelup");
-            $rank++;
-        }
-
-        foreach ($this->getWorld()->getPlayers() as $player) {
-            $player->sendMessage(C::colorize("&r&l&bGlacial Hydra Defeated!"));
-        }
+        $this->rewardConfiguredTopDamagers(
+            "&r&l&bGlacial Hydra Defeated!",
+            "&b",
+            "Glacial Hydra",
+            [
+                "boss_id" => $this->getBossConfigId(),
+                "boss_name" => strtolower($this->getName()),
+            ]
+        );
     }
 
     public function jump(): void

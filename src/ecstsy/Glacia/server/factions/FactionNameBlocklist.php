@@ -91,6 +91,41 @@ final class FactionNameBlocklist
         return preg_replace("/[^a-z0-9]/", "", $t) ?? "";
     }
 
+    /**
+     * Lowercase, strip formatting, optionally leet-fold, and preserve word boundaries as spaces.
+     */
+    private static function normalizePhraseText(string $input, bool $leetFold = false): string
+    {
+        $text = strtolower(C::clean($input));
+        if ($leetFold) {
+            $text = strtr($text, [
+                "0" => "o",
+                "1" => "i",
+                "3" => "e",
+                "4" => "a",
+                "5" => "s",
+                "7" => "t",
+                "8" => "b",
+                "@" => "a",
+                "$" => "s",
+                "!" => "i",
+                "|" => "l",
+            ]);
+        }
+
+        $text = preg_replace("/[^a-z0-9]+/", " ", $text) ?? "";
+        return trim(preg_replace("/\\s+/", " ", $text) ?? "");
+    }
+
+    private static function containsBlockedPhrase(string $haystack, string $needle): bool
+    {
+        if ($haystack === "" || $needle === "") {
+            return false;
+        }
+
+        return preg_match('/(?:^| )' . preg_quote($needle, '/') . '(?: |$)/', $haystack) === 1;
+    }
+
     public static function firstFactionNameViolation(string $originalInput, string $sanitizedName): ?string
     {
         $sn = strtolower($sanitizedName);
@@ -143,6 +178,71 @@ final class FactionNameBlocklist
             foreach ($haystacks as $hay) {
                 if ($hay !== "" && str_contains($hay, $word)) {
                     return "That description contains a forbidden word.";
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public static function firstGenericNameViolation(string $originalInput, string $sanitizedName, string $label = "name"): ?string
+    {
+        $sn = strtolower(trim($sanitizedName));
+        if ($sn === "") {
+            return null;
+        }
+
+        if (isset(self::$reservedNames[$sn])) {
+            return "That {$label} is reserved.";
+        }
+
+        if (isset(self::$blockedFullNames[$sn])) {
+            return "That {$label} is not allowed.";
+        }
+
+        $haystacks = [
+            strtolower(C::clean($originalInput)),
+            $sn,
+            self::foldString($originalInput),
+            self::foldString($sanitizedName),
+        ];
+
+        foreach (self::$blockedSubstrings as $word) {
+            foreach ($haystacks as $hay) {
+                if ($hay !== "" && str_contains($hay, $word)) {
+                    return "That {$label} contains prohibited language.";
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public static function firstGenericTextViolation(string $text, string $label = "message", ?int $maxLength = null): ?string
+    {
+        if ($maxLength !== null && strlen($text) > $maxLength) {
+            return ucfirst($label) . " is too long (max {$maxLength} characters).";
+        }
+
+        $haystacks = [
+            self::normalizePhraseText($text, false),
+            self::normalizePhraseText($text, true),
+        ];
+
+        foreach (self::$blockedSubstrings as $word) {
+            $needle = self::normalizePhraseText($word, true);
+            foreach ($haystacks as $hay) {
+                if (self::containsBlockedPhrase($hay, $needle)) {
+                    return "That {$label} contains prohibited language.";
+                }
+            }
+        }
+
+        foreach (array_keys(self::$blockedFullNames) as $word) {
+            $needle = self::normalizePhraseText($word, true);
+            foreach ($haystacks as $hay) {
+                if (self::containsBlockedPhrase($hay, $needle)) {
+                    return "That {$label} contains prohibited language.";
                 }
             }
         }

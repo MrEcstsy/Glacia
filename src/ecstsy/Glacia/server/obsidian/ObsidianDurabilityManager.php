@@ -10,8 +10,12 @@ use pocketmine\block\VanillaBlocks;
 
 final class ObsidianDurabilityManager
 {
-    private const KEY_HP = "obsidian_hp";
-    private const DEFAULT_HP = 3;
+    private const KEY_REMAIN = "obsidian_remain";
+
+    /** @deprecated Legacy integer layers (e.g. 3), migrated to fractional remain */
+    private const KEY_HP_LEGACY = "obsidian_hp";
+
+    private const FLOAT_EPS = 1e-6;
 
     public static function isTrackedObsidian(Block $block): bool
     {
@@ -20,7 +24,7 @@ final class ObsidianDurabilityManager
 
     public static function getMaxHp(): int
     {
-        return self::DEFAULT_HP;
+        return ObsidianExplosionConfig::displayLayers();
     }
 
     public static function getHp(Block $block): int
@@ -29,31 +33,70 @@ final class ObsidianDurabilityManager
             return 0;
         }
 
-        $data = Loader::getBlockData()->get($block);
-        if (!is_array($data)) {
-            return self::DEFAULT_HP;
+        $layers = ObsidianExplosionConfig::displayLayers();
+        $remain = self::getRemain($block);
+
+        if ($remain <= self::FLOAT_EPS) {
+            return 0;
         }
 
-        return max(1, (int) ($data[self::KEY_HP] ?? self::DEFAULT_HP));
+        return max(1, (int) ceil($layers * $remain - self::FLOAT_EPS));
     }
 
-    public static function damage(Block $block, int $amount = 1): int
+    /**
+     * @return float remainder in ~0–1 — 1 = fresh
+     */
+    public static function getRemain(Block $block): float
+    {
+        $data = Loader::getBlockData()->get($block);
+        if (!is_array($data)) {
+            return 1.0;
+        }
+
+        if (isset($data[self::KEY_REMAIN])) {
+            $v = $data[self::KEY_REMAIN];
+            if (is_float($v) || is_int($v)) {
+                return max(0.0, min(1.0, (float) $v));
+            }
+        }
+
+        if (isset($data[self::KEY_HP_LEGACY]) && is_numeric($data[self::KEY_HP_LEGACY])) {
+            $layers = ObsidianExplosionConfig::displayLayers();
+
+            return max(0.0, min(1.0, (float) (((int) $data[self::KEY_HP_LEGACY]) / $layers)));
+        }
+
+        return 1.0;
+    }
+
+    /**
+     * Applies fractional wear after one explosion pulse against this obsidian block.
+     *
+     * @return bool Whether the obsidian should be destroyed (added to explosion break list)
+     */
+    public static function applyExplosionWear(Block $block, float $fractionOfFullDurability): bool
     {
         if (!self::isTrackedObsidian($block)) {
-            return 0;
+            return false;
         }
 
-        $remaining = self::getHp($block) - max(1, $amount);
-        if ($remaining <= 0) {
+        $wear = max(0.0, min(1.0, $fractionOfFullDurability));
+
+        $remain = self::getRemain($block) - $wear;
+        if ($remain <= self::FLOAT_EPS) {
             self::clear($block);
-            return 0;
+
+            return true;
         }
 
-        Loader::getBlockData()->set($block, [
-            self::KEY_HP => $remaining
-        ]);
+        $existing = Loader::getBlockData()->get($block);
+        $merged = is_array($existing) ? $existing : [];
+        unset($merged[self::KEY_HP_LEGACY]);
+        $merged[self::KEY_REMAIN] = $remain;
 
-        return $remaining;
+        Loader::getBlockData()->set($block, $merged);
+
+        return false;
     }
 
     public static function clear(Block $block): void

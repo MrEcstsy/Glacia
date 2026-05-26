@@ -1,0 +1,15 @@
+# Bump schema-version when you add documented example keys in this resource.
+schema-version: 1
+
+# Player-facing lore for Glacia custom enchantments only (not vanilla).
+# Keys: internal CE id exactly as defined in PHP (same as definitions map).
+#
+# Plain string:
+#   autosmelt: "Smelted drops go straight into your inventory."
+#
+# Structured:
+#   clarity:
+#     description: "Clears blindness when you strike."
+#
+# `\n` in a quoted scalar becomes a newline.
+

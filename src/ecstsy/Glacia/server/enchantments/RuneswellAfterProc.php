@@ -17,7 +17,7 @@ final class RuneswellAfterProc
     public static function onProcSucceeded(Player $player, string $enchantKey): void
     {
         $h = $player->getInventory()->getItemInHand();
-        if (!($h instanceof Axe) || CustomEnchantmentManager::getLevel($h, "runeswell") < 1) {
+        if (!($h instanceof Axe) || CustomEnchantmentManager::getLevel($h, "runevein") < 1) {
             return;
         }
         if (RuneswellProcBonus::getForRoll($player, $enchantKey) < 1) {

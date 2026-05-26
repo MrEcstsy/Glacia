@@ -9,6 +9,7 @@ use ecstsy\Glacia\entity\boss\BossEntity;
 use ecstsy\Glacia\entity\boss\bosses\GlacialHydra;
 use ecstsy\Glacia\entity\boss\projectile\HydraRiftFireball as HydraRiftFireballProjectile;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\utils\CustomParticleEffectManager;
 use pocketmine\entity\Location;
 use pocketmine\event\entity\ProjectileLaunchEvent;
 use pocketmine\nbt\tag\CompoundTag;
@@ -60,6 +61,31 @@ final class HydraRiftFireball extends BossAbility
                 }
 
                 $origin = $boss->getPosition()->asVector3()->add(0, 1.65, 0);
+                CustomParticleEffectManager::columnVariants(
+                    $boss->getWorld(),
+                    $origin->add(0, -0.2, 0),
+                    [
+                        CustomParticleEffectManager::HYDRA_VOID_CORE,
+                        CustomParticleEffectManager::HYDRA_VOID,
+                        CustomParticleEffectManager::HYDRA_VOID_SHARD,
+                    ],
+                    2.3,
+                    8,
+                    48.0
+                );
+                CustomParticleEffectManager::burstVariants(
+                    $boss->getWorld(),
+                    $origin,
+                    [
+                        CustomParticleEffectManager::HYDRA_VOID,
+                        CustomParticleEffectManager::HYDRA_VOID_CORE,
+                        CustomParticleEffectManager::HYDRA_VOID_SHARD,
+                    ],
+                    18,
+                    0.65,
+                    0.55,
+                    48.0
+                );
                 $aim = $target->getPosition()->asVector3()->add(0, $target->getEyeHeight() * 0.85, 0);
                 $delta = $aim->subtractVector($origin);
                 if ($delta->lengthSquared() <= 0.0001) {
@@ -74,10 +100,10 @@ final class HydraRiftFireball extends BossAbility
                     default => [0.0],
                 };
                 $damage = match ($boss->getPhase()) {
-                    1 => 8.5,
-                    2 => 11.0,
-                    3 => 14.5,
-                    default => 8.5,
+                    1 => 7.5,
+                    2 => 10.0,
+                    3 => 13.0,
+                    default => 7.5,
                 } * $boss->getPressureDamageMultiplier();
                 $speed = match ($boss->getPhase()) {
                     1 => 0.92,

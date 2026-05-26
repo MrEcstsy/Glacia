@@ -11,6 +11,7 @@ use pocketmine\player\Player;
 use pocketmine\utils\SingletonTrait;
 use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
+use SQLite3;
 
 final class PlayerManager {
     use SingletonTrait;
@@ -30,27 +31,30 @@ final class PlayerManager {
     private function loadSessions(): void {
         Loader::getDatabase()->executeSelect(QueryStmts::PLAYERS_SELECT, [], function(array $rows): void {
             foreach ($rows as $row) {
-                $this->sessions[$row['uuid']] = new GlaciaPlayer(
-                    Uuid::fromString($row['uuid']),
-                    $row['username'],
-                    $row['balance'],
-                    $row['cooldowns'],
-                    $row['faction_id'],
-                    $row['faction_role'],
-                    $row['power'],
-                    $row['rank'],
-                    $row['settings'],
-                    $row['buffs'],
-                    $row['sell_multiplier'],
-                    $row['collection'],
-                    $row['kills'],
-                    $row['deaths'],
-                    (int)($row['slot_credits'] ?? 0),
-                    (int)($row['item_flip_credits'] ?? 0),
-                    $row['title'] ?? null
-                );
+                $uuid = (string) ($row["uuid"] ?? "");
+                if ($uuid === "" || isset($this->sessions[$uuid])) {
+                    continue;
+                }
+
+                $this->sessions[$uuid] = $this->hydrateSessionRow($row);
             }
         });
+    }
+
+    public function ensureSessionLoaded(Player $player): GlaciaPlayer
+    {
+        $existing = $this->getSession($player);
+        if ($existing instanceof GlaciaPlayer) {
+            return $existing;
+        }
+
+        $loaded = $this->loadSessionFromDatabase($player->getUniqueId()->toString());
+        if ($loaded instanceof GlaciaPlayer) {
+            $this->sessions[$player->getUniqueId()->toString()] = $loaded;
+            return $loaded;
+        }
+
+        return $this->createSession($player);
     }
 
     public function createSession(Player $player): GlaciaPlayer {
@@ -60,8 +64,10 @@ final class PlayerManager {
             'notifications' => true,
             'loot_announcer' => true,
             'quick_claim' => true,
-            'max_homes' => 3,
+            'max_homes' => 5,
             'show_coordinates' => true,
+            'guard_inspect_use_form' => false,
+            'night_vision' => false,
         ], "default player settings") ?? "{}";
         $defaultBuffs = StorageUtils::encodeJsonString([], "default player buffs") ?? "[]";
         $defaultCollection = StorageUtils::encodeJsonString([], "default player collection") ?? "[]";
@@ -83,6 +89,7 @@ final class PlayerManager {
             "deaths" => 0,
             "slot_credits" => 0,
             "item_flip_credits" => 0,
+            "playtime_seconds" => 0,
             "title" => null
         ];
 
@@ -105,10 +112,73 @@ final class PlayerManager {
             $args["deaths"],
             $args["slot_credits"],
             $args["item_flip_credits"],
+            $args["playtime_seconds"],
             $args["title"]
         );
 
         return $this->sessions[$player->getUniqueId()->toString()];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function hydrateSessionRow(array $row): GlaciaPlayer
+    {
+        return new GlaciaPlayer(
+            Uuid::fromString((string) $row["uuid"]),
+            (string) ($row["username"] ?? "Unknown"),
+            (float) ($row["balance"] ?? 950),
+            (string) ($row["cooldowns"] ?? "{}"),
+            isset($row["faction_id"]) ? (string) $row["faction_id"] : null,
+            isset($row["faction_role"]) ? (string) $row["faction_role"] : null,
+            (int) ($row["power"] ?? 100),
+            (string) ($row["rank"] ?? "frostborn"),
+            (string) ($row["settings"] ?? "{}"),
+            (string) ($row["buffs"] ?? "[]"),
+            (float) ($row["sell_multiplier"] ?? 1.0),
+            (string) ($row["collection"] ?? "[]"),
+            (int) ($row["kills"] ?? 0),
+            (int) ($row["deaths"] ?? 0),
+            (int) ($row["slot_credits"] ?? 0),
+            (int) ($row["item_flip_credits"] ?? 0),
+            (int) ($row["playtime_seconds"] ?? 0),
+            isset($row["title"]) ? (string) $row["title"] : null
+        );
+    }
+
+    private function loadSessionFromDatabase(string $uuid): ?GlaciaPlayer
+    {
+        $databasePath = Loader::getInstance()->getDataFolder() . "sqlite.sql";
+        if (!is_file($databasePath)) {
+            return null;
+        }
+
+        try {
+            $db = new SQLite3($databasePath, SQLITE3_OPEN_READONLY);
+            $stmt = $db->prepare("SELECT * FROM glacia_players WHERE uuid = :uuid LIMIT 1;");
+            if ($stmt === false) {
+                $db->close();
+                return null;
+            }
+
+            $stmt->bindValue(":uuid", $uuid, SQLITE3_TEXT);
+            $result = $stmt->execute();
+            if ($result === false) {
+                $db->close();
+                return null;
+            }
+
+            $row = $result->fetchArray(SQLITE3_ASSOC);
+            $result->finalize();
+            $db->close();
+            if (!is_array($row)) {
+                return null;
+            }
+
+            return $this->hydrateSessionRow($row);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function getSession(Player $player): ?GlaciaPlayer {
@@ -167,6 +237,13 @@ final class PlayerManager {
     public function getSessions() : array
     {
         return $this->sessions;
+    }
+
+    public function resetAllPersistentData(bool $preserveRanks = true): void
+    {
+        foreach ($this->sessions as $session) {
+            $session->resetPersistentData($preserveRanks, false);
+        }
     }
 
 }

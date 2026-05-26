@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\utils\screens\shop;
 
+use ecstsy\Glacia\utils\inventory\CustomSizedInvMenu;
 use ecstsy\MartianUtilities\utils\screens\BaseScreen;
 use muqsit\invmenu\InvMenu;
 use muqsit\invmenu\transaction\DeterministicInvMenuTransaction;
-use muqsit\invmenu\type\InvMenuTypeIds;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\block\utils\DyeColor;
 use pocketmine\item\VanillaItems;
@@ -20,11 +20,15 @@ final class ShopCategoryScreen extends BaseScreen {
     private const ITEMS_PER_PAGE = 45;
     private int $page = 1;
     private array $items = [];
+    private string $category;
 
-    public function __construct(string $category)
+    public function __construct(string $category, int $page = 1)
     {
+        $this->category = $category;
         $this->items = ShopRepository::getItemsForCategory($category);
-        $this->invMenu = InvMenu::create(InvMenuTypeIds::TYPE_DOUBLE_CHEST);
+        $maxPage = max(1, (int) ceil(max(1, count($this->items)) / self::ITEMS_PER_PAGE));
+        $this->page = max(1, min($maxPage, $page));
+        $this->invMenu = CustomSizedInvMenu::create(54);
         $this->invMenu->setName(C::colorize("&r&8Shop Items (&b$category&r&8)"));
 
         $this->invMenu->setListener(InvMenu::readonly(function(DeterministicInvMenuTransaction $transaction): void {
@@ -43,7 +47,10 @@ final class ShopCategoryScreen extends BaseScreen {
                 if ($this->page > 1) {
                     $this->page--;
                     $this->build();
+                    return;
                 }
+
+                ShopScreen::display($player);
                 return;
             }
 
@@ -56,7 +63,7 @@ final class ShopCategoryScreen extends BaseScreen {
 
                 $player->removeCurrentWindow();
                 $transaction->then(function() use($player, $itemData) {
-                    ShopConfirmScreen::displayForm($player, $itemData);
+                    ShopConfirmScreen::displayForm($player, $itemData, $this->category, $this->page);
                 });
             }
         }));
@@ -98,6 +105,8 @@ final class ShopCategoryScreen extends BaseScreen {
 
         if ($this->page > 1) {
             $inv->setItem(45, VanillaItems::ARROW()->setCustomName(C::colorize("&r&c<- Back")));
+        } else {
+            $inv->setItem(45, VanillaItems::ARROW()->setCustomName(C::colorize("&r&c<- Categories")));
         }
 
         if (($offset + self::ITEMS_PER_PAGE) < count($this->items)) {

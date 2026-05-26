@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\vote;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\utils\SplitConfigHelper;
 use ecstsy\Glacia\tasks\vote\VoteClaimTask;
 use ecstsy\Glacia\utils\RewardResolver;
 use ecstsy\Glacia\utils\StorageUtils;
-use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\console\ConsoleCommandSender;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
@@ -29,6 +29,11 @@ final class VoteManager{
 	private array $rewardItems = [];
 	/** @var string[] */
 	private array $rewardCommands = [];
+	/** @var array<int, array<string, mixed>> */
+	private array $bonusRewardItems = [];
+	/** @var string[] */
+	private array $bonusRewardCommands = [];
+	private string $bonusRewardPermission = "glacia.vote.bonus_reward";
 
 	/** @var array<string, int> */
 	private array $voteTotals = [];
@@ -45,8 +50,7 @@ final class VoteManager{
 	}
 
 	public function loadFromConfig() : void{
-		$config = GeneralUtils::getConfiguration(Loader::getInstance(), "config.yml");
-		$section = (array) ($config?->get("voting", []) ?? []);
+		$section = SplitConfigHelper::loadRootSection(Loader::getInstance(), "voting.yml", "voting");
 
 		$this->enabled = (bool) ($section["enabled"] ?? false);
 		$this->apiKey = trim((string) ($section["api-key"] ?? ""));
@@ -55,6 +59,9 @@ final class VoteManager{
 		$this->voteSites = array_values(array_filter(array_map("strval", (array) ($section["vote-sites"] ?? [])), static fn(string $s) : bool => trim($s) !== ""));
 		$this->rewardItems = array_values(array_filter((array) ($section["rewards"]["items"] ?? []), static fn(mixed $row) : bool => is_array($row)));
 		$this->rewardCommands = array_values(array_filter(array_map("strval", (array) ($section["rewards"]["commands"] ?? [])), static fn(string $s) : bool => trim($s) !== ""));
+		$this->bonusRewardPermission = trim((string) ($section["rewards"]["bonus"]["permission"] ?? "glacia.vote.bonus_reward"));
+		$this->bonusRewardItems = array_values(array_filter((array) ($section["rewards"]["bonus"]["items"] ?? []), static fn(mixed $row) : bool => is_array($row)));
+		$this->bonusRewardCommands = array_values(array_filter(array_map("strval", (array) ($section["rewards"]["bonus"]["commands"] ?? [])), static fn(string $s) : bool => trim($s) !== ""));
 	}
 
 	public function isEnabled() : bool{
@@ -105,6 +112,7 @@ final class VoteManager{
 		$this->grantRewards($player);
 		$this->incrementVoteCount($player->getName());
 		$this->setNextEligibleAt($player->getName(), time() + $this->claimCooldownSeconds);
+		$this->saveStorage();
         $this->announceClaim($player);
 	}
 
@@ -146,7 +154,23 @@ final class VoteManager{
 	}
 
 	private function grantRewards(Player $player) : void{
-		foreach($this->rewardItems as $entry){
+		$this->grantConfiguredRewards($player, $this->rewardItems, $this->rewardCommands);
+
+		if (
+			$this->bonusRewardPermission !== "" &&
+			$player->hasPermission($this->bonusRewardPermission) &&
+			($this->bonusRewardItems !== [] || $this->bonusRewardCommands !== [])
+		) {
+			$this->grantConfiguredRewards($player, $this->bonusRewardItems, $this->bonusRewardCommands);
+		}
+	}
+
+	/**
+	 * @param array<int, array<string, mixed>> $rewardItems
+	 * @param string[] $rewardCommands
+	 */
+	private function grantConfiguredRewards(Player $player, array $rewardItems, array $rewardCommands) : void{
+		foreach($rewardItems as $entry){
 			$item = RewardResolver::resolveItem($entry, $player);
 			if($item === null){
 				continue;
@@ -157,7 +181,7 @@ final class VoteManager{
 		}
 
 		$console = new ConsoleCommandSender($player->getServer(), $player->getServer()->getLanguage());
-		foreach($this->rewardCommands as $raw){
+		foreach($rewardCommands as $raw){
 			$command = str_replace(
 				["{player}", "{name}", "{username}", "{uuid}"],
 				[$player->getName(), $player->getName(), $player->getName(), $player->getUniqueId()->toString()],
@@ -170,13 +194,11 @@ final class VoteManager{
 	private function incrementVoteCount(string $playerName) : void{
 		$key = strtolower($playerName);
 		$this->voteTotals[$key] = ($this->voteTotals[$key] ?? 0) + 1;
-		$this->saveStorage();
 	}
 
 	private function setNextEligibleAt(string $playerName, int $unixTime) : void{
 		$key = strtolower($playerName);
 		$this->nextEligibleAt[$key] = max(0, $unixTime);
-		$this->saveStorage();
 	}
 
     private function announceClaim(Player $player) : void{
@@ -252,4 +274,3 @@ final class VoteManager{
 		return strlen($message) > 72 ? substr($message, 0, 72) . "..." : $message;
 	}
 }
-

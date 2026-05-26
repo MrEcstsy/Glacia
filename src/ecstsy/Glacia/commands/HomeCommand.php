@@ -32,10 +32,13 @@ final class HomeCommand extends BaseCommand {
         if ($homeName !== null) {
             $home = Loader::getHomeManager()->getPlayerHome($sender->getUniqueId(), $homeName);
             if ($home !== null) {
-                $home->teleport($sender);
-                $sender->sendMessage(C::GREEN . "Teleported to home '{$homeName}'.");
+                if ($home->teleport($sender)) {
+                    $sender->sendMessage(C::colorize("&aTeleported to home '{$homeName}'."));
+                } else {
+                    $sender->sendMessage(C::colorize("&cHome '{$homeName}' could not be loaded right now."));
+                }
             } else {
-                $sender->sendMessage(C::RED . "Home '{$homeName}' does not exist.");
+                $sender->sendMessage(C::colorize("&cHome '{$homeName}' does not exist."));
             }
         } 
     }

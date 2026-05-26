@@ -33,12 +33,12 @@ final class RemoveHomeCommand extends BaseCommand {
             $home = Loader::getHomeManager()->getPlayerHome($sender->getUniqueId(), $homeName);
             if ($home !== null) { // Probably redundant 
                 Loader::getHomeManager()->deleteHome($home);
-                $sender->sendMessage(C::RED . "Successfully removed home '{$homeName}'!");
+                $sender->sendMessage(C::colorize("&cSuccessfully removed home '{$homeName}'!"));
             } else {
-                $sender->sendMessage(C::RED . "Home '{$homeName}' does not exist.");
+                $sender->sendMessage(C::colorize("&cHome '{$homeName}' does not exist."));
             }
         } else {
-            $sender->sendMessage(C::RED . "Home '{$homeName}' does not exist.");
+            $sender->sendMessage(C::colorize("&cHome '{$homeName}' does not exist."));
         }
     }
 

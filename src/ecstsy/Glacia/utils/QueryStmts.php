@@ -15,6 +15,7 @@ final class QueryStmts {
     public const PLAYERS_UPDATE = "glacia_players.update";
     public const PLAYERS_DELETE = "glacia_players.delete";
     public const PLAYERS_USERNAME_BY_UUID = "glacia_players.username_by_uuid";
+    public const PLAYERS_RESET_SEASON = "glacia_players.reset_season";
 
     public const PLAYER_RANK_INIT = "glacia_ranks.init";
     public const PLAYER_RANK_SELECT = "glacia_ranks.select";
@@ -35,6 +36,7 @@ final class QueryStmts {
     public const SERVER_HOMES_CREATE = "homes.create";
     public const SERVER_HOMES_UPDATE = "homes.update";
     public const SERVER_HOMES_DELETE = "homes.delete";
+    public const SERVER_HOMES_DELETE_ALL = "homes.delete_all";
 
     public const SERVER_WARPS_INIT = "warps.init";
     public const SERVER_WARPS_SELECT = "warps.select";
@@ -54,18 +56,21 @@ final class QueryStmts {
     public const FACTIONS_CREATE = "glacia_factions.create";
     public const FACTIONS_UPDATE = "glacia_factions.update";
     public const FACTIONS_DELETE = "glacia_factions.delete";
+    public const FACTIONS_DELETE_ALL = "glacia_factions.delete_all";
 
     public const FACTION_HOME_INIT = "glacia_faction_homes.init";
     public const FACTION_HOME_SELECT = "glacia_faction_homes.select";
     public const FACTION_HOME_CREATE = "glacia_faction_homes.create";
     public const FACTION_HOME_UPDATE = "glacia_faction_homes.update";
     public const FACTION_HOME_DELETE = "glacia_faction_homes.delete";
+    public const FACTION_HOME_DELETE_ALL = "glacia_faction_homes.delete_all";
 
     public const FACTION_ROLES_INIT = "glacia_faction_roles.init";
     public const FACTION_ROLES_SELECT = "glacia_faction_roles.select";
     public const FACTION_ROLES_CREATE = "glacia_faction_roles.create";
     public const FACTION_ROLES_UPDATE = "glacia_faction_roles.update";
     public const FACTION_ROLES_DELETE = "glacia_faction_roles.delete";
+    public const FACTION_ROLES_DELETE_ALL = "glacia_faction_roles.delete_all";
 
     public const FACTION_MEMBERS_INIT = "glacia_faction_members.init";
     public const FACTION_MEMBERS_SELECT = "glacia_faction_members.select";
@@ -73,6 +78,7 @@ final class QueryStmts {
     public const FACTION_MEMBERS_CREATE = "glacia_faction_members.create";
     public const FACTION_MEMBERS_UPDATE = "glacia_faction_members.update";
     public const FACTION_MEMBERS_DELETE = "glacia_faction_members.delete";
+    public const FACTION_MEMBERS_DELETE_ALL = "glacia_faction_members.delete_all";
 
     public const FACTION_CLAIM_INIT = "glacia_faction_claims.init";
     public const FACTION_CLAIM_SELECT = "glacia_faction_claims.select";
@@ -80,23 +86,27 @@ final class QueryStmts {
     public const FACTION_CLAIM_UPDATE = "glacia_faction_claims.update";
     public const FACTION_CLAIM_DELETE = "glacia_faction_claims.delete";
     public const FACTION_CLAIM_DELETE_FACTION = "glacia_faction_claims.deleteByFaction";
+    public const FACTION_CLAIM_DELETE_ALL = "glacia_faction_claims.delete_all";
 
     public const FACTION_RELATIONS_INIT = "glacia_faction_relations.init";
     public const FACTION_RELATIONS_SELECT = "glacia_faction_relations.select";
     public const FACTION_RELATIONS_CREATE = "glacia_faction_relations.create";
     public const FACTION_RELATIONS_UPDATE = "glacia_faction_relations.update";
     public const FACTION_RELATIONS_DELETE = "glacia_faction_relations.delete";
+    public const FACTION_RELATIONS_DELETE_ALL = "glacia_faction_relations.delete_all";
 
     public const FACTION_UPGRADE_BANK_INIT = "glacia_faction_upgrade_bank.init";
     public const FACTION_UPGRADE_BANK_SELECT = "glacia_faction_upgrade_bank.select";
     public const FACTION_UPGRADE_BANK_CREATE = "glacia_faction_upgrade_bank.create";
     public const FACTION_UPGRADE_BANK_DELETE = "glacia_faction_upgrade_bank.delete";
+    public const FACTION_UPGRADE_BANK_DELETE_ALL = "glacia_faction_upgrade_bank.delete_all";
 
     // COINFLIP QUERY
     public const COINFLIP_INIT = "coinflip.initialize";
     public const COINFLIP_SELECT = "coinflip.select";
     public const COINFLIP_CREATE = "coinflip.create";
     public const COINFLIP_DELETE = "coinflip.delete";
+    public const COINFLIP_DELETE_ALL = "coinflip.delete_all";
 
     // JACKPOT QUERY
     public const JACKPOT_INIT = "glacia_jackpot.init";
@@ -109,12 +119,15 @@ final class QueryStmts {
     public const JACKPOT_STATS_SELECT = "glacia_jackpot_stats.select";
     public const JACKPOT_STATS_UPDATE = "glacia_jackpot_stats.update";
     public const JACKPOT_STATS_INSERT = "glacia_jackpot_stats.insert";
+    public const JACKPOT_RESET = "glacia_jackpot.reset";
+    public const JACKPOT_STATS_DELETE_ALL = "glacia_jackpot_stats.delete_all";
 
     // BOUNTIES
     public const BOUNTIES_INIT = "glacia_bounties.init";
     public const BOUNTIES_SELECT = "glacia_bounties.select";
     public const BOUNTIES_CREATE = "glacia_bounties.create";
     public const BOUNTIES_DELETE = "glacia_bounties.delete";
+    public const BOUNTIES_DELETE_ALL = "glacia_bounties.delete_all";
 
     // COMBAT LOGGER QUERY
     public const COMBAT_LOGGER_INIT = "glacia_combat_loggers.init";
@@ -123,21 +136,38 @@ final class QueryStmts {
     public const COMBAT_LOGGER_CREATE = "glacia_combat_loggers.create";
     public const COMBAT_LOGGER_DELETE = "glacia_combat_loggers.delete";
     public const COMBAT_LOGGER_UPDATE_DEAD = "glacia_combat_loggers.update_dead";
+    public const COMBAT_LOGGER_DELETE_ALL = "glacia_combat_loggers.delete_all";
 
     // AUCTION HOUSE
     public const AUCTION_HOUSE_LISTINGS_INIT = "glacia_auction_house_listings.init";
     public const AUCTION_HOUSE_LISTINGS_SELECT = "glacia_auction_house_listings.select";
     public const AUCTION_HOUSE_LISTINGS_CREATE = "glacia_auction_house_listings.create";
     public const AUCTION_HOUSE_LISTINGS_DELETE = "glacia_auction_house_listings.delete";
+    public const AUCTION_HOUSE_LISTINGS_DELETE_ALL = "glacia_auction_house_listings.delete_all";
 
     public const AUCTION_HOUSE_COLLECTION_INIT = "glacia_auction_house_collection.init";
     public const AUCTION_HOUSE_COLLECTION_SELECT = "glacia_auction_house_collection.select";
     public const AUCTION_HOUSE_COLLECTION_CREATE = "glacia_auction_house_collection.create";
     public const AUCTION_HOUSE_COLLECTION_DELETE = "glacia_auction_house_collection.delete";
+    public const AUCTION_HOUSE_COLLECTION_DELETE_ALL = "glacia_auction_house_collection.delete_all";
 
     // PLAYER VAULTS
     public const PLAYER_VAULTS_INIT = "glacia_player_vaults.init";
     public const PLAYER_VAULTS_SELECT = "glacia_player_vaults.select";
     public const PLAYER_VAULTS_CREATE = "glacia_player_vaults.create";
     public const PLAYER_VAULTS_DELETE = "glacia_player_vaults.delete";
+    public const PLAYER_VAULTS_DELETE_ALL = "glacia_player_vaults.delete_all";
+
+    // QUEST BOARD
+    public const PLAYER_QUESTS_INIT = "glacia_player_quests.init";
+    public const PLAYER_QUESTS_SELECT = "glacia_player_quests.select";
+    public const PLAYER_QUESTS_CREATE = "glacia_player_quests.create";
+    public const PLAYER_QUESTS_UPDATE = "glacia_player_quests.update";
+    public const PLAYER_QUESTS_DELETE = "glacia_player_quests.delete";
+    public const PLAYER_QUESTS_DELETE_ALL = "glacia_player_quests.delete_all";
+
+    public const QUEST_SHOP_STATE_INIT = "glacia_quest_shop_state.init";
+    public const QUEST_SHOP_STATE_SELECT = "glacia_quest_shop_state.select";
+    public const QUEST_SHOP_STATE_UPSERT = "glacia_quest_shop_state.upsert";
+    public const QUEST_SHOP_STATE_DELETE_ALL = "glacia_quest_shop_state.delete_all";
 }

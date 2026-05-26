@@ -6,6 +6,8 @@ namespace ecstsy\Glacia\server\enchantments\enchants\sword;
 
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantDebugManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\item\Bow;
 use pocketmine\item\Sword;
@@ -20,7 +22,6 @@ final class GreatswordEnchant implements EntityDamageByEntityEnchantmentHandler 
 
         $damager = $event->getDamager();
         $victim = $event->getEntity();
-
         if (!$damager instanceof Player || !$victim instanceof Player) {
             return;
         }
@@ -40,7 +41,12 @@ final class GreatswordEnchant implements EntityDamageByEntityEnchantmentHandler 
             return;
         }
 
-        $multiplier = 1 + (0.02 * $level); // 2% per level
+        $multiplier = max(1.0, EnchantTuningManager::value("greatsword", "damage-multiplier", $level, 1.02));
         $event->setBaseDamage($base * $multiplier);
+        EnchantDebugManager::logPassiveValues($damager, "greatsword", $level, [
+            "damage_multiplier" => $multiplier,
+            "base_damage" => $base,
+            "final_damage" => $event->getBaseDamage(),
+        ]);
     }
 }

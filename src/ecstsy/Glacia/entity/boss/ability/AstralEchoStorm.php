@@ -59,9 +59,9 @@ final class AstralEchoStorm extends BossAbility
         }
 
         $damage = match ($boss->getPhase()) {
-            2 => 5.0,
-            3 => 7.5,
-            default => 5.0,
+            2 => 6.0,
+            3 => 9.0,
+            default => 6.0,
         };
 
         $scheduler = Loader::getInstance()->getScheduler();
@@ -144,7 +144,7 @@ final class AstralEchoStorm extends BossAbility
                             continue;
                         }
 
-                        $player->attack(new EntityDamageByEntityEvent($boss, $player, EntityDamageEvent::CAUSE_MAGIC, $damage, [], 0.0, 0.0));
+                        $boss->dealBossTrueDamage($player, $damage);
 
                         if ($isFinal) {
                             $player->getEffects()->add(new EffectInstance(VanillaEffects::WEAKNESS(), 80, 0));

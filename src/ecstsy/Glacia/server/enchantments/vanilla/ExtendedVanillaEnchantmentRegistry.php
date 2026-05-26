@@ -68,9 +68,263 @@ final class ExtendedVanillaEnchantmentRegistry
             }
         );
 
+        self::register(
+            "smite",
+            EnchantmentIds::SMITE,
+            new Enchantment(
+                KnownTranslationFactory::enchantment_damage_undead(),
+                Rarity::UNCOMMON,
+                0,
+                0,
+                5,
+                fn(int $level): int => 11 * ($level - 1) + 5,
+                20
+            ),
+            ["smite"],
+            [ItemEnchantmentTags::SWORD],
+            []
+        );
+
+        self::register(
+            "bane_of_arthropods",
+            EnchantmentIds::BANE_OF_ARTHROPODS,
+            new Enchantment(
+                KnownTranslationFactory::enchantment_damage_arthropods(),
+                Rarity::UNCOMMON,
+                0,
+                0,
+                5,
+                fn(int $level): int => 11 * ($level - 1) + 5,
+                20
+            ),
+            ["bane_of_arthropods", "baneofarthropods"],
+            [ItemEnchantmentTags::SWORD],
+            []
+        );
+
+        self::register(
+            "looting",
+            EnchantmentIds::LOOTING,
+            new Enchantment(
+                KnownTranslationFactory::enchantment_lootBonus(),
+                Rarity::RARE,
+                0,
+                0,
+                3,
+                fn(int $level): int => 9 * ($level - 1) + 15,
+                50
+            ),
+            ["looting"],
+            [ItemEnchantmentTags::SWORD],
+            []
+        );
+
+        self::register(
+            "luck_of_the_sea",
+            EnchantmentIds::LUCK_OF_THE_SEA,
+            new Enchantment(
+                KnownTranslationFactory::enchantment_lootBonusFishing(),
+                Rarity::RARE,
+                0,
+                0,
+                3,
+                fn(int $level): int => 9 * ($level - 1) + 15,
+                50
+            ),
+            ["luck_of_the_sea", "luckofthesea"],
+            [ItemEnchantmentTags::FISHING_ROD],
+            []
+        );
+
+        self::register(
+            "lure",
+            EnchantmentIds::LURE,
+            new Enchantment(
+                KnownTranslationFactory::enchantment_fishingSpeed(),
+                Rarity::RARE,
+                0,
+                0,
+                3,
+                fn(int $level): int => 9 * ($level - 1) + 15,
+                50
+            ),
+            ["lure"],
+            [ItemEnchantmentTags::FISHING_ROD],
+            []
+        );
+
+        self::register(
+            "binding",
+            EnchantmentIds::BINDING,
+            new Enchantment(
+                KnownTranslationFactory::enchantment_curse_binding(),
+                Rarity::MYTHIC,
+                0,
+                0,
+                1,
+                fn(int $level): int => 25,
+                25
+            ),
+            ["binding", "curse_of_binding", "curseofbinding"],
+            [ItemEnchantmentTags::ARMOR, ItemEnchantmentTags::ELYTRA],
+            []
+        );
+
+        self::register(
+            "impaling",
+            EnchantmentIds::IMPALING,
+            new Enchantment(
+                KnownTranslationFactory::enchantment_tridentImpaling(),
+                Rarity::RARE,
+                0,
+                0,
+                5,
+                fn(int $level): int => 8 * ($level - 1) + 1,
+                20
+            ),
+            ["impaling"],
+            [ItemEnchantmentTags::TRIDENT],
+            []
+        );
+
+        self::register(
+            "riptide",
+            EnchantmentIds::RIPTIDE,
+            new Enchantment(
+                KnownTranslationFactory::enchantment_tridentRiptide(),
+                Rarity::RARE,
+                0,
+                0,
+                3,
+                fn(int $level): int => 10 * $level,
+                15
+            ),
+            ["riptide"],
+            [ItemEnchantmentTags::TRIDENT],
+            []
+        );
+
+        self::register(
+            "loyalty",
+            EnchantmentIds::LOYALTY,
+            new Enchantment(
+                KnownTranslationFactory::enchantment_tridentLoyalty(),
+                Rarity::UNCOMMON,
+                0,
+                0,
+                3,
+                fn(int $level): int => 12 * ($level - 1) + 5,
+                50
+            ),
+            ["loyalty"],
+            [ItemEnchantmentTags::TRIDENT],
+            []
+        );
+
+        self::register(
+            "channeling",
+            EnchantmentIds::CHANNELING,
+            new Enchantment(
+                KnownTranslationFactory::enchantment_tridentChanneling(),
+                Rarity::RARE,
+                0,
+                0,
+                1,
+                fn(int $level): int => 25,
+                25
+            ),
+            ["channeling"],
+            [ItemEnchantmentTags::TRIDENT],
+            []
+        );
+
+        self::register(
+            "multishot",
+            EnchantmentIds::MULTISHOT,
+            new Enchantment(
+                KnownTranslationFactory::enchantment_crossbowMultishot(),
+                Rarity::RARE,
+                0,
+                0,
+                1,
+                fn(int $level): int => 20,
+                30
+            ),
+            ["multishot"],
+            [ItemEnchantmentTags::CROSSBOW],
+            []
+        );
+
+        self::register(
+            "piercing",
+            EnchantmentIds::PIERCING,
+            new Enchantment(
+                KnownTranslationFactory::enchantment_crossbowPiercing(),
+                Rarity::COMMON,
+                0,
+                0,
+                4,
+                fn(int $level): int => 10 * ($level - 1) + 1,
+                50
+            ),
+            ["piercing"],
+            [ItemEnchantmentTags::CROSSBOW],
+            []
+        );
+
+        self::register(
+            "quick_charge",
+            EnchantmentIds::QUICK_CHARGE,
+            new Enchantment(
+                KnownTranslationFactory::enchantment_crossbowQuickCharge(),
+                Rarity::UNCOMMON,
+                0,
+                0,
+                3,
+                fn(int $level): int => 12 * ($level - 1) + 10,
+                50
+            ),
+            ["quick_charge", "quickcharge"],
+            [ItemEnchantmentTags::CROSSBOW],
+            []
+        );
+
+        self::register(
+            "soul_speed",
+            EnchantmentIds::SOUL_SPEED,
+            new Enchantment(
+                KnownTranslationFactory::enchantment_soul_speed(),
+                Rarity::MYTHIC,
+                0,
+                0,
+                3,
+                fn(int $level): int => 10 * $level,
+                5
+            ),
+            ["soul_speed", "soulspeed"],
+            [ItemEnchantmentTags::BOOTS],
+            []
+        );
+
         IncompatibleEnchantmentRegistry::getInstance()->register("glacia_boots_movement", [
             self::mustGet("depth_strider"),
             VanillaEnchantments::FROST_WALKER()
+        ]);
+
+        IncompatibleEnchantmentRegistry::getInstance()->register("glacia_sword_damage_vanilla", [
+            VanillaEnchantments::SHARPNESS(),
+            self::mustGet("smite"),
+            self::mustGet("bane_of_arthropods"),
+        ]);
+
+        IncompatibleEnchantmentRegistry::getInstance()->register("glacia_crossbow_modes", [
+            self::mustGet("multishot"),
+            self::mustGet("piercing"),
+        ]);
+
+        IncompatibleEnchantmentRegistry::getInstance()->register("glacia_trident_weather", [
+            self::mustGet("riptide"),
+            self::mustGet("channeling"),
         ]);
     }
 

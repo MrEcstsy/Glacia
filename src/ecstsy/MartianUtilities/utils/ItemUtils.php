@@ -11,6 +11,7 @@ use pocketmine\item\Item;
 use pocketmine\item\StringToItemParser;
 use pocketmine\nbt\LittleEndianNbtSerializer;
 use pocketmine\nbt\TreeRoot;
+use pocketmine\network\mcpe\convert\TypeConverter;
 use pocketmine\player\Player;
 use pocketmine\Server;
 use pocketmine\utils\TextFormat;
@@ -37,6 +38,32 @@ final class ItemUtils {
     public static function decodeItem(string $data): Item {
         $serializer = new LittleEndianNbtSerializer();
         return Item::nbtDeserialize($serializer->read(base64_decode($data))->mustGetCompoundTag());
+    }
+
+    public static function ensureClientSafe(Item $item, bool $displayContext = false): ?Item
+    {
+        try {
+            $safeItem = clone $item;
+            if ($safeItem->isNull()) {
+                return null;
+            }
+
+            $count = $displayContext ? 1 : $safeItem->getCount();
+            if ($count <= 0) {
+                $count = 1;
+            }
+
+            $maxCount = max(1, min(255, $safeItem->getMaxStackSize()));
+            if ($count > $maxCount) {
+                $count = $maxCount;
+            }
+
+            $safeItem->setCount($count);
+            TypeConverter::getInstance()->coreItemStackToNet($safeItem);
+            return $safeItem;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public static function setupItems(array $rewardData, ?Player $player = null): array

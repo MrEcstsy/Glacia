@@ -9,6 +9,7 @@ use ecstsy\Glacia\entity\boss\BossEntity;
 use ecstsy\Glacia\entity\boss\BossParticles;
 use ecstsy\Glacia\entity\boss\bosses\GlacialHydra;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\utils\CustomParticleEffectManager;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
@@ -49,9 +50,9 @@ final class HydraCrystalSpikes extends BossAbility
         $telegraphParticle = new BlockBreakParticle(VanillaBlocks::PACKED_ICE());
         $impactParticle = new BlockBreakParticle(VanillaBlocks::BLUE_ICE());
         $damage = match ($boss->getPhase()) {
-            2 => 14.0,
-            3 => 19.0,
-            default => 10.5,
+            2 => 12.0,
+            3 => 16.0,
+            default => 9.0,
         } * $boss->getPressureDamageMultiplier();
         $radius = 1.9;
 
@@ -68,16 +69,34 @@ final class HydraCrystalSpikes extends BossAbility
                             $point,
                             1.6,
                             $telegraphParticle,
-                            14,
+                            8,
                             0.08
                         );
                         BossParticles::burst(
                             $world,
                             $point,
                             BossParticles::portalParticle(),
-                            8,
-                            0.7,
-                            0.8
+                            4,
+                            0.5,
+                            0.5
+                        );
+                        CustomParticleEffectManager::stackedRing(
+                            $world,
+                            $point,
+                            1.7,
+                            CustomParticleEffectManager::HYDRA_WARNING,
+                            2,
+                            14,
+                            0.18,
+                            48.0
+                        );
+                        CustomParticleEffectManager::column(
+                            $world,
+                            $point->add(0, 0.05, 0),
+                            CustomParticleEffectManager::HYDRA_FROST,
+                            1.5,
+                            6,
+                            48.0
                         );
                     }
                 }
@@ -97,17 +116,34 @@ final class HydraCrystalSpikes extends BossAbility
                         $world,
                         $point,
                         $impactParticle,
-                        22,
-                        0.95,
-                        1.8
+                        12,
+                        0.75,
+                        1.2
                     );
                     BossParticles::burst(
                         $world,
                         $point->add(0, 0.3, 0),
                         BossParticles::portalParticle(),
-                        16,
-                        0.9,
-                        1.4
+                        6,
+                        0.6,
+                        0.8
+                    );
+                    CustomParticleEffectManager::burst(
+                        $world,
+                        $point->add(0, 0.18, 0),
+                        CustomParticleEffectManager::HYDRA_FROST,
+                        18,
+                        0.5,
+                        0.75,
+                        56.0
+                    );
+                    CustomParticleEffectManager::column(
+                        $world,
+                        $point->add(0, 0.08, 0),
+                        CustomParticleEffectManager::HYDRA_VOID,
+                        1.9,
+                        7,
+                        56.0
                     );
                 }
 
@@ -121,7 +157,7 @@ final class HydraCrystalSpikes extends BossAbility
                             continue;
                         }
 
-                        $player->attack(new EntityDamageByEntityEvent($boss, $player, EntityDamageEvent::CAUSE_MAGIC, $damage, [], 0.0, 0.0));
+                        $boss->dealBossTrueDamage($player, $damage);
                         $player->getEffects()->add(new EffectInstance(VanillaEffects::SLOWNESS(), 80, 1));
                         $boss->applyBossMotion($player, new Vector3(0, 0.34, 0));
                         break;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\entity;
 
 use ecstsy\Glacia\entity\mobs\Blaze;
+use ecstsy\Glacia\entity\mobs\Bee;
 use ecstsy\Glacia\entity\mobs\Chicken;
 use ecstsy\Glacia\entity\mobs\Cow;
 use ecstsy\Glacia\entity\mobs\Creeper;
@@ -16,9 +17,11 @@ use ecstsy\Glacia\entity\mobs\Mooshroom;
 use ecstsy\Glacia\entity\mobs\Pig;
 use ecstsy\Glacia\entity\mobs\Sheep;
 use ecstsy\Glacia\entity\mobs\Skeleton;
+use ecstsy\Glacia\entity\mobs\Spider;
 use ecstsy\Glacia\entity\mobs\Slime;
 use ecstsy\Glacia\entity\mobs\SnowGolem;
 use ecstsy\Glacia\entity\mobs\Squid;
+use ecstsy\Glacia\entity\mobs\Warden;
 use ecstsy\Glacia\entity\mobs\Zombie;
 use ecstsy\Glacia\entity\mobs\ZombiePigman;
 use pocketmine\entity\EntityDataHelper;
@@ -36,6 +39,7 @@ final class EntityManager
 
     private array $entities = [
         Blaze::class,
+        Bee::class,
         Chicken::class,
         Cow::class,
         Creeper::class,
@@ -47,7 +51,9 @@ final class EntityManager
         Pig::class,
         Skeleton::class,
         Slime::class,
+        Spider::class,
         Squid::class,
+        Warden::class,
         Zombie::class,
         ZombiePigman::class,
         Sheep::class,
@@ -72,6 +78,8 @@ final class EntityManager
         switch($entityTypeId) {
             case Blaze::getNetworkTypeId():
                 return new Blaze($location, $nbt);
+            case Bee::getNetworkTypeId():
+                return new Bee($location, $nbt);
             case Chicken::getNetworkTypeId():
                 return new Chicken($location, $nbt);
             case Cow::getNetworkTypeId():
@@ -94,8 +102,12 @@ final class EntityManager
                 return new Skeleton($location, $nbt);
             case Slime::getNetworkTypeId():
                 return new Slime($location, $nbt);
+            case Spider::getNetworkTypeId():
+                return new Spider($location, $nbt);
             case Squid::getNetworkTypeId():
                 return new Squid($location, $nbt);
+            case Warden::getNetworkTypeId():
+                return new Warden($location, $nbt);
             case Zombie::getNetworkTypeId():
                 return new Zombie($location, $nbt);
             case ZombiePigman::getNetworkTypeId():

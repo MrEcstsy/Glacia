@@ -1,180 +1,568 @@
+quest-templates:
+  starter_mining:
+    type: "mine"
+    objectives:
+      - block: "coal_ore"
+        amount: 32
+      - block: "iron_ore"
+        amount: 16
+
+  starter_selling:
+    type: "sell"
+    objectives:
+      - item: "wheat"
+        amount: 64
+      - item: "carrot"
+        amount: 48
+
+  starter_hunting:
+    type: "kill"
+    objectives:
+      - entity: "zombie"
+        amount: 20
+      - entity: "skeleton"
+        amount: 10
+
+  builder_small:
+    type: "place"
+    objectives:
+      - block: "cobblestone"
+        amount: 64
+      - block: "oak_planks"
+        amount: 32
+
+reward-tables:
+  dormant_loot:
+    - material: "iron_ingot"
+      count: 16
+    - material: "amethyst_shard"
+      count: 8
+    - id: "simple_book"
+    - id: "xpnote"
+      amount: 3000
+
+  awakened_loot:
+    - material: "gold_ingot"
+      count: 16
+    - material: "emerald"
+      count: 4
+    - id: "unique_book"
+    - id: "xpnote"
+      amount: 9000
+    - id: "slot_ticket"
+
+  ascendent_loot:
+    - material: "diamond"
+      count: 8
+    - material: "emerald"
+      count: 6
+    - id: "elite_book"
+    - id: "ultimate_book"
+    - id: "xpnote"
+      amount: 25000
+    - id: "whitescroll"
+
+  eternal_loot:
+    - material: "diamond"
+      count: 20
+    - material: "nether_star"
+      count: 2
+    - id: "legendary_book"
+    - id: "mastery_book"
+    - id: "xpnote"
+      amount: 125000
+    - id: "holy_whitescroll"
+
+  farming_bonus:
+    - material: "sugar_cane"
+      count: 128
+    - material: "cactus"
+      count: 128
+    - id: "xpnote"
+      amount: 12000
+
 tiers:
   dormant:
     display: "Dormant"
     material: "amethyst_shard"
     color: "&b"
     symbol: "*"
+    reward-table: "dormant_loot"
     quests:
-      - type: "mine"
-        name: "Coal Miner I"
-        objectives:
-          - block: "coal_ore"
-            amount: 20
-      - type: "mine"
-        name: "Iron Miner I"
-        objectives:
-          - block: "iron_ore"
-            amount: 20
-      - type: "place"
-        name: "Builder I"
-        objectives:
-          - block: "stone"
-            amount: 25
-      - type: "kill"
-        name: "Zombie Slayer I"
-        objectives:
-          - entity: "zombie"
-            amount: 10
-      - type: "sell"
-        name: "Farmers Market I"
-        objectives:
-          - item: "wheat"
-            amount: 15
-    rewards:
-      - material: "iron_ingot"
-        count: 8
-      - material: "amethyst_shard"
-        count: 4
-      - id: "money_note"
-        amount: 5000
-      - id: "xpnote"
-        amount: 2500
+      - template: "starter_mining"
+        name: "Cold Start Survey"
+      - template: "builder_small"
+        name: "Frontier Footing"
+      - template: "starter_hunting"
+        name: "Graveyard Sweep"
+      - template: "starter_selling"
+        name: "Harvest Cart"
 
   awakened:
     display: "Awakened"
     material: "echo_shard"
     color: "&5"
-    symbol: "*"
+    symbol: "+"
+    reward-table: "awakened_loot"
     quests:
       - type: "mine"
-        name: "Iron Miner II"
+        name: "Deep Vein Survey"
         objectives:
           - block: "iron_ore"
-            amount: 50
-      - type: "mine"
-        name: "Gold Miner I"
-        objectives:
+            amount: 40
           - block: "gold_ore"
-            amount: 20
-      - type: "place"
-        name: "Builder II"
-        objectives:
-          - block: "oak_planks"
-            amount: 50
-      - type: "kill"
-        name: "Mob Slayer II"
-        objectives:
-          - entity: "zombie"
-            amount: 25
-      - type: "sell"
-        name: "Farmers Market II"
-        objectives:
-          - item: "wheat"
-            amount: 25
-          - item: "carrot"
+            amount: 24
+          - block: "redstone_ore"
             amount: 32
-    rewards:
-      - material: "gold_ingot"
-        count: 6
-      - material: "emerald"
-        count: 2
-      - id: "money_note"
-        amount: 15000
-      - id: "xpnote"
-        amount: 7500
+      - type: "place"
+        name: "Watchpost Frame"
+        objectives:
+          - block: "stone_bricks"
+            amount: 80
+          - block: "spruce_planks"
+            amount: 48
+      - type: "kill"
+        name: "Night Shift"
+        objectives:
+          - entity: "skeleton"
+            amount: 24
+          - entity: "spider"
+            amount: 24
+          - entity: "zombie"
+            amount: 24
+      - type: "sell"
+        name: "Patchwork Produce"
+        reward-table: "farming_bonus"
+        objectives:
+          - item: "pumpkin"
+            amount: 64
+          - item: "melon"
+            amount: 96
+          - item: "beetroot"
+            amount: 64
 
   ascendent:
     display: "Ascendent"
     material: "nether_star"
     color: "&e"
-    symbol: "*"
+    symbol: "#"
+    reward-table: "ascendent_loot"
+    sell-values:
+      raw: 45000
+      complete: 120000
     quests:
       - type: "mine"
-        name: "Diamond Hunter"
+        name: "Gemrunner Route"
         objectives:
           - block: "diamond_ore"
-            amount: 30
+            amount: 24
           - block: "gold_ore"
-            amount: 50
+            amount: 40
+          - block: "redstone_ore"
+            amount: 64
       - type: "place"
-        name: "Fortress Builder"
+        name: "Breach Stockpile"
         objectives:
           - block: "obsidian"
-            amount: 50
+            amount: 96
           - block: "stone_bricks"
-            amount: 50
+            amount: 96
       - type: "kill"
-        name: "Elite Slayer"
+        name: "Blazeline"
         objectives:
-          - entity: "zombie"
-            amount: 50
           - entity: "blaze"
-            amount: 20
+            amount: 32
+          - entity: "skeleton"
+            amount: 48
       - type: "sell"
-        name: "Market Expert"
+        name: "Pearl and Powder"
         objectives:
-          - item: "carrot"
-            amount: 50
-          - item: "potato"
-            amount: 40
-    rewards:
-      - material: "diamond"
-        count: 5
-      - material: "gold_ingot"
-        count: 12
-      - id: "money_note"
-        amount: 50000
-      - id: "xpnote"
-        amount: 20000
+          - item: "ender_pearl"
+            amount: 32
+          - item: "gunpowder"
+            amount: 96
+          - item: "blaze_rod"
+            amount: 24
 
   eternal:
     display: "Eternal"
     material: "dragon_egg"
     color: "&c"
-    symbol: "*"
+    symbol: "@"
+    reward-table: "eternal_loot"
+    sell-values:
+      raw: 135000
+      complete: 350000
     quests:
       - type: "mine"
-        name: "Master Miner"
+        name: "Crystal Treasury"
         objectives:
           - block: "diamond_ore"
-            amount: 100
+            amount: 48
           - block: "emerald_ore"
-            amount: 50
+            amount: 36
           - block: "nether_quartz_ore"
-            amount: 75
+            amount: 96
       - type: "place"
-        name: "Grand Architect"
+        name: "Citadel Core"
         objectives:
           - block: "obsidian"
-            amount: 100
-          - block: "nether_bricks"
-            amount: 75
+            amount: 192
           - block: "stone_bricks"
-            amount: 100
+            amount: 128
+          - block: "nether_bricks"
+            amount: 96
       - type: "kill"
-        name: "Ultimate Slayer"
+        name: "Rift Cull"
         objectives:
-          - entity: "zombie"
-            amount: 100
           - entity: "blaze"
-            amount: 50
+            amount: 72
           - entity: "skeleton"
-            amount: 50
+            amount: 96
+          - entity: "zombie"
+            amount: 120
       - type: "sell"
-        name: "Tycoon"
+        name: "Black Market Caravan"
         objectives:
-          - item: "carrot"
-            amount: 100
-          - item: "potato"
-            amount: 100
-          - item: "wheat"
-            amount: 150
+          - item: "gunpowder"
+            amount: 160
+          - item: "blaze_rod"
+            amount: 64
+          - item: "ender_pearl"
+            amount: 64
+
+board:
+  settings:
+    enabled: true
+    daily-refresh: "24h"
+    shop-refresh: "4h"
+    shop-rotation-size: 7
+    daily-quest-count: 3
+    max-bonus-quests: 3
+  reputation:
+    points-per-level: 20
+    max-level: 10
+    tiers:
+      1:
+        tier_1: 80
+        tier_2: 18
+        tier_3: 2
+      2:
+        tier_1: 75
+        tier_2: 20
+        tier_3: 5
+      3:
+        tier_1: 70
+        tier_2: 20
+        tier_3: 10
+      4:
+        tier_1: 65
+        tier_2: 22
+        tier_3: 13
+      5:
+        tier_1: 60
+        tier_2: 25
+        tier_3: 15
+      6:
+        tier_1: 55
+        tier_2: 27
+        tier_3: 18
+      7:
+        tier_1: 50
+        tier_2: 30
+        tier_3: 20
+      8:
+        tier_1: 45
+        tier_2: 32
+        tier_3: 23
+      9:
+        tier_1: 40
+        tier_2: 35
+        tier_3: 25
+      10:
+        tier_1: 35
+        tier_2: 35
+        tier_3: 30
+  sigils:
+    dormant: "tier_1"
+    awakened: "tier_1"
+    ascendent: "tier_2"
+    eternal: "tier_3"
+  tiers:
+    tier_1:
+      display: "Tier 1"
+      points: 1
+      quests:
+        books_any_30:
+          name: "Arcane Curiosity"
+          description: "Open 30 enchantment books of any rarity."
+          type: "enchant_books_opened"
+          amount: 30
+        warzone_kill_1:
+          name: "First Blood"
+          description: "Kill 1 player in the Warzone."
+          type: "player_kills_warzone"
+          amount: 1
+        white_scroll_1:
+          name: "Protected Craft"
+          description: "Apply a White Scroll to an item."
+          type: "white_scrolls_applied"
+          amount: 1
+        transmog_1:
+          name: "Reforged Order"
+          description: "Apply a Transmog Scroll to an item."
+          type: "transmog_scrolls_applied"
+          amount: 1
+        zone_mobs_10:
+          name: "Astral Cleanup"
+          description: "Kill 10 zone mobs."
+          type: "zone_mobs_killed"
+          amount: 10
+        black_scroll_1:
+          name: "Extraction Run"
+          description: "Use a Black Scroll once."
+          type: "black_scrolls_used"
+          amount: 1
+        bah_win_1:
+          name: "Dark Lots Winner"
+          description: "Win 1 item from /bah."
+          type: "bah_wins"
+          amount: 1
+        xp_booster_1:
+          name: "Faction Rally"
+          description: "Activate any XP booster."
+          type: "xp_boosters_activated"
+          amount: 1
+        zone_booster_1:
+          name: "Zone Surge"
+          description: "Activate any zone booster."
+          type: "zone_boosters_activated"
+          amount: 1
+        coinflip_million:
+          name: "High Roller"
+          description: "Win a coinflip over $1,000,000."
+          type: "coinflip_wins"
+          amount: 1
+          filters:
+            min_wager: 1000000
+        jackpot_tickets_1000:
+          name: "Pot Chaser"
+          description: "Buy 1,000 jackpot tickets."
+          type: "jackpot_tickets_bought"
+          amount: 1000
+        envoys_5:
+          name: "Skybreaker"
+          description: "Break 5 envoys."
+          type: "envoys_broken"
+          amount: 5
+    tier_2:
+      display: "Tier 2"
+      points: 2
+      quests:
+        bah_win_3:
+          name: "Black Market Sweep"
+          description: "Win 3 items on /bah."
+          type: "bah_wins"
+          amount: 3
+        adminbazaar_1:
+          name: "Bazaar Customer"
+          description: "Purchase an item from /adminbazaar."
+          type: "admin_bazaar_purchases"
+          amount: 1
+        dust_50:
+          name: "Dust Dealer"
+          description: "Apply 50 enchantment dusts to books."
+          type: "enchant_dust_applied"
+          amount: 50
+        zone_elites_4:
+          name: "Astral Titan"
+          description: "Kill 4 world event bosses."
+          type: "bosses_killed"
+          amount: 4
+        ec_open_3:
+          name: "Crate Diver"
+          description: "Open 3 Ethereal Crates."
+          type: "ethereal_crates_opened"
+          amount: 3
+        outpost_1:
+          name: "Banner Raised"
+          description: "Capture an outpost."
+          type: "outposts_captured"
+          amount: 1
+        boss_top_1:
+          name: "Lead Damager"
+          description: "Get top damager on any boss."
+          type: "boss_top_damage"
+          amount: 1
+        legendary_envoys_15:
+          name: "Golden Rain"
+          description: "Open 15 legendary envoys."
+          type: "envoys_broken"
+          amount: 15
+          filters:
+            crate_type: "legendary"
+        slotbot_roll_1:
+          name: "Jackpot Lever"
+          description: "Roll a slotbot ticket."
+          type: "slotbot_tickets_rolled"
+          amount: 1
+        sell_25m:
+          name: "Bulk Liquidation"
+          description: "Sell $25,000,000 worth of items."
+          type: "sell_value"
+          amount: 25000000
+        orb_fail_1:
+          name: "Orb Breaker"
+          description: "Fail an enchantment orb apply."
+          type: "orb_failures"
+          amount: 1
+        melons_1000:
+          name: "Melon Mill"
+          description: "Mine 1,000 melons."
+          type: "melons_mined"
+          amount: 1000
+        mastery_apply_1:
+          name: "Masterpiece"
+          description: "Apply any mastery enchantment."
+          type: "mastery_enchants_applied"
+          amount: 1
+        warlords_3:
+          name: "Warlord Hunter"
+          description: "Kill 3 warlords."
+          type: "warlords_killed"
+          amount: 3
+    tier_3:
+      display: "Tier 3"
+      points: 3
+      quests:
+        zone_mobs_100:
+          name: "Astral Purge"
+          description: "Kill 100 zone mobs."
+          type: "zone_mobs_killed"
+          amount: 100
+        mobs_5000:
+          name: "Mass Extinction"
+          description: "Kill 5,000 mobs of any kind."
+          type: "mobs_killed"
+          amount: 5000
+        exclusive_book_1:
+          name: "Forbidden Wisdom"
+          description: "Open an Exclusive Book."
+          type: "exclusive_books_opened"
+          amount: 1
+        godly_chests_5:
+          name: "Apex Vault"
+          description: "Open 5 Godly Ethereal Chests."
+          type: "godly_ethereal_chests_opened"
+          amount: 5
+        holy_black_1:
+          name: "Perfect Extraction"
+          description: "Use a Holy Black Scroll."
+          type: "holy_black_scrolls_used"
+          amount: 1
+        books_any_500:
+          name: "Bookstorm"
+          description: "Open 500 enchantment books."
+          type: "enchant_books_opened"
+          amount: 500
+        zone_elites_10:
+          name: "Endfall Menace"
+          description: "Kill 10 world event bosses."
+          type: "bosses_killed"
+          amount: 10
+        zone_boosters_unique_3:
+          name: "Zone Strategist"
+          description: "Use 3 different zone boosters."
+          type: "zone_boosters_activated"
+          amount: 3
+          filters:
+            unique: true
+            unique_field: "booster_key"
+        books_dusted_5:
+          name: "Perfected Pages"
+          description: "Dust 5 books to 100% success."
+          type: "books_dusted_to_100"
+          amount: 5
+        fish_125:
+          name: "Tidal Grind"
+          description: "Catch 125 fish."
+          type: "fishes_caught"
+          amount: 125
+        envoys_50:
+          name: "Skyfall Veteran"
+          description: "Break 50 envoys."
+          type: "envoys_broken"
+          amount: 50
+        unique_players_10:
+          name: "Hit List"
+          description: "Kill 10 unique players."
+          type: "player_kills"
+          amount: 10
+          filters:
+            unique: true
+            unique_field: "victim"
+        bah_streak_2:
+          name: "Back-to-Back"
+          description: "Win 2 /bah items in a row."
+          type: "bah_wins"
+          amount: 1
+          filters:
+            streak_at_least: 2
+  shop:
     rewards:
-      - material: "diamond"
-        count: 20
-      - material: "emerald"
-        count: 10
-      - id: "money_note"
-        amount: 250000
-      - id: "xpnote"
-        amount: 100000
+      legendary_book:
+        display: "Legendary Book"
+        cost: 2
+        weight: 8
+        reward:
+          id: "legendary_book"
+      mastery_book:
+        display: "Mastery Book"
+        cost: 4
+        weight: 5
+        reward:
+          id: "mastery_book"
+      godly_chest:
+        display: "Godly Ethereal Chest"
+        cost: 8
+        weight: 2
+        reward:
+          id: "godly_ethereal_chest"
+      holy_blackscroll:
+        display: "Holy Black Scroll"
+        cost: 7
+        weight: 2
+        reward:
+          id: "holy_blackscroll"
+      holy_whitescroll:
+        display: "Holy White Scroll"
+        cost: 6
+        weight: 3
+        reward:
+          id: "holy_whitescroll"
+      slot_ticket_bundle:
+        display: "Slot Ticket x3"
+        cost: 3
+        weight: 6
+        reward:
+          id: "slot_ticket"
+          count: 3
+      jackpot_note:
+        display: "$5,000,000 Note"
+        cost: 5
+        weight: 4
+        reward:
+          id: "money_note"
+          amount: 5000000
+      exotic_book:
+        display: "Exotic Book"
+        cost: 2
+        weight: 8
+        reward:
+          id: "exotic_book"
+      transmog:
+        display: "Transmog Scroll"
+        cost: 2
+        weight: 6
+        reward:
+          id: "transmog"

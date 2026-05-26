@@ -1,0 +1,87 @@
+# Bump schema-version only when default structure changes — staff never edits this line.
+schema-version: 14
+
+max-wire-distance: 16
+max-updates-per-flush: 256
+button-power-ticks:
+  stone: 20
+  wooden: 30
+pressure-plate:
+  refresh-ticks: 2
+chunk-load-dispenser-warmup-delay-ticks: 8
+post-boot-dispenser-warmup-delay-ticks: 80
+
+# GlaciaPrimedTNT: vanilla-like underwater blasts — still hurt entities, but do not break blocks (PM core does not implement this; avoids water-stream charges wrecking cannons). Set false for legacy “wet explosions break blocks.”
+primed-tnt-water-suppresses-explosion-block-break: true
+
+# --- DISPENSER / DROPPER (Glacia) ---
+# Two different ejects:
+# A) PRIMED TNT from a dispenser: spawns 1 block ahead, base speed is fixed in plugin (0.09) x stack multiplier below.
+#    Gravity: primed-tnt-dispenser-gravity. Cannon tweaks (gravity/drag/water-drag) apply when dispenser.cannon-mode is true.
+# B) Other items: use spawn-offset + tnt-velocity as the eject vector (not used for primed TNT).
+dispenser:
+  cooldown-ticks: 4
+  tnt-fuse-ticks: 80
+  cannon-mode: false
+  works-underwater: false
+  # If true, dispenser primed TNT is nudged by flowing water/lava (PM liquid currents). If false, shots stay straighter underwater.
+  primed-tnt-liquid-currents: true
+  # Only when cannon-mode is on for that shot: scales primed-TNT gravity (0.04 x this). 1.0 ~= normal PM feel.
+  gravity-multiplier: 1.0
+  # Only when cannon-mode + touching water: scales drag (friction = 1 - drag). Higher = stronger slowdown vs velocity.
+  water-drag-multiplier: 1.0
+  spawn-offset: 0.72
+  primed-tnt-dispenser-gravity: true
+  # 0 = no extra speed from stacking; 0.1 = each extra TNT adds +0.1 to the (1 + (n-1)*k) multiplier.
+  primed-tnt-stack-velocity-per-extra-piece: 0.0
+  # Primed-TNT dispenser shot only: impulse per axis before stack multiplier (tnt-velocity.* is for items, not primed TNT).
+  primed-tnt-launch-base: 0.09
+  tnt-velocity:
+    horizontal: 0.35
+    vertical-boost: 0.06
+    vertical: 0.35
+  # Expert: ties effective gravity to speed (when enabled). Same gravity-multiplier base applies first.
+  # curve inverse (default): multiplier = 1/(1+k×v) → faster horizontal flight = less pull ("floats" more).
+  # curve legacy: multiplier = 1+k×v → faster = heavier drop (old plugin behavior).
+  primed-tnt-gravity-times-one-plus-velocity:
+    enabled: false
+    velocity-coefficient: 1.0
+    velocity-mode: xz
+    curve: inverse
+
+# When one primed TNT explodes: extra push on nearby primed TNT + Glacia cannon sand in radius (not dispenser launch speed).
+# max-motion &gt; 0: effective cap = min(max-motion, absolute-max-motion). max-motion &lt;= 0: soft cap off, use absolute-max only.
+# Tiny max-motion (e.g. 0.01) makes TNT crawl — looks “frozen”. Use 0 + higher propabsmax, or sensible values like 32+.
+# Hand-lit TNT is still pushed toward siblings before detonation — crater overlap destroys "vanilla" gaps. Set only-dispenser-primed-targets: true so flint-lit chains ignore propulsion (dispenser-fired TNT/sand unchanged).
+# Same server tick: PocketMine updates entities in list order. If two primed TNT share fuse=0, one may explode before the other runs — that one never receives propulsion (feels random). Use redstone for same-tick ignite or extend fuse on one slightly.
+# Two-block gap: falloff-radius-pad (default 0.4) sets outer reach = radius+pad for entity scan box, inclusion distance, and falloff — diagonal “rim” (dist slightly > r inside ±r cube) pushes too; set 0 for legacy strict sphere r.
+cannon-tnt-propulsion:
+  enabled: true
+  only-dispenser-primed-targets: false
+  radius: 3
+  minimum-falloff: 0.0
+  falloff-radius-pad: 0.4
+  # Per exploding piece: target velocity += radial push (scaled by this). Many volleys stack additively until primed-mot-cap or the piece detonates — not “one hit only.”
+  power: 40.00
+  vertical-boost: 5.00
+  # If false: only radial knock has Y — on flat terrain direction.y≈0, so lowering proppower fixes horizontal without fighting a huge additive pop.
+  additive-vertical-boost: true
+  # false = upward kick scales with distance (max(0.35, falloff)); manual ignite timing changes distance a lot. true = same upward add every time.
+  vertical-boost-full: false
+  # true = additive vertical scales with radial hit strength (strength/power). Stops giant vertical pops when power is tiny but vertical-boost is high.
+  vertical-boost-scales-with-hit-strength: false
+  water-multiplier: 1.35
+  max-motion: 32
+  absolute-max-motion: 128
+  hit-strength-times-one-plus-velocity:
+    enabled: false
+    velocity-coefficient: 1.0
+    velocity-mode: xz
+
+# Cobweb slowdown: primed TNT (non-cannon) + MartianUtilities hostiles.
+# Falling sand uses vanilla/entity-default cobweb behavior (no custom web logic here).
+sand-cobweb:
+  horizontal-damp: 0.25
+  vertical-damp: 0.05
+  max-fall-per-tick: 0.004
+  no-drag-while-inside: true

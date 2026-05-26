@@ -7,14 +7,14 @@ namespace ecstsy\Glacia\commands;
 use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseCommand;
 use ecstsy\Glacia\utils\GlaciaUtils;
-use ecstsy\Glacia\utils\screens\BragScreen;
+use ecstsy\Glacia\utils\screens\PlayerInventoryEditorScreen;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
 
-final class InvSeeCommand extends BaseCommand {
-
+final class InvSeeCommand extends BaseCommand
+{
     protected function prepare(): void
     {
         $this->setPermission($this->getPermission());
@@ -34,7 +34,13 @@ final class InvSeeCommand extends BaseCommand {
             return;
         }
 
-        BragScreen::displayTo($sender, $target);
+        if ($target->getName() === $sender->getName()) {
+            $sender->sendMessage(C::colorize("&r&cUse your own inventory normally."));
+            return;
+        }
+
+        (new PlayerInventoryEditorScreen($sender, $target))->display();
+
         GlaciaUtils::logAdminAction("InvSee", [
             "admin" => $sender->getName(),
             "target" => $target->getName()

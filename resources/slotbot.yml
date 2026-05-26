@@ -1,6 +1,25 @@
 # Slot rewards
 jackpot-chance: 1.0
 
+credit-shop:
+  rotation: "12h"
+  items:
+    - type: item
+      chance: 10
+      price: 250
+      id: "legendarybook"
+      count: 2
+    - type: item
+      chance: 8
+      price: 450
+      id: "heroic_slot_ticket"
+      count: 1
+    - type: item
+      chance: 6
+      price: 650
+      id: "eternal_sigil"
+      count: 1
+
 rewards:
   - type: item
     chance: 10

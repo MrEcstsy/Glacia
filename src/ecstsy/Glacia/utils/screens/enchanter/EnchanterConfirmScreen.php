@@ -45,13 +45,13 @@ final class EnchanterConfirmScreen extends BaseScreen {
 
             $maxFit = self::getMaxFit($player, $item);
             if ($maxFit <= 0) {
-                $player->sendMessage(C::RED . "You do not have enough inventory space.");
+                $player->sendMessage(C::colorize("&cYou do not have enough inventory space."));
                 return;
             }
 
             $maxAffordable = self::getMaxAffordable($player, $price);
             if ($maxAffordable <= 0) {
-                $player->sendMessage(C::RED . "You do not have enough XP.");
+                $player->sendMessage(C::colorize("&cYou do not have enough XP."));
                 return;
             }
 
@@ -60,16 +60,18 @@ final class EnchanterConfirmScreen extends BaseScreen {
             $currentXp = $player->getXpManager()->getCurrentTotalXp();
 
             if ($currentXp < $totalCost) {
-                $player->sendMessage(C::RED . "You do not have enough XP.");
+                $player->sendMessage(C::colorize("&cYou do not have enough XP."));
                 return;
             }
 
-            $player->getXpManager()->setCurrentTotalXp($currentXp - $totalCost);
-            Loader::getChallengeManager()->incrementProgress($player, "xp_spent_enchanter", $totalCost);
+            if ($totalCost > 0) {
+                $player->getXpManager()->setCurrentTotalXp($currentXp - $totalCost);
+                Loader::getChallengeManager()->incrementProgress($player, "xp_spent_enchanter", $totalCost);
+            }
             $item->setCount($amount);
             $player->getInventory()->addItem($item);
 
-            $player->sendMessage(C::GREEN . "Purchased x$amount " . C::clean($displayName) . C::GREEN . " for " . number_format($totalCost) . " XP");
+            $player->sendMessage(C::colorize("&aPurchased x$amount " . C::clean($displayName) . "&a for " . number_format($totalCost) . " XP"));
         });
 
         $this->form->setTitle(C::colorize("&r&8Confirm Purchase"));
@@ -113,7 +115,7 @@ final class EnchanterConfirmScreen extends BaseScreen {
     private static function getMaxAffordable(Player $player, int $price): int
     {
         if ($price <= 0) {
-            return 0;
+            return 64;
         }
 
         return intdiv($player->getXpManager()->getCurrentTotalXp(), $price);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\utils\screens\enchanter;
 
 use ecstsy\Glacia\server\enchanter\EnchanterRepository;
+use ecstsy\Glacia\utils\inventory\CustomSizedInvMenu;
 use ecstsy\MartianUtilities\utils\screens\BaseScreen;
 use muqsit\invmenu\InvMenu;
 use muqsit\invmenu\transaction\DeterministicInvMenuTransaction;
@@ -17,15 +18,15 @@ final class EnchanterScreen extends BaseScreen {
 
     public InvMenu $invMenu;
 
-    public function __construct()
+    public function __construct(private ?Player $viewer = null)
     {
-        $this->invMenu = InvMenu::create(InvMenu::TYPE_CHEST);
+        $this->invMenu = CustomSizedInvMenu::create(27);
         $this->invMenu->setName(C::colorize("&r&l&8Glacia Enchanter"));
         $this->invMenu->setListener(InvMenu::readonly(function(DeterministicInvMenuTransaction $transaction): void {
             $slot = $transaction->getAction()->getSlot();
             $player = $transaction->getPlayer();
 
-            $bookData = EnchanterRepository::getBookDataBySlot($slot);
+            $bookData = EnchanterRepository::getBookDataBySlot($slot, $player);
             if ($bookData === null) {
                 return;
             }
@@ -40,7 +41,7 @@ final class EnchanterScreen extends BaseScreen {
     }
 
     public function display(Player $player): void {
-        (new self())->getMenu()->send($player);
+        (new self($player))->getMenu()->send($player);
     }
 
     public function getMenu(): InvMenu {
@@ -56,8 +57,8 @@ final class EnchanterScreen extends BaseScreen {
             $inventory->setItem($slot, clone $filler);
         }
 
-        foreach (EnchanterRepository::getBooks() as $slot => $bookData) {
-            $inventory->setItem($slot, EnchanterRepository::createDisplayItem($bookData["group"], $bookData["price"]));
+        foreach (EnchanterRepository::getBooks($this->viewer) as $slot => $bookData) {
+            $inventory->setItem($slot, EnchanterRepository::createDisplayItem($bookData["group"], $bookData["price"], $this->viewer));
         }
     }
 }

@@ -20,7 +20,7 @@ final class UndisguiseCommand extends BaseCommand
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void
     {
         if (!$sender instanceof Player) {
-            $sender->sendMessage(C::RED . "This command can only be used in-game.");
+            $sender->sendMessage(C::colorize("&cThis command can only be used in-game."));
             return;
         }
 

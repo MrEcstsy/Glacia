@@ -2,6 +2,8 @@
 
 namespace ecstsy\MartianUtilities\entity;
 
+use ecstsy\Glacia\server\physics\CobwebMotion;
+use ecstsy\Glacia\server\redstone\RedstoneManager;
 use pocketmine\block\Block;
 use pocketmine\block\Slab;
 use pocketmine\block\Stair;
@@ -149,6 +151,23 @@ abstract class BaseHostileEntity extends Living {
             $this->motion->y = max($this->motion->y, 0.42);
             $this->pathCooldown = 0;
         }
+    }
+
+    protected function tryChangeMovement(): void {
+        parent::tryChangeMovement();
+        $bb = $this->getBoundingBox()->expandedCopy(0.08, 0.08, 0.08);
+        if (!CobwebMotion::boundingBoxIntersectsCobweb($this->getWorld(), $bb)) {
+            return;
+        }
+        $rm = RedstoneManager::getInstance();
+        $maxFall = min(0.5, max(0.001, $rm->getSandCobwebMaxFallPerTick()));
+        $this->motion = CobwebMotion::dampMotion(
+            $this->motion,
+            $rm->getSandCobwebHorizontalDamp(),
+            $rm->getSandCobwebVerticalDamp(),
+            $maxFall,
+            false
+        );
     }
 
     protected function validateTarget(): void {
@@ -332,7 +351,7 @@ abstract class BaseHostileEntity extends Living {
     }
 
     protected function shouldJumpAhead(): bool {
-        if (!$this->onGround) {
+        if (!$this->isGroundedForStepHop()) {
             return false;
         }
 
@@ -425,11 +444,11 @@ abstract class BaseHostileEntity extends Living {
     }
 
     public function jump(): void {
-        if (!$this->onGround) {
+        if (!$this->isGroundedForStepHop()) {
             return;
         }
 
-        $this->motion->y = 0.42;
+        $this->motion->y = max($this->motion->y, $this->getAdaptiveJumpVelocity());
     }
 
     protected function canAttack(Player $player): bool {
@@ -451,9 +470,13 @@ abstract class BaseHostileEntity extends Living {
 
         if (!$event->isCancelled()) {
             $this->attackCooldown = $this->getAttackCooldownTicks();
-            $dx = $player->getPosition()->x - $this->location->x;
-            $dz = $player->getPosition()->z - $this->location->z;
-            $player->knockBack($dx, $dz);
+            $knockBack = method_exists($event, "getKnockBack") ? max(0.0, (float) $event->getKnockBack()) : 0.4;
+            $verticalLimit = method_exists($event, "getVerticalKnockBackLimit") ? $event->getVerticalKnockBackLimit() : null;
+            if ($knockBack > 0.0) {
+                $dx = $player->getPosition()->x - $this->location->x;
+                $dz = $player->getPosition()->z - $this->location->z;
+                $player->knockBack($dx, $dz, $knockBack, $verticalLimit);
+            }
         }
     }
 
@@ -473,7 +496,7 @@ abstract class BaseHostileEntity extends Living {
      */
     protected function requiresJumpTowardElevatedNearbyTarget(): bool
     {
-        if ($this->target === null || !$this->onGround || !$this->target->isAlive()) {
+        if ($this->target === null || !$this->isGroundedForStepHop() || !$this->target->isAlive()) {
             return false;
         }
 
@@ -518,7 +541,45 @@ abstract class BaseHostileEntity extends Living {
 
         // Force a vertical hop even when onGround is unreliable (we're stuck).
         // Using motion directly avoids jump()'s onGround guard.
-        $this->motion->y = max($this->motion->y, 0.42);
+        $this->motion->y = max($this->motion->y, $this->getAdaptiveJumpVelocity());
+    }
+
+    protected function getAdaptiveJumpVelocity(): float
+    {
+        $bb = $this->getBoundingBox();
+        $height = max(0.6, $bb->maxY - $bb->minY);
+        $speed = max(0.08, $this->getMoveSpeed());
+
+        $heightBoost = max(0.0, min(0.14, ($height - 1.2) * 0.06));
+        $speedBoost = max(0.0, min(0.09, ($speed - 0.18) * 0.55));
+
+        return min(0.58, 0.42 + $heightBoost + $speedBoost);
+    }
+
+    protected function isGroundedForStepHop(): bool
+    {
+        if ($this->onGround) {
+            return true;
+        }
+
+        $world = $this->getWorld();
+        $bb = $this->getBoundingBox();
+        $probeY = (int) floor($bb->minY - 0.12);
+        $minX = (int) floor($bb->minX + 0.001);
+        $maxX = (int) floor($bb->maxX - 0.001);
+        $minZ = (int) floor($bb->minZ + 0.001);
+        $maxZ = (int) floor($bb->maxZ - 0.001);
+
+        for ($x = $minX; $x <= $maxX; $x++) {
+            for ($z = $minZ; $z <= $maxZ; $z++) {
+                $block = $world->getBlockAt($x, $probeY, $z);
+                if ($block->isSolid() || $block instanceof Slab || $block instanceof Stair) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

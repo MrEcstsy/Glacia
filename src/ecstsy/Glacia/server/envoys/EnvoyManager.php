@@ -14,6 +14,7 @@ use ecstsy\Glacia\entity\envoys\EnvoyZombie;
 use ecstsy\Glacia\entity\envoys\EnvoyZombiePigman;
 use ecstsy\Glacia\entity\SpawnerEntity;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\items\pets\PetManager;
 use ecstsy\Glacia\utils\QueryStmts;
 use ecstsy\Glacia\utils\RewardResolver;
 use ecstsy\Glacia\utils\StorageUtils;
@@ -46,6 +47,9 @@ final class EnvoyManager
     private bool $loaded = false;
     private int $lastIndicatorAt = 0;
     private int $nextIndicatorIndex = 0;
+    /** @var array<string, mixed>|null */
+    private ?array $specialEvent = null;
+    private int $nextSpecialEventStartAt = 0;
 
     public function __construct()
     {
@@ -61,6 +65,9 @@ final class EnvoyManager
         if (!$this->loaded && $this->nextStartAt <= 0) {
             $this->nextStartAt = time() + $this->getInterval();
         }
+        if (!$this->loaded && $this->nextSpecialEventStartAt <= 0) {
+            $this->scheduleNextSpecialEvent(true);
+        }
     }
 
     public function tick(): void
@@ -70,6 +77,7 @@ final class EnvoyManager
         }
 
         $now = time();
+        $this->tickSpecialEvent($now);
         if ($this->active !== null) {
             if (($this->active["ends_at"] ?? 0) <= $now || $this->getRemainingCrates() <= 0) {
                 $this->endActiveEvent();
@@ -143,7 +151,7 @@ final class EnvoyManager
      */
     public function getTypeIds(): array
     {
-        return array_keys($this->getEnabledTypes());
+        return array_keys($this->getNormalRollTypes());
     }
 
     public function forceStart(): bool
@@ -193,6 +201,8 @@ final class EnvoyManager
         }
 
         $crateType = (string) ($data["crate_type"] ?? "simple");
+        $originalCrateType = $crateType;
+        $crateType = $this->upgradeTypeForPlayer($player, $crateType);
         $typeConfig = $this->getTypeConfig($crateType);
         $spawnOnClaim = (bool) (($typeConfig["mob-wave"]["spawn-on-claim"] ?? false) === true);
         if ($spawnOnClaim) {
@@ -248,6 +258,9 @@ final class EnvoyManager
         $world->addSound($position, new XpCollectSound());
         $this->spawnFirework($position->x + 0.5, $position->y + 1, $position->z + 0.5, $world, $crateType);
         Loader::getChallengeManager()->incrementProgress($player, "envoys_broken", 1);
+        Loader::getQuestBoardManager()->recordProgress($player, "envoys_broken", 1, [
+            "crate_type" => strtolower($crateType),
+        ]);
         $remaining = $this->getRemainingCrates();
         $message = "&r&bEnvoy &8| &r&aYou looted a " . $this->formatTypeName($crateType) . " &r&acrate&7. "
             . "&f{$remaining} &7remaining.";
@@ -255,6 +268,9 @@ final class EnvoyManager
             $message .= " &8(&bVacuumed&8)";
         }
         $player->sendMessage(C::colorize($message));
+        if ($crateType !== $originalCrateType) {
+            $player->sendMessage(C::colorize("&r&eSkycourier Drake Pet &r&7upgraded your crate from &f" . C::clean($this->formatTypeName($originalCrateType)) . " &r&7to &f" . C::clean($this->formatTypeName($crateType)) . "&7."));
+        }
 
         if ($this->active !== null && $this->getRemainingCrates() <= 0) {
             $this->endActiveEvent();
@@ -277,7 +293,12 @@ final class EnvoyManager
 
     private function getCrateCount(): int
     {
-        return max(1, (int) ($this->config["crate-count"] ?? 10));
+        $count = max(1, (int) ($this->config["crate-count"] ?? 10));
+        if ($this->specialEvent !== null) {
+            $multiplier = max(0.1, (float) ($this->getSpecialEventConfig()["crate-count-multiplier"] ?? 0.6));
+            $count = max(1, (int) floor($count * $multiplier));
+        }
+        return $count;
     }
 
     private function getSpawnAttempts(): int
@@ -288,15 +309,32 @@ final class EnvoyManager
     /**
      * @return array<string, array<string, mixed>>
      */
-    private function getEnabledTypes(): array
+    private function getConfiguredTypes(): array
     {
-        $enabled = [];
+        $configured = [];
         foreach ((array) ($this->config["types"] ?? []) as $id => $entry) {
-            if (!is_array($entry) || !(bool) ($entry["enabled"] ?? true)) {
+            if (!is_array($entry)) {
                 continue;
             }
 
-            $enabled[(string) $id] = $entry;
+            $configured[$this->normalizeTypeId((string) $id)] = $entry;
+        }
+
+        return $configured;
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function getNormalRollTypes(): array
+    {
+        $enabled = [];
+        foreach ($this->getConfiguredTypes() as $id => $entry) {
+            if (!(bool) ($entry["enabled"] ?? true)) {
+                continue;
+            }
+
+            $enabled[$id] = $entry;
         }
 
         return $enabled;
@@ -307,17 +345,17 @@ final class EnvoyManager
      */
     private function getTypeConfig(string $type): array
     {
-        $config = (array) ($this->getEnabledTypes()[$type] ?? []);
-        $id = strtolower($type);
+        $id = $this->normalizeTypeId($type);
+        $config = (array) ($this->getConfiguredTypes()[$id] ?? []);
 
-        if ($id === "heroic") {
+        if ($id === "godly") {
             $mobWave = is_array($config["mob-wave"] ?? null) ? $config["mob-wave"] : [];
             $mobWave = array_replace([
                 "enabled" => true,
                 "spawn-on-claim" => true,
                 "count" => 3,
                 "spawn-radius" => 5,
-                "name" => "&r&4&lHeroic Envoy Beast",
+                "name" => "&r&5&lGodly Envoy Beast",
                 "mobs" => [
                     ["id" => "envoy_zombie", "chance" => 35],
                     ["id" => "envoy_skeleton", "chance" => 35],
@@ -332,7 +370,27 @@ final class EnvoyManager
 
     private function rollType(): string
     {
-        $types = $this->getEnabledTypes();
+        if ($this->specialEvent !== null) {
+            $pool = [];
+            foreach ((array) ($this->getSpecialEventConfig()["types"] ?? []) as $id => $chance) {
+                $normalizedId = $this->normalizeTypeId((string) $id);
+                if (!$this->isTypeConfigured($normalizedId)) {
+                    continue;
+                }
+
+                $pool[] = [
+                    "chance" => max(1, (int) $chance),
+                    "id" => $normalizedId,
+                ];
+            }
+
+            if ($pool !== []) {
+                $entry = RewardResolver::rollEntry($pool);
+                return (string) ($entry["id"] ?? "exotic");
+            }
+        }
+
+        $types = $this->getNormalRollTypes();
         $pool = [];
         foreach ($types as $id => $entry) {
             $pool[] = [
@@ -354,7 +412,7 @@ final class EnvoyManager
             return false;
         }
 
-        $types = $this->getEnabledTypes();
+        $types = $this->getNormalRollTypes();
         if ($types === []) {
             $this->scheduleNext();
             return false;
@@ -548,6 +606,132 @@ final class EnvoyManager
         $this->nextStartAt = time() + $this->getInterval();
     }
 
+    private function tickSpecialEvent(int $now): void
+    {
+        if ($this->specialEvent !== null && ($this->specialEvent["ends_at"] ?? 0) <= $now) {
+            $this->endSpecialEvent();
+        }
+
+        if ($this->specialEvent === null && $this->nextSpecialEventStartAt > 0 && $now >= $this->nextSpecialEventStartAt) {
+            $this->startSpecialEvent();
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function getSpecialEventConfig(): array
+    {
+        $config = (array) ($this->config["special-event"] ?? []);
+        return (bool) ($config["enabled"] ?? false) ? $config : [];
+    }
+
+    private function getSpecialEventInterval(): int
+    {
+        $config = $this->getSpecialEventConfig();
+        return max(300, GeneralUtils::parseTimeString((string) ($config["interval"] ?? "8h")));
+    }
+
+    private function getSpecialEventInitialDelay(): int
+    {
+        $config = $this->getSpecialEventConfig();
+        return max(300, GeneralUtils::parseTimeString((string) ($config["initial-delay"] ?? ($config["interval"] ?? "8h"))));
+    }
+
+    private function getSpecialEventDuration(): int
+    {
+        $config = $this->getSpecialEventConfig();
+        return max(60, GeneralUtils::parseTimeString((string) ($config["duration"] ?? "1h")));
+    }
+
+    private function scheduleNextSpecialEvent(bool $initial = false): void
+    {
+        $config = $this->getSpecialEventConfig();
+        if ($config === []) {
+            $this->nextSpecialEventStartAt = 0;
+            return;
+        }
+
+        $delay = $initial ? $this->getSpecialEventInitialDelay() : $this->getSpecialEventInterval();
+        $this->nextSpecialEventStartAt = time() + $delay;
+    }
+
+    private function startSpecialEvent(): void
+    {
+        $config = $this->getSpecialEventConfig();
+        if ($config === []) {
+            $this->nextSpecialEventStartAt = 0;
+            return;
+        }
+
+        $duration = $this->getSpecialEventDuration();
+        $this->specialEvent = [
+            "id" => "exotic_legendary_godly_rush",
+            "ends_at" => time() + $duration,
+        ];
+        $this->nextSpecialEventStartAt = 0;
+        $this->saveState();
+
+        $message = (string) ($config["broadcasts"]["start"] ?? "&r&l&dWorld Event &8| &r&fFor the next &d{time}&f, envoys will only spawn as &dExotic&f, &6Legendary&f, or &5Godly&f crates, with fewer crates than usual.");
+        $this->broadcast(str_replace("{time}", GeneralUtils::translateTime($duration), $message));
+    }
+
+    private function endSpecialEvent(): void
+    {
+        if ($this->specialEvent === null) {
+            return;
+        }
+
+        $config = $this->getSpecialEventConfig();
+        $message = (string) ($config["broadcasts"]["end"] ?? "&r&l&dWorld Event &8| &r&7The exotic envoy surge has ended.");
+        $this->specialEvent = null;
+        $this->scheduleNextSpecialEvent();
+        $this->saveState();
+        $this->broadcast($message);
+    }
+
+    private function isTypeEnabled(string $type): bool
+    {
+        return isset($this->getNormalRollTypes()[$this->normalizeTypeId($type)]);
+    }
+
+    private function isTypeConfigured(string $type): bool
+    {
+        return isset($this->getConfiguredTypes()[$this->normalizeTypeId($type)]);
+    }
+
+    private function upgradeTypeForPlayer(Player $player, string $crateType): string
+    {
+        if (!PetManager::isEnvoyUpgradeActive($player)) {
+            return $crateType;
+        }
+
+        if (mt_rand(1, 100) > PetManager::getEnvoyUpgradeChance()) {
+            return $crateType;
+        }
+
+        return $this->getNextType($crateType);
+    }
+
+    private function getNextType(string $type): string
+    {
+        $type = $this->normalizeTypeId($type);
+        $next = match ($type) {
+            "simple" => "unique",
+            "unique" => "elite",
+            "elite" => "exotic",
+            "exotic" => "legendary",
+            "legendary" => "godly",
+            default => $type,
+        };
+
+        if ($this->specialEvent !== null) {
+            return $this->isTypeConfigured($next) ? $next : $type;
+        }
+
+        return $this->isTypeEnabled($next) ? $next : $type;
+    }
+
     private function removeActivePosition(Vector3 $position): void
     {
         if ($this->active === null) {
@@ -594,12 +778,9 @@ final class EnvoyManager
 
                 $this->active = is_array($decoded["active"] ?? null) ? $decoded["active"] : null;
                 $this->nextStartAt = max(0, (int) ($decoded["next_start_at"] ?? 0));
+                $this->specialEvent = is_array($decoded["special_event"] ?? null) ? $decoded["special_event"] : null;
+                $this->nextSpecialEventStartAt = max(0, (int) ($decoded["next_special_event_start_at"] ?? 0));
                 break;
-            }
-
-            if ($this->active !== null) {
-                $this->clearTrackedPositions((array) ($this->active["positions"] ?? []));
-                $this->active = null;
             }
 
             $this->loaded = true;
@@ -610,6 +791,9 @@ final class EnvoyManager
             if ($this->active === null && $this->nextStartAt <= 0) {
                 $this->scheduleNext();
             }
+            if ($this->specialEvent === null && $this->nextSpecialEventStartAt <= 0) {
+                $this->scheduleNextSpecialEvent(true);
+            }
             $this->saveState();
         });
     }
@@ -619,6 +803,8 @@ final class EnvoyManager
         $payload = StorageUtils::encodeJsonString([
             "active" => $this->active,
             "next_start_at" => $this->nextStartAt,
+            "special_event" => $this->specialEvent,
+            "next_special_event_start_at" => $this->nextSpecialEventStartAt,
         ], "envoy state");
         if ($payload === null) {
             return;
@@ -799,13 +985,13 @@ final class EnvoyManager
 
     private function formatTypeName(string $type): string
     {
-        $display = match (strtolower($type)) {
+        $display = match ($this->normalizeTypeId($type)) {
             "simple" => "&fSimple",
             "unique" => "&aUnique",
             "elite" => "&bElite",
             "exotic" => "&dExotic",
             "legendary" => "&6Legendary",
-            "heroic" => "&3Heroic",
+            "godly" => "&5Godly",
             default => "&f" . ucfirst($type),
         };
 
@@ -821,13 +1007,13 @@ final class EnvoyManager
 
     private function spawnFirework(float $x, float $y, float $z, World $world, string $type): void
     {
-        [$mainColors, $fadeColors] = match ($type) {
+        [$mainColors, $fadeColors] = match ($this->normalizeTypeId($type)) {
             "simple" => [[DyeColor::LIGHT_GRAY(), DyeColor::WHITE()], [DyeColor::WHITE(), DyeColor::LIGHT_GRAY()]],
             "unique" => [[DyeColor::LIME(), DyeColor::GREEN()], [DyeColor::GREEN(), DyeColor::LIME()]],
             "elite" => [[DyeColor::CYAN(), DyeColor::LIGHT_BLUE()], [DyeColor::LIGHT_BLUE(), DyeColor::CYAN()]],
             "exotic" => [[DyeColor::PURPLE(), DyeColor::MAGENTA()], [DyeColor::MAGENTA(), DyeColor::PINK()]],
             "legendary" => [[DyeColor::ORANGE(), DyeColor::YELLOW()], [DyeColor::YELLOW(), DyeColor::ORANGE()]],
-            "heroic" => [[DyeColor::CYAN(), DyeColor::BLUE()], [DyeColor::BLUE(), DyeColor::WHITE()]],
+            "godly" => [[DyeColor::PURPLE(), DyeColor::BLUE()], [DyeColor::PINK(), DyeColor::WHITE()]],
             default => [[DyeColor::WHITE()], [DyeColor::LIGHT_GRAY()]],
         };
 
@@ -837,5 +1023,11 @@ final class EnvoyManager
             [new FireworkRocketExplosion(FireworkRocketType::LARGE_BALL, $mainColors, $fadeColors, true, true)]
         );
         $firework->spawnToAll();
+    }
+
+    private function normalizeTypeId(string $type): string
+    {
+        $normalized = strtolower(trim($type));
+        return $normalized === "heroic" ? "godly" : $normalized;
     }
 }

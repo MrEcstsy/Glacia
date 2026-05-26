@@ -6,8 +6,10 @@ namespace ecstsy\Glacia\server\adminbazaar;
 
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\player\GlaciaPlayer;
+use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\Glacia\utils\RewardResolver;
 use ecstsy\Glacia\utils\StorageUtils;
+use ecstsy\Glacia\utils\lang\MessageTemplates;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use ecstsy\MartianUtilities\utils\ItemUtils;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
@@ -123,7 +125,7 @@ final class AdminBazaarManager
         }
 
         $entry = $pool[$entryKey];
-        $reward = RewardResolver::resolveItem((array) ($entry["reward"] ?? []), null);
+        $reward = RewardResolver::resolveItem(self::buildRewardEntry($entry), null);
         if (!$reward instanceof Item) {
             Loader::getInstance()->getLogger()->warning("[AdminBazaar] Failed to resolve listing reward for '{$entryKey}'.");
             return false;
@@ -169,35 +171,37 @@ final class AdminBazaarManager
     {
         $listing = self::$activeListing;
         if ($listing === null || self::getTimeUntilExpiry() <= 0) {
-            $player->sendMessage(C::colorize("&r&cThere is no active Admin Bazaar listing right now."));
+            $player->sendMessage(GlaciaUtils::format("adminbazaar.error.no_active_listing"));
             return false;
         }
 
         $session = Loader::getPlayerManager()->getSession($player);
         if (!$session instanceof GlaciaPlayer) {
-            $player->sendMessage(C::colorize("&r&cFailed to load your session."));
+            $player->sendMessage(GlaciaUtils::format("adminbazaar.error.session_load"));
             return false;
         }
 
         if (!self::canAccessListing($player, $listing)) {
-            $player->sendMessage(C::colorize("&r&cYou do not have permission to access this Admin Bazaar listing."));
+            $player->sendMessage(GlaciaUtils::format("adminbazaar.error.no_access"));
             return false;
         }
 
         if ((bool) ($listing["purchase_once"] ?? true) && self::hasPurchased($session, (string) $listing["id"])) {
-            $player->sendMessage(C::colorize("&r&cYou already purchased this Admin Bazaar item."));
+            $player->sendMessage(GlaciaUtils::format("adminbazaar.error.already_purchased"));
             return false;
         }
 
         $currency = (string) (($listing["price"]["currency"] ?? "money"));
         $amount = (int) (($listing["price"]["amount"] ?? 0));
         if ($amount <= 0) {
-            $player->sendMessage(C::colorize("&r&cThis listing is misconfigured."));
+            $player->sendMessage(GlaciaUtils::format("adminbazaar.error.misconfigured"));
             return false;
         }
 
         if (!self::charge($session, $currency, $amount)) {
-            $player->sendMessage(C::colorize("&r&cYou need &f" . self::formatPrice($amount, $currency) . " &cto buy this listing."));
+            $player->sendMessage(GlaciaUtils::format("adminbazaar.error.not_enough_currency", [
+                "price" => self::formatPrice($amount, $currency),
+            ]));
             PlayerUtils::playSound($player, "note.bass");
             return false;
         }
@@ -205,7 +209,7 @@ final class AdminBazaarManager
         $item = self::decodeListingItem($listing);
         if ($item === null) {
             self::refund($session, $currency, $amount);
-            $player->sendMessage(C::colorize("&r&cThis listing could not be claimed."));
+            $player->sendMessage(GlaciaUtils::format("adminbazaar.error.claim_failed"));
             return false;
         }
 
@@ -223,7 +227,9 @@ final class AdminBazaarManager
         if ((bool) ($listing["purchase_once"] ?? true)) {
             self::markPurchased($session, (string) $listing["id"]);
         }
-        $player->sendMessage(C::colorize("&r&aYou purchased &f" . C::clean((string) $listing["name"]) . " &afrom the Admin Bazaar."));
+        $player->sendMessage(GlaciaUtils::format("adminbazaar.success.purchased", [
+            "item" => C::clean((string) $listing["name"]),
+        ]));
         PlayerUtils::playSound($player, "random.levelup");
 
         self::broadcast(
@@ -233,6 +239,9 @@ final class AdminBazaarManager
                 "item" => C::clean((string) $listing["name"]),
             ]
         );
+        Loader::getQuestBoardManager()->recordProgress($player, "admin_bazaar_purchases", 1, [
+            "listing" => strtolower((string) ($listing["key"] ?? "")),
+        ]);
 
         return true;
     }
@@ -258,14 +267,22 @@ final class AdminBazaarManager
         $lines = [];
         $listing = self::$activeListing;
         if ($listing !== null && self::getTimeUntilExpiry() > 0) {
-            $lines[] = C::colorize("&r&dActive: &f" . C::clean((string) $listing["name"]));
-            $lines[] = C::colorize("&r&dPrice: &f" . self::formatPrice((int) $listing["price"]["amount"], (string) $listing["price"]["currency"]));
-            $lines[] = C::colorize("&r&dEnds In: &f" . GeneralUtils::translateTime(self::getTimeUntilExpiry()));
+            $lines[] = GlaciaUtils::format("adminbazaar.status.active", [
+                "item" => C::clean((string) $listing["name"]),
+            ]);
+            $lines[] = GlaciaUtils::format("adminbazaar.status.price", [
+                "price" => self::formatPrice((int) $listing["price"]["amount"], (string) $listing["price"]["currency"]),
+            ]);
+            $lines[] = GlaciaUtils::format("adminbazaar.status.ends_in", [
+                "time" => GeneralUtils::translateTime(self::getTimeUntilExpiry()),
+            ]);
         } else {
-            $lines[] = C::colorize("&r&dActive: &fNone");
+            $lines[] = GlaciaUtils::format("adminbazaar.status.none");
         }
 
-        $lines[] = C::colorize("&r&dNext Rotation: &f" . GeneralUtils::translateTime(self::getTimeUntilRefresh()));
+        $lines[] = GlaciaUtils::format("adminbazaar.status.next_rotation", [
+            "time" => GeneralUtils::translateTime(self::getTimeUntilRefresh()),
+        ]);
         return $lines;
     }
 
@@ -383,6 +400,113 @@ final class AdminBazaarManager
         return array_key_first($pool);
     }
 
+    /**
+     * Lets Admin Bazaar listings define item modifiers either inside `reward:`
+     * or alongside the listing itself.
+     *
+     * @param array<string, mixed> $entry
+     * @return array<string, mixed>
+     */
+    private static function buildRewardEntry(array $entry): array
+    {
+        $reward = is_array($entry["reward"] ?? null) ? (array) $entry["reward"] : [];
+
+        foreach ([
+            "type",
+            "id",
+            "material",
+            "item",
+            "identifier",
+            "name",
+            "display",
+            "count",
+            "amount",
+            "lore",
+            "enchantments",
+            "color",
+            "rune",
+            "applied_rune",
+            "preapplied_rune",
+            "bound_rune",
+            "rune_id",
+            "essence",
+            "essence_id",
+            "essences",
+            "protected",
+            "whitescrolled",
+            "white_scrolled",
+            "white_scroll",
+            "holy_white",
+            "holy_whitescroll",
+            "holy_white_scroll",
+            "holywhitescroll",
+            "holy_white_max",
+            "holy_white_used",
+            "holy_white_active",
+            "holy_water",
+            "holywater",
+            "soul_conduit",
+            "soul_conduit_type",
+            "conduit",
+            "conduit_type",
+            "soul_identifier",
+            "soul_id",
+            "conduit_identifier",
+            "conduit_id",
+            "bind_id",
+            "soul_gem_id",
+            "soul_group",
+            "conduit_group",
+            "heroic",
+            "is_heroic",
+            "heroic_armor",
+            "transmogged",
+            "pretransmogged",
+            "apply_transmog",
+            "transmogged_key",
+            "enchanted",
+            "success",
+            "destroy",
+            "souls",
+            "uses",
+            "pet",
+            "pet_id",
+            "multiplier",
+            "duration",
+            "zone",
+            "zone_id",
+            "orb_type",
+            "max",
+            "slots",
+            "new",
+            "bonus",
+            "bonus_success",
+            "percent",
+            "credits",
+            "tracker",
+            "tracker_type",
+            "trackers",
+            "title",
+            "title_id",
+            "disguise",
+            "mob",
+            "type_id",
+            "kit",
+            "gkit",
+            "warlord",
+        ] as $key) {
+            if (array_key_exists($key, $entry) && !array_key_exists($key, $reward)) {
+                $reward[$key] = $entry[$key];
+            }
+        }
+
+        if (!isset($reward["name"]) && isset($entry["display-name"])) {
+            $reward["name"] = $entry["display-name"];
+        }
+
+        return $reward;
+    }
+
     private static function getStatePath() : string
     {
         return Loader::getInstance()->getDataFolder() . "admin_bazaar_state.json";
@@ -447,13 +571,13 @@ final class AdminBazaarManager
 
     private static function broadcast(string $key, array $replacements) : void
     {
-        $message = (string) ((self::getSettings()["broadcasts"][$key] ?? "") ?? "");
+        $message = MessageTemplates::render(
+            "adminbazaar.broadcast." . str_replace("-", "_", $key),
+            $replacements,
+            (string) ((self::getSettings()["broadcasts"][$key] ?? "") ?? "")
+        );
         if ($message === "") {
             return;
-        }
-
-        foreach ($replacements as $search => $replace) {
-            $message = str_replace("{" . $search . "}", (string) $replace, $message);
         }
 
         foreach (Loader::getInstance()->getServer()->getOnlinePlayers() as $online) {

@@ -12,7 +12,7 @@ use Vecnavium\FormsUI\SimpleForm;
 
 final class OpenableLootPreviewScreen {
 
-    private const ENTRIES_PER_PAGE = 9;
+    private const ENTRIES_PER_PAGE = 10;
 
     /**
      * @param array<int, array{name: string, entries: array<int, array<string, mixed>>}> $groups
@@ -40,18 +40,32 @@ final class OpenableLootPreviewScreen {
             }
         });
 
-        $form->setTitle(C::colorize("&r&8Loot Table"));
+        $form->setTitle(C::colorize("&r&8Loot Preview"));
 
         $lines = [
-            C::colorize("&r&f{$title}"),
+            C::colorize("&r&f&l{$title}"),
             C::colorize("&r&7Page &f" . ($page + 1) . "&7/&f" . ($maxPage + 1)),
-            ""
         ];
 
+        $lastGroup = null;
         foreach ($slice as $entryData) {
             $entry = $entryData["entry"];
+            $group = (string) $entryData["group"];
+            $groupWeight = (int) $entryData["group_weight"];
+
+            if ($group !== $lastGroup) {
+                $lines[] = "";
+                $lines[] = C::colorize("&r&l&n" . self::formatGroupName($group));
+                $lastGroup = $group;
+            }
+
             $item = RewardResolver::resolveItem($entry, $player);
-            $lines[] = C::colorize("&r&6* &r&f" . ($item?->getCount() ?? 1) . "x &r" . self::getItemDisplayName($item));
+            $count = $item?->getCount() ?? 1;
+            $chanceText = self::formatChancePercent((int) ($entry["chance"] ?? 0), $groupWeight);
+
+            $lines[] = C::colorize(
+                "&r&6* " . $chanceText . " &r&f" . $count . "x &r" . self::getItemDisplayName($item)
+            );
         }
 
         $form->setContent(implode("\n", $lines));
@@ -70,22 +84,63 @@ final class OpenableLootPreviewScreen {
 
     /**
      * @param array<int, array{name: string, entries: array<int, array<string, mixed>>}> $groups
-     * @return array<int, array{group: string, entry: array<string, mixed>}>
+     * @return array<int, array{group: string, entry: array<string, mixed>, group_weight: int}>
      */
     private static function flattenEntries(array $groups): array
     {
         $flattened = [];
 
         foreach ($groups as $group) {
-            foreach ($group["entries"] as $entry) {
+            $entries = (array) ($group["entries"] ?? []);
+            $groupWeight = 0;
+            foreach ($entries as $entry) {
+                if (!is_array($entry)) {
+                    continue;
+                }
+                $groupWeight += max(0, (int) ($entry["chance"] ?? 0));
+            }
+
+            foreach ($entries as $entry) {
+                if (!is_array($entry)) {
+                    continue;
+                }
                 $flattened[] = [
-                    "group" => (string) $group["name"],
-                    "entry" => $entry
+                    "group" => (string) ($group["name"] ?? ""),
+                    "entry" => $entry,
+                    "group_weight" => $groupWeight,
                 ];
             }
         }
 
         return $flattened;
+    }
+
+    private static function formatGroupName(string $group): string
+    {
+        $clean = trim($group);
+        if ($clean === "") {
+            return "Loot";
+        }
+
+        return ucwords(strtolower($clean));
+    }
+
+    private static function formatChancePercent(int $weight, int $groupWeight): string
+    {
+        if ($weight <= 0 || $groupWeight <= 0) {
+            return C::colorize("&r&8(?%)");
+        }
+
+        $percent = ($weight / $groupWeight) * 100.0;
+        if ($percent >= 10.0) {
+            $formatted = number_format($percent, 0);
+        } elseif ($percent >= 1.0) {
+            $formatted = number_format($percent, 1);
+        } else {
+            $formatted = number_format($percent, 2);
+        }
+
+        return C::colorize("&r&7(&e" . $formatted . "%&7)");
     }
 
     private static function getItemDisplayName(?Item $item): string

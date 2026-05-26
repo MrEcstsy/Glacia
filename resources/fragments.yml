@@ -1,3 +1,6 @@
+# Bump only when you add new default keys; staff fragment IDs stay on disk (additive merge).
+schema-version: 1
+
 recipes:
   april2026cc:
     enabled: true

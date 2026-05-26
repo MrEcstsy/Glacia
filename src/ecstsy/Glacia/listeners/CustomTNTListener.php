@@ -9,11 +9,18 @@ use ecstsy\Glacia\entity\GlaciaPrimedTNT;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\customtnt\CustomTNTIds;
 use ecstsy\Glacia\server\items\GlaciaItemFactory;
+use ecstsy\Glacia\server\factions\claims\CoreChunkRaidManager;
+use ecstsy\Glacia\server\cannon\CannonRulesConfig;
+use ecstsy\Glacia\server\obsidian\EnchantmentTableDurabilityManager;
+use ecstsy\Glacia\server\obsidian\EnchantmentTableExplosionConfig;
 use ecstsy\Glacia\server\obsidian\ObsidianDurabilityManager;
+use ecstsy\Glacia\server\obsidian\ObsidianExplosionConfig;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\block\TNT;
 use pocketmine\block\VanillaBlocks;
+use pocketmine\entity\Entity;
 use pocketmine\entity\Location;
+use pocketmine\entity\object\PrimedTNT;
 use pocketmine\event\Listener;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\block\BlockPlaceEvent;
@@ -25,9 +32,9 @@ use pocketmine\item\FireCharge;
 use pocketmine\item\FlintSteel;
 use pocketmine\item\Item;
 use pocketmine\item\ItemTypeIds;
-use pocketmine\math\Vector3;
 use pocketmine\player\GameMode;
 use pocketmine\utils\TextFormat as C;
+use pocketmine\world\World;
 
 final class CustomTNTListener implements Listener {
 
@@ -57,6 +64,10 @@ final class CustomTNTListener implements Listener {
 
         if (ObsidianDurabilityManager::isTrackedObsidian($block)) {
             ObsidianDurabilityManager::clear($block);
+        }
+
+        if (EnchantmentTableDurabilityManager::isTrackedTable($block)) {
+            EnchantmentTableDurabilityManager::clear($block);
         }
 
         if (!$block instanceof TNT) {
@@ -89,14 +100,24 @@ final class CustomTNTListener implements Listener {
 
         if (
             $item->getTypeId() === ItemTypeIds::POTATO &&
-            ObsidianDurabilityManager::isTrackedObsidian($block) &&
             $event->getAction() === PlayerInteractEvent::RIGHT_CLICK_BLOCK
         ) {
-            $hp = ObsidianDurabilityManager::getHp($block);
-            $max = ObsidianDurabilityManager::getMaxHp();
-            $player->sendActionBarMessage(C::colorize("&r&5Obsidian Durability &8| &r&f{$hp}&7/&f{$max}"));
-            PlayerUtils::playSound($player, "random.click");
-            return;
+            if (ObsidianDurabilityManager::isTrackedObsidian($block)) {
+                $hp = ObsidianDurabilityManager::getHp($block);
+                $max = ObsidianDurabilityManager::getMaxHp();
+                $player->sendActionBarMessage(C::colorize("&r&5Obsidian Durability &8| &r&f{$hp}&7/&f{$max}"));
+                PlayerUtils::playSound($player, "random.click");
+
+                return;
+            }
+            if (EnchantmentTableDurabilityManager::isTrackedTable($block)) {
+                $hp = EnchantmentTableDurabilityManager::getHp($block);
+                $max = EnchantmentTableDurabilityManager::getMaxHp();
+                $player->sendActionBarMessage(C::colorize("&r&5Enchantment Table Durability &8| &r&f{$hp}&7/&f{$max}"));
+                PlayerUtils::playSound($player, "random.click");
+
+                return;
+            }
         }
 
         if (!$block instanceof TNT) {
@@ -142,6 +163,7 @@ final class CustomTNTListener implements Listener {
             0.0
         ));
         $tnt->setTNTType($type);
+        $tnt->setRaidSourceFactionId(Loader::getPlayerManager()->getSession($player)?->getFactionId());
         $tnt->spawnToAll();
 
         PlayerUtils::playSound($player, "random.fuse");
@@ -218,67 +240,252 @@ final class CustomTNTListener implements Listener {
         ]);
     }
 
-    public function onExplode(EntityExplodeEvent $event): void
-    {
+    public function onExplode(EntityExplodeEvent $event): void {
         $entity = $event->getEntity();
-        if (
-            !$entity instanceof GlaciaPrimedTNT &&
-            !$entity instanceof GlaciaExplosiveCreeper
-        ) {
+        if (!$entity instanceof PrimedTNT && !$entity instanceof GlaciaExplosiveCreeper) {
+            return;
+        }
+        if ($event->isCancelled()) {
             return;
         }
 
-        $updated = [];
-        foreach ($event->getBlockList() as $block) {
-            if (!ObsidianDurabilityManager::isTrackedObsidian($block)) {
-                $updated[] = $block;
-                continue;
-            }
-
-            $remaining = ObsidianDurabilityManager::damage($block);
-            if ($remaining > 0) {
-                continue;
-            }
-
-            $updated[] = $block;
+        if (CannonRulesConfig::enabled() && CannonRulesConfig::suppressExplosionFullyAt($event->getPosition())) {
+            return;
         }
 
-        // Obsidian usually isn't part of vanilla explodeA block lists due blast resistance.
-        // Scan around the blast center so TNT can still chip obsidian durability.
+        if ($entity instanceof GlaciaExplosiveCreeper && $this->isCeggBlockDamageProtectedRegion($event->getPosition())) {
+            $event->setBlockList([]);
+        }
+
+        if ($entity instanceof GlaciaPrimedTNT) {
+            CoreChunkRaidManager::handleTntExplosion($entity, $event->getPosition());
+        } elseif ($entity instanceof GlaciaExplosiveCreeper) {
+            $attackerFactionId = $entity->getRaidSourceFactionId();
+            if ($attackerFactionId !== null) {
+                CoreChunkRaidManager::handleFactionExplosionAt($attackerFactionId, $event->getPosition());
+            }
+        }
+
+        if (ObsidianExplosionConfig::waterBlocksDamage()
+            && GlaciaPrimedTNT::isEntityTouchingWater($entity)) {
+            return;
+        }
+
+        $profile = $this->resolveObsidianExplosionProfile($entity);
+
+        $fraction = ObsidianExplosionConfig::fractionalWearPerExplodeEvent($profile);
+
+        $uniqObsidianByPos = [];
+
+        foreach ($event->getBlockList() as $block) {
+            if (!ObsidianDurabilityManager::isTrackedObsidian($block)) {
+                continue;
+            }
+            $p = $block->getPosition();
+            $uniqObsidianByPos[World::blockHash($p->getFloorX(), $p->getFloorY(), $p->getFloorZ())] = $block;
+        }
+
+        // Obsidian usually isn't part of vanilla explodeA lists — radial scan overlaps without double-wearing blocks.
         $center = $event->getPosition();
         $radius = $entity instanceof GlaciaPrimedTNT ? 4.0 : 3.0;
         $radiusInt = (int) ceil($radius);
         $world = $center->getWorld();
-        $visited = [];
+
+        $visitedCoords = [];
 
         for ($x = -$radiusInt; $x <= $radiusInt; $x++) {
             for ($y = -$radiusInt; $y <= $radiusInt; $y++) {
                 for ($z = -$radiusInt; $z <= $radiusInt; $z++) {
-                    $pos = $center->add($x, $y, $z);
-                    $vector = new Vector3((int) floor($pos->x), (int) floor($pos->y), (int) floor($pos->z));
-                    $key = $vector->x . ":" . $vector->y . ":" . $vector->z;
-                    if (isset($visited[$key])) {
+                    $vx = ((int) floor($center->x)) + $x;
+                    $vy = ((int) floor($center->y)) + $y;
+                    $vz = ((int) floor($center->z)) + $z;
+
+                    $ck = "{$vx}:{$vy}:{$vz}";
+                    if (isset($visitedCoords[$ck])) {
                         continue;
                     }
-                    $visited[$key] = true;
+                    $visitedCoords[$ck] = true;
 
-                    if ($center->distanceSquared($vector->add(0.5, 0.5, 0.5)) > ($radius * $radius)) {
+                    $dx = $vx + 0.5 - $center->x;
+                    $dy = $vy + 0.5 - $center->y;
+                    $dz = $vz + 0.5 - $center->z;
+
+                    if (($dx ** 2) + ($dy ** 2) + ($dz ** 2) > ($radius ** 2)) {
                         continue;
                     }
 
-                    $block = $world->getBlock($vector);
+                    $block = $world->getBlockAt($vx, $vy, $vz);
                     if (!ObsidianDurabilityManager::isTrackedObsidian($block)) {
                         continue;
                     }
 
-                    $remaining = ObsidianDurabilityManager::damage($block);
-                    if ($remaining <= 0) {
-                        $updated[] = $block;
-                    }
+                    $hash = World::blockHash($vx, $vy, $vz);
+                    $uniqObsidianByPos[$hash] = $block;
                 }
             }
         }
 
-        $event->setBlockList($updated);
+        $breakHashes = [];
+        foreach ($uniqObsidianByPos as $hash => $ob) {
+            if (ObsidianDurabilityManager::applyExplosionWear($ob, $fraction)) {
+                $breakHashes[$hash] = true;
+            }
+        }
+
+        $outByHash = [];
+        foreach ($event->getBlockList() as $block) {
+            if (!ObsidianDurabilityManager::isTrackedObsidian($block)) {
+                $h = World::blockHash(
+                    $block->getPosition()->getFloorX(),
+                    $block->getPosition()->getFloorY(),
+                    $block->getPosition()->getFloorZ()
+                );
+                $outByHash[$h] = $block;
+                continue;
+            }
+
+            $h = World::blockHash(
+                $block->getPosition()->getFloorX(),
+                $block->getPosition()->getFloorY(),
+                $block->getPosition()->getFloorZ()
+            );
+            if (isset($breakHashes[$h])) {
+                $outByHash[$h] = $block;
+            }
+        }
+
+        foreach ($uniqObsidianByPos as $hash => $block) {
+            if (!isset($breakHashes[$hash]) || isset($outByHash[$hash])) {
+                continue;
+            }
+            $outByHash[$hash] = $block;
+        }
+
+        $event->setBlockList(array_values($outByHash));
+
+        $this->applyEnchantmentTableExplosionWear($event, $entity, $profile);
+    }
+
+    private function applyEnchantmentTableExplosionWear(EntityExplodeEvent $event, Entity $entity, string $profile): void {
+        $fraction = EnchantmentTableExplosionConfig::fractionalWearPerExplodeEvent($profile);
+
+        $uniqByPos = [];
+
+        foreach ($event->getBlockList() as $block) {
+            if (!EnchantmentTableDurabilityManager::isTrackedTable($block)) {
+                continue;
+            }
+            $p = $block->getPosition();
+            $uniqByPos[World::blockHash($p->getFloorX(), $p->getFloorY(), $p->getFloorZ())] = $block;
+        }
+
+        $center = $event->getPosition();
+        $radius = $entity instanceof GlaciaPrimedTNT ? 4.0 : 3.0;
+        $radiusInt = (int) ceil($radius);
+        $world = $center->getWorld();
+
+        $visitedCoords = [];
+
+        for ($x = -$radiusInt; $x <= $radiusInt; ++$x) {
+            for ($y = -$radiusInt; $y <= $radiusInt; ++$y) {
+                for ($z = -$radiusInt; $z <= $radiusInt; ++$z) {
+                    $vx = ((int) floor($center->x)) + $x;
+                    $vy = ((int) floor($center->y)) + $y;
+                    $vz = ((int) floor($center->z)) + $z;
+
+                    $ck = "{$vx}:{$vy}:{$vz}";
+                    if (isset($visitedCoords[$ck])) {
+                        continue;
+                    }
+                    $visitedCoords[$ck] = true;
+
+                    $dx = $vx + 0.5 - $center->x;
+                    $dy = $vy + 0.5 - $center->y;
+                    $dz = $vz + 0.5 - $center->z;
+
+                    if (($dx ** 2) + ($dy ** 2) + ($dz ** 2) > ($radius ** 2)) {
+                        continue;
+                    }
+
+                    $block = $world->getBlockAt($vx, $vy, $vz);
+                    if (!EnchantmentTableDurabilityManager::isTrackedTable($block)) {
+                        continue;
+                    }
+
+                    $hash = World::blockHash($vx, $vy, $vz);
+                    $uniqByPos[$hash] = $block;
+                }
+            }
+        }
+
+        $breakHashes = [];
+        foreach ($uniqByPos as $hash => $tb) {
+            if (EnchantmentTableDurabilityManager::applyExplosionWear($tb, $fraction)) {
+                $breakHashes[$hash] = true;
+            }
+        }
+
+        $outByHash = [];
+        foreach ($event->getBlockList() as $block) {
+            if (!EnchantmentTableDurabilityManager::isTrackedTable($block)) {
+                $h = World::blockHash(
+                    $block->getPosition()->getFloorX(),
+                    $block->getPosition()->getFloorY(),
+                    $block->getPosition()->getFloorZ()
+                );
+                $outByHash[$h] = $block;
+                continue;
+            }
+
+            $h = World::blockHash(
+                $block->getPosition()->getFloorX(),
+                $block->getPosition()->getFloorY(),
+                $block->getPosition()->getFloorZ()
+            );
+            if (isset($breakHashes[$h])) {
+                $outByHash[$h] = $block;
+            }
+        }
+
+        foreach ($uniqByPos as $hash => $block) {
+            if (!isset($breakHashes[$hash]) || isset($outByHash[$hash])) {
+                continue;
+            }
+            $outByHash[$hash] = $block;
+        }
+
+        $event->setBlockList(array_values($outByHash));
+    }
+
+    private function resolveObsidianExplosionProfile(Entity $entity): string {
+        if ($entity instanceof GlaciaPrimedTNT) {
+            $type = $entity->getTNTType();
+
+            return ($type !== "" && CustomTNTIds::isCustomTNT($type))
+                ? $type
+                : CustomTNTIds::PROFILE_NORMAL;
+        }
+
+        if ($entity instanceof GlaciaExplosiveCreeper) {
+            $type = $entity->getExplosiveType();
+
+            return ($type !== "" && CustomTNTIds::isCustomTNT($type))
+                ? $type
+                : CustomTNTIds::PROFILE_NORMAL;
+        }
+
+        return CustomTNTIds::PROFILE_NORMAL;
+    }
+
+    private function isCeggBlockDamageProtectedRegion(\pocketmine\math\Vector3 $position): bool
+    {
+        foreach (Loader::getRegionManager()->getRegionsAt($position) as $region) {
+            $name = strtolower($region->getName());
+            if ($name === "spawn" || $name === "warzone" || str_starts_with($name, "warzone_")) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

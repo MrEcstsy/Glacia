@@ -61,6 +61,6 @@ final class NearCommand extends BaseCommand {
 
     public function getPermission() : string
     {
-        return "glacia.default";
+        return "glacia.command.near";
     }
 }

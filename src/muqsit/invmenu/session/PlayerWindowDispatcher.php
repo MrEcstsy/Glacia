@@ -30,6 +30,7 @@ final class PlayerWindowDispatcher{
 	private ?Closure $container_open_callback = null;
 
 	private ?int $window_id = null;
+	private int $window_type = WindowTypes::CONTAINER;
 
 	/** @var list<ClientboundPacket> */
 	private array $packets;
@@ -92,7 +93,9 @@ final class PlayerWindowDispatcher{
 
 			foreach($packets as $packet){
 				if($packet instanceof ContainerOpenPacket){
+					$this->window_type = $packet->windowType;
 					$translator->translate($this->session, $this->info, $packet);
+					$this->window_type = $packet->windowType;
 				}
 			}
 
@@ -117,7 +120,7 @@ final class PlayerWindowDispatcher{
 
 		assert($this->window_id !== null);
 		$session = $this->session->player->getNetworkSession();
-		$session->sendDataPacket(ContainerClosePacket::create($this->window_id, WindowTypes::CONTAINER, false));
+		$session->sendDataPacket(ContainerClosePacket::create($this->window_id, $this->window_type, false));
 		$this->n_finalization_acks++;
 		foreach($this->packets as $packet){
 			$session->sendDataPacket($packet);

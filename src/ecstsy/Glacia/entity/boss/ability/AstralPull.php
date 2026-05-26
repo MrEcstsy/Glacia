@@ -24,9 +24,9 @@ final class AstralPull extends BossAbility {
                 ->normalize();
 
             $force = match ($boss->getPhase()) {
-                1 => 0.35,
-                2 => 0.6,
-                3 => 0.9,
+                1 => 0.20,
+                2 => 0.28,
+                3 => 0.38,
             };
 
             $boss->applyBossMotion($player, new Vector3(
@@ -35,19 +35,14 @@ final class AstralPull extends BossAbility {
                 $dir->z * $force
             ));
 
-            $player->attack(new EntityDamageByEntityEvent(
-                $boss,
+            $boss->dealBossTrueDamage(
                 $player,
-                EntityDamageEvent::CAUSE_MAGIC,
                 match ($boss->getPhase()) {
-                    1 => 3.0,
-                    2 => 5.0,
-                    3 => 7.0,
-                },
-                [],
-                0.0,
-                0.0
-            ));
+                    1 => 7.0,
+                    2 => 11.0,
+                    3 => 15.0,
+                }
+            );
 
             $boss->playAbilitySound("mob.endermen.portal", 1.2, 0.7);
             $boss->broadcastAbility(C::colorize("&r&l&5Astral Devourer bends space around itself!"));

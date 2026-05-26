@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\utils\screens\settings;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\factions\guardian\FactionGuardianManager;
 use ecstsy\Glacia\server\staff\StaffModeManager;
 use ecstsy\Glacia\utils\GameRuleUtils;
 use ecstsy\Glacia\utils\lang\MessageTemplates;
@@ -22,7 +23,9 @@ final class SettingsScreen
             return;
         }
 
-        $form = new SimpleForm(function (Player $player, $data) use ($session): void {
+        $guardInspectStaff = $player->hasPermission("glacia.anticheat.command");
+
+        $form = new SimpleForm(function (Player $player, $data) use ($session, $guardInspectStaff): void {
             if (!is_int($data)) {
                 return;
             }
@@ -60,6 +63,18 @@ final class SettingsScreen
                 case 5:
                     ScoreboardScreen::displayMain($player);
                     break;
+                case 6:
+                    $session->toggleSetting("hide_faction_guardians");
+                    FactionGuardianManager::refreshVisibilityFor($player);
+                    self::sendSettingToast($player, "settings.toast.label.hide_faction_guardians", (bool) $session->getSetting("hide_faction_guardians"));
+                    break;
+                case 7:
+                    if (!$guardInspectStaff) {
+                        break;
+                    }
+                    $session->toggleSetting("guard_inspect_use_form");
+                    self::sendSettingToast($player, "settings.toast.label.guard_inspect_ui", (bool) $session->getSetting("guard_inspect_use_form"));
+                    break;
             }
         });
 
@@ -71,13 +86,17 @@ final class SettingsScreen
         $form->addButton(MessageTemplates::render("settings.menu.button.quick_claim"));
         $form->addButton(MessageTemplates::render("settings.menu.button.show_coordinates"));
         $form->addButton(MessageTemplates::render("settings.menu.button.scoreboard"));
+        $form->addButton(MessageTemplates::render("settings.menu.button.hide_faction_guardians"));
+        if ($guardInspectStaff) {
+            $form->addButton(MessageTemplates::render("settings.menu.button.guard_inspect_ui"));
+        }
 
         $player->sendForm($form);
     }
 
     private static function sendSettingToast(Player $player, string $labelKey, bool $enabled): void
     {
-        $color = $enabled ? C::GREEN : C::RED;
+        $color = $enabled ? "&a" : "&c";
         $player->sendToastNotification(
             C::colorize(Loader::SERVER_PREFIX),
             C::colorize(MessageTemplates::render("settings.toast.state", [

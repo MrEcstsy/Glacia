@@ -8,13 +8,12 @@ use ecstsy\Glacia\blocks\tiles\SpawnerTile;
 use ecstsy\Glacia\server\items\GlaciaSpawnerItem;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use pocketmine\block\Block;
+use pocketmine\block\MonsterSpawner;
 use pocketmine\data\bedrock\LegacyEntityIdToStringIdMap;
 use pocketmine\item\Item;
-use pocketmine\item\StringToItemParser;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\world\BlockTransaction;
-use pocketmine\block\MonsterSpawner;
 
 class CustomSpawner extends MonsterSpawner
 {
@@ -42,8 +41,7 @@ class CustomSpawner extends MonsterSpawner
 
     public function getSilkTouchDrops(Item $item): array {
         return [
-            StringToItemParser::getInstance()->parse("52:" . $this->legacyEntityId)
-                ?? GlaciaSpawnerItem::MONSTER_SPAWNER()
+            GlaciaSpawnerItem::createMobSpawner($this->legacyEntityId)
         ];
     }
 

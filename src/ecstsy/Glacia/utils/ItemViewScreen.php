@@ -41,7 +41,7 @@ final class ItemViewScreen extends BaseScreen {
 
         $name = $this->resolveText($player, $item->getName());
         $count = $item->getCount() > 1 ? " x{$item->getCount()}" : "";
-        $lines[] = C::BOLD . C::AQUA . $name . C::RESET . $count;
+        $lines[] = C::colorize("&l&b" . $name . "&r" . $count);
 
         $lore = $item->getLore();
 
@@ -56,7 +56,7 @@ final class ItemViewScreen extends BaseScreen {
         $vanillaEnchantLines = [];
         foreach ($item->getEnchantments() as $enchantmentInstance) {
             $enchName = $this->resolveText($player, $enchantmentInstance->getType()->getName());
-            $vanillaEnchantLines[] = C::GRAY . $enchName . ' ' . $this->toRoman($enchantmentInstance->getLevel());
+            $vanillaEnchantLines[] = C::colorize("&7" . $enchName . ' ' . $this->toRoman($enchantmentInstance->getLevel()));
         }
 
         if (!empty($vanillaEnchantLines)) {

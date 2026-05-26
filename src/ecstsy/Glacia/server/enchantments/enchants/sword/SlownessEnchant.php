@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\enchantments\enchants\sword;
 
 use ecstsy\Glacia\entity\gkits\ForsakenChampion;
+use ecstsy\Glacia\entity\MummifiedRemnant;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantProcManager;
 use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
-use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
+use ecstsy\Glacia\server\enchantments\manager\MirrorbrandProcManager;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\entity\Living;
@@ -31,32 +33,50 @@ final class SlownessEnchant implements EntityDamageByEntityEnchantmentHandler {
 
         $session = $damager instanceof Player ? PlayerManager::getInstance()->getSession($damager) : null;
 
-        $item = $damager instanceof Player ? $damager->getInventory()->getItemInHand() : ($damager instanceof ForsakenChampion ? $damager->getCombatItem() : null);
+        $item = $damager instanceof Player ? $damager->getInventory()->getItemInHand() : (($damager instanceof ForsakenChampion || $damager instanceof MummifiedRemnant) ? $damager->getCombatItem() : null);
         if ($item === null) return;
         if (!CustomEnchantmentManager::hasEnchantment($item, "slowness")) return;
 
-        $data = [
-            1 => ["chance" => 35, "cd" => 2, "duration" => 60,  "effectLevel" => 0],
-            2 => ["chance" => 55, "cd" => 2, "duration" => 80,  "effectLevel" => 1],
-            3 => ["chance" => 75, "cd" => 2, "duration" => 100, "effectLevel" => 2],
-        ];
-
-        $cfg = $data[$level] ?? $data[1];
-        $cfg["chance"] = EnchantTuningManager::getLevelInt("slowness", "chance-by-level", $level, (int) $cfg["chance"]);
-        $cfg["duration"] = EnchantTuningManager::getLevelInt("slowness", "effect-duration-seconds-by-level", $level, (int) $cfg["duration"]);
-
-        if (!ProcLuckManager::roll($damager, "slowness", $cfg["chance"], 2, 12)) return;
-        if ($session !== null && $session->isOnCooldown("slowness")) return;
+        $chance = EnchantTuningManager::chance("slowness", $level, 35.0);
+        $cooldownSeconds = EnchantTuningManager::cooldownSeconds("slowness", $level, 1);
+        $durationTicks = max(1, EnchantTuningManager::valueInt("slowness", "duration-ticks", $level, 60));
+        $effectLevel = max(0, EnchantTuningManager::valueInt("slowness", "amplifier", $level, 0));
+        $result = EnchantProcManager::attempt(
+            $damager,
+            "slowness",
+            $level,
+            $chance,
+            $cooldownSeconds,
+            static fn() => $session?->getCooldown("slowness") ?? 0
+        );
+        if (!$result->success) {
+            return;
+        }
 
         if (!$victim->getEffects()->has(VanillaEffects::SLOWNESS())) {
             $victim->getEffects()->add(new EffectInstance(
                 VanillaEffects::SLOWNESS(),
-                $cfg["duration"] * 20,
-                $cfg["effectLevel"]
+                $durationTicks,
+                $effectLevel
             ));
-            if ($session !== null) {
-                $session->addCooldown("slowness", max(0, EnchantTuningManager::getInt("slowness", "cooldown", 1)));
+            if ($damager instanceof Player && $victim instanceof Player) {
+                MirrorbrandProcManager::record($damager, "slowness", static function (Player $reflector, Player $attacker) use ($durationTicks, $effectLevel): bool {
+                    $attacker->getEffects()->add(new EffectInstance(
+                        VanillaEffects::SLOWNESS(),
+                        $durationTicks,
+                        $effectLevel
+                    ));
+                    return true;
+                });
             }
+            EnchantProcManager::applyCooldownIfNeeded($result, static fn(int $seconds) => $session?->addCooldown("slowness", $seconds));
+            EnchantProcManager::debugAppliedValues($damager, $result, [
+                "duration_ticks" => $durationTicks,
+                "amplifier" => $effectLevel,
+            ]);
+            return;
         }
+
+        EnchantProcManager::debugAppliedValues($damager, $result, ["blocked" => "effect_already_active"]);
     }
 }

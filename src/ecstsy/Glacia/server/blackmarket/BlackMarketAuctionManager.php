@@ -27,7 +27,8 @@ final class BlackMarketAuctionManager {
 
     public function reload(): void
     {
-        $this->config = GeneralUtils::getConfiguration(Loader::getInstance(), "blackmarket.yml")->getAll();
+        $cfg = GeneralUtils::getConfiguration(Loader::getInstance(), "blackmarket.yml");
+        $this->config = $cfg !== null ? $cfg->getAll() : [];
     }
 
     public function getConfig(): array
@@ -57,7 +58,21 @@ final class BlackMarketAuctionManager {
             return null;
         }
 
-        $entryKey = $this->rollPoolKey($pool);
+        $forced = trim((string) ($this->config["settings"]["next-auction-entry"] ?? ""));
+        $entryKey = null;
+        $usedForced = false;
+        if ($forced !== "" && isset($pool[$forced]) && is_array($pool[$forced])) {
+            $entryKey = $forced;
+            $usedForced = true;
+        } elseif ($forced !== "") {
+            Loader::getInstance()->getLogger()->warning(
+                "[BlackMarket] settings.next-auction-entry '{$forced}' is not a valid pool key; using weighted roll instead."
+            );
+        }
+
+        if ($entryKey === null) {
+            $entryKey = $this->rollPoolKey($pool);
+        }
         if ($entryKey === null) {
             return null;
         }
@@ -78,6 +93,10 @@ final class BlackMarketAuctionManager {
             throw new RuntimeException("Failed to resolve BAH reward for entry '{$entryKey}'");
         }
 
+        if ($usedForced) {
+            $this->persistNextAuctionEntry("");
+        }
+
         $displayName = (string) ($listingData["name"] ?? $reward->getName());
         $startingBid = GeneralUtils::parseRandomNumber($listingData["starting-bid"] ?? 100000);
 
@@ -87,6 +106,100 @@ final class BlackMarketAuctionManager {
             $reward,
             max(1, $startingBid)
         );
+    }
+
+    /**
+     * Random Black Market pool reward (weighted by {@code chance}); does not start an auction.
+     */
+    public function resolveRandomPoolReward(?Player $player = null): ?Item
+    {
+        $pool = $this->config["pool"] ?? [];
+        if (!is_array($pool) || $pool === []) {
+            return null;
+        }
+
+        $entryKey = $this->rollPoolKey($pool);
+        if ($entryKey === null) {
+            return null;
+        }
+
+        $entry = $pool[$entryKey] ?? null;
+        if (!is_array($entry)) {
+            return null;
+        }
+
+        $rewardData = $entry["reward"] ?? null;
+        if (!is_array($rewardData)) {
+            return null;
+        }
+
+        $item = RewardResolver::resolveItem($rewardData, $player);
+        return $item instanceof Item ? $item : null;
+    }
+
+    /**
+     * Writes settings.next-auction-entry to blackmarket.yml and reloads this manager.
+     */
+    public function setNextAuctionPoolEntry(string $id): bool
+    {
+        $trim = trim($id);
+        if ($trim === "") {
+            return false;
+        }
+
+        $config = GeneralUtils::getConfiguration(Loader::getInstance(), "blackmarket.yml");
+        if ($config === null) {
+            return false;
+        }
+
+        $pool = $config->get("pool");
+        if (!is_array($pool) || !isset($pool[$trim]) || !is_array($pool[$trim])) {
+            return false;
+        }
+
+        $entry = $pool[$trim];
+        $rewardData = $entry["reward"] ?? null;
+        $listingData = $entry["listing"] ?? null;
+        if (!is_array($rewardData) || !is_array($listingData)) {
+            return false;
+        }
+
+        $config->setNested("settings.next-auction-entry", $trim);
+        $config->save();
+        $this->reload();
+        return true;
+    }
+
+    public function getPoolEntryDisplayName(string $entryKey): string
+    {
+        $pool = $this->config["pool"] ?? [];
+        if (!is_array($pool)) {
+            return "";
+        }
+
+        $entry = $pool[$entryKey] ?? null;
+        if (!is_array($entry)) {
+            return "";
+        }
+
+        $listingData = $entry["listing"] ?? null;
+        if (!is_array($listingData)) {
+            return "";
+        }
+
+        return (string) ($listingData["name"] ?? "");
+    }
+
+    private function persistNextAuctionEntry(string $value): void
+    {
+        $config = GeneralUtils::getConfiguration(Loader::getInstance(), "blackmarket.yml");
+        if ($config === null) {
+            return;
+        }
+
+        $config->setNested("settings.next-auction-entry", $value);
+        $config->save();
+        $this->reload();
     }
 
     public function getBidIncrement(int $currentBid): int

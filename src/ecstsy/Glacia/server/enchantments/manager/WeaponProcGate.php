@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\server\enchantments\manager;
 
+use ecstsy\Glacia\entity\MummifiedRemnant;
 use ecstsy\Glacia\entity\gkits\ForsakenChampion;
 use pocketmine\entity\Entity;
 use pocketmine\player\Player;
@@ -41,7 +42,7 @@ final class WeaponProcGate
      * Call once per hit when the weapon has at least one custom enchant that uses
      * {@code entity_damage_by_entity}. Returns whether those handlers may run.
      */
-    public static function recordAndAllowWeaponProcs(Player|ForsakenChampion $attacker, Entity $victim): bool
+    public static function recordAndAllowWeaponProcs(Player|ForsakenChampion|MummifiedRemnant $attacker, Entity $victim): bool
     {
         if (!EnchantTuningManager::isWeaponProcGateEnabled()) {
             return true;
@@ -67,15 +68,18 @@ final class WeaponProcGate
         return self::$state[$k]['hits'] >= self::$state[$k]['required'];
     }
 
-    private static function pairKey(Player|ForsakenChampion $attacker, Entity $victim): string
+    private static function pairKey(Player|ForsakenChampion|MummifiedRemnant $attacker, Entity $victim): string
     {
         return self::attackerKey($attacker) . '|' . self::victimKey($victim);
     }
 
-    private static function attackerKey(Player|ForsakenChampion $attacker): string
+    private static function attackerKey(Player|ForsakenChampion|MummifiedRemnant $attacker): string
     {
         if ($attacker instanceof Player) {
             return $attacker->getUniqueId()->toString();
+        }
+        if ($attacker instanceof MummifiedRemnant) {
+            return 'mm:' . $attacker->getId();
         }
 
         return 'fc:' . $attacker->getId();

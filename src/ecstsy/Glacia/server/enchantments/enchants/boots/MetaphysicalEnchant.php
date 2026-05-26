@@ -6,6 +6,9 @@ namespace ecstsy\Glacia\server\enchantments\enchants\boots;
 
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\handler\EntityEffectAddEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantDebugManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantProcManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\event\entity\EntityEffectAddEvent;
 use pocketmine\player\Player;
@@ -27,16 +30,16 @@ final class MetaphysicalEnchant implements EntityEffectAddEnchantmentHandler {
             return;
         }
 
-        $resistChance = match ($level) {
-            1 => 40,
-            2 => 55,
-            3 => 70,
-            4 => 90,
-            default => 0
-        };
-
-        if (mt_rand(1, 100) <= $resistChance) {
-            $event->cancel();
+        $chance = EnchantTuningManager::chance("metaphysical", $level, 40.0);
+        $result = EnchantProcManager::attempt($entity, "metaphysical", $level, $chance, EnchantTuningManager::cooldownSeconds("metaphysical", $level, 0));
+        if (!$result->success) {
+            return;
         }
+
+        $event->cancel();
+        EnchantDebugManager::logAppliedValues($entity, $result, [
+            "negated_effect" => "slowness",
+            "cancelled" => true,
+        ]);
     }
 }

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\items\runes;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\items\lore\ItemLoreLayout;
+use ecstsy\Glacia\server\items\pets\PetManager;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\block\Beetroot;
 use pocketmine\block\Carrot;
@@ -103,8 +105,8 @@ final class RuneManager
 
     public static function getPetMultiplier(Player $player, string $petKey): float
     {
-        $petKey = strtolower($petKey);
-        foreach ($player->getInventory()->getContents() as $item) {
+        $petKey = PetManager::resolvePetKey($petKey);
+        foreach (self::getPassiveRuneStorageContents($player) as $item) {
             $glacia = $item->getNamedTag()->getCompoundTag(self::GLACIA_TAG);
             if ($glacia === null || $glacia->getString("glaciaItem", "") !== "pet_duration_rune") {
                 continue;
@@ -122,13 +124,16 @@ final class RuneManager
 
     public static function getPetDisplay(string $petKey): string
     {
-        return (string) (self::getDefinition("pet_duration")["pets"][strtolower($petKey)] ?? ucwords(str_replace("_", " ", $petKey)));
+        $petKey = PetManager::resolvePetKey($petKey);
+        $displayKey = preg_replace('/_pet$/', '', $petKey) ?? $petKey;
+
+        return (string) (self::getDefinition("pet_duration")["pets"][$displayKey] ?? ucwords(str_replace("_", " ", $displayKey)));
     }
 
     public static function hasPassiveRune(Player $player, string $runeId): bool
     {
         $runeId = strtolower($runeId);
-        foreach ($player->getInventory()->getContents() as $item) {
+        foreach (self::getPassiveRuneStorageContents($player) as $item) {
             $glacia = $item->getNamedTag()->getCompoundTag(self::GLACIA_TAG);
             if ($glacia === null) {
                 continue;
@@ -144,6 +149,18 @@ final class RuneManager
         }
 
         return false;
+    }
+
+    /**
+     * @return list<Item>
+     */
+    private static function getPassiveRuneStorageContents(Player $player): array
+    {
+        return [
+            ...array_values($player->getInventory()->getContents()),
+            ...array_values($player->getEnderInventory()->getContents()),
+            ...Loader::getPassiveRunePouchManager()->getActiveContents($player),
+        ];
     }
 
     public static function hasRuneOnArmor(Player $player, string $runeId): bool
@@ -450,6 +467,7 @@ final class RuneManager
         $root->setTag(self::GLACIA_TAG, $glacia);
         $item->setNamedTag($root);
         $item->setLore(self::withRuneLore($item->getLore(), $runeId));
+        ItemLoreLayout::normalizeForCombatGear($item);
 
         return $item;
     }
@@ -465,6 +483,7 @@ final class RuneManager
             $item->setNamedTag($root);
         }
         $item->setLore(self::withoutRuneLore($item->getLore()));
+        ItemLoreLayout::normalizeForCombatGear($item);
 
         return $item;
     }
@@ -479,7 +498,12 @@ final class RuneManager
         if ($lore !== []) {
             $lore[] = "";
         }
-        $lore[] = C::colorize("&r&dRune: &f" . self::getDisplayName($runeId));
+        $display = self::getDisplayName($runeId);
+        $lore[] = C::colorize(
+            str_contains($display, "&")
+                ? "&r&7Rune: {$display}"
+                : "&r&7Rune: &f{$display}"
+        );
         return $lore;
     }
 

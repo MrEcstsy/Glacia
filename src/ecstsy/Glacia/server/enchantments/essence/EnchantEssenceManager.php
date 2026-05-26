@@ -135,6 +135,75 @@ final class EnchantEssenceManager
         return $tag !== null && $tag->getByte(strtolower($essenceId), 0) === 1;
     }
 
+    /**
+     * Default apply success percent from essences.yml (1–100).
+     */
+    public static function getEssenceDefaultSuccessPercent(string $essenceId) : int
+    {
+        $entry = self::getEssence(strtolower(trim($essenceId)));
+        $rate = (int) ($entry["success-rate"] ?? 100);
+
+        return max(1, min(100, $rate));
+    }
+
+    /**
+     * Success chance when dragging an essence onto gear: per-stack NBT "success" overrides config.
+     */
+    public static function getApplySuccessPercent(Item $essenceItem, string $essenceId) : int
+    {
+        $tag = $essenceItem->getNamedTag()->getCompoundTag("Glacia");
+        if ($tag !== null) {
+            $successTag = $tag->getTag("success");
+            if ($successTag !== null) {
+                $nbt = match (true) {
+                    $successTag instanceof \pocketmine\nbt\tag\IntTag => $successTag->getValue(),
+                    $successTag instanceof \pocketmine\nbt\tag\StringTag => (int) $successTag->getValue(),
+                    default => -1,
+                };
+                if ($nbt > 0) {
+                    return max(1, min(100, $nbt));
+                }
+            }
+        }
+
+        return self::getEssenceDefaultSuccessPercent($essenceId);
+    }
+
+    /**
+     * Reads an essence "effects" value from a single weapon or armor piece when the essence is applied and requirements pass.
+     */
+    public static function resolveGearEssenceFloat(Item $item, string $essenceId, string $effectKey, float $default) : float
+    {
+        if ($item->isNull()) {
+            return $default;
+        }
+
+        $essenceId = strtolower(trim($essenceId));
+        if (!self::hasEssence($item, $essenceId)) {
+            return $default;
+        }
+
+        $essence = self::getEssence($essenceId);
+        if ($essence === null) {
+            return $default;
+        }
+
+        $enchantId = strtolower(trim((string) ($essence["enchant"] ?? $essenceId)));
+        $level = CustomEnchantmentManager::getLevel($item, $enchantId);
+        if ($level <= 0) {
+            return $default;
+        }
+
+        if ((bool) ($essence["require-max-level"] ?? true)) {
+            $enchant = CustomEnchantments::getEnchantmentByName($enchantId);
+            if ($enchant !== null && $level < $enchant->getMaxLevel()) {
+                return $default;
+            }
+        }
+
+        return (float) ($essence["effects"][$effectKey] ?? $default);
+    }
+
     public static function resolveArmorValue(Player $player, string $essenceId, string $effectKey, float $default) : float
     {
         $essence = self::getEssence($essenceId);
@@ -176,7 +245,7 @@ final class EnchantEssenceManager
         $applied = self::getAppliedEssenceLabels($item);
         if ($applied !== []) {
             $lore[] = "";
-            $lore[] = C::colorize("&r&dEssence: &f" . implode(", ", $applied));
+            $lore[] = C::colorize("&r&7Essence: &f" . implode(", ", $applied));
         }
         $item->setLore($lore);
     }

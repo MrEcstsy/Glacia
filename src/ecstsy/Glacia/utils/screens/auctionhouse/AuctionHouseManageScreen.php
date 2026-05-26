@@ -30,11 +30,17 @@ final class AuctionHouseManageScreen extends BaseScreen {
             $player = $transaction->getPlayer();
 
             if ($slot === 46) {
-                (new AuctionHouseCollectionScreen($player))->display($player);
+                $player->removeCurrentWindow();
+                $transaction->then(function() use ($player): void {
+                    (new AuctionHouseCollectionScreen($player))->display($player);
+                });
                 return;
             }
             if ($slot === 49) {
-                (new AuctionHouseScreen($player))->display($player);
+                $player->removeCurrentWindow();
+                $transaction->then(function() use ($player): void {
+                    (new AuctionHouseScreen($player))->display($player);
+                });
                 return;
             }
             if ($slot === 48 && $this->page > 1) {

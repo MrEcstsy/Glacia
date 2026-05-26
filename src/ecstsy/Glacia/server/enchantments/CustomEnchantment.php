@@ -19,6 +19,8 @@ final class CustomEnchantment {
     private string $name;
     private int $rarity;
     private string $description;
+    /** Optional player-facing description from {@code enchant_descriptions.yml}. */
+    private ?string $descriptionOverride = null;
     private int $maxLevel;
     /** @var string[] */
     private array $tags;
@@ -46,7 +48,23 @@ final class CustomEnchantment {
     }
 
     public function getDescription(): string {
+        return $this->descriptionOverride ?? $this->description;
+    }
+
+    /**
+     * Base text from PHP definitions (ignores YAML override).
+     */
+    public function getBaseDescription(): string {
         return $this->description;
+    }
+
+    public function applyDescriptionOverride(?string $text): void {
+        if ($text === null) {
+            $this->descriptionOverride = null;
+            return;
+        }
+        $t = trim($text);
+        $this->descriptionOverride = $t !== "" ? $t : null;
     }
 
     public function getMaxLevel(): int {

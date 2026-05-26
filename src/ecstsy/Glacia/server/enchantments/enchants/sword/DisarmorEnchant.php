@@ -8,11 +8,13 @@ use ecstsy\Glacia\entity\gkits\ForsakenChampion;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
-use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
 use ecstsy\Glacia\server\enchantments\enchants\chestplate\KerbusEnchant;
+use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
 use ecstsy\Glacia\server\enchantments\manager\AdvancedEnchantState;
+use ecstsy\Glacia\server\enchantments\manager\EnchantProcManager;
 use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
-use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
+use ecstsy\Glacia\server\enchantments\manager\MirrorbrandProcManager;
+use ecstsy\Glacia\server\items\rings\RingManager;
 use pocketmine\entity\Living;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\item\VanillaItems;
@@ -21,71 +23,92 @@ use pocketmine\utils\TextFormat as C;
 
 final class DisarmorEnchant implements EntityDamageByEntityEnchantmentHandler
 {
+    /** @var array<string, float> */
+    private static array $ringNoticeCooldowns = [];
+
     public static function handle(EntityDamageByEntityEvent $event, CustomEnchantment $enchant, int $level): void
     {
-        if ($event->isCancelled()) return;
+        if ($event->isCancelled()) {
+            return;
+        }
 
         $damager = $event->getDamager();
         $victim = $event->getEntity();
-        if (!$damager instanceof Living || !$victim instanceof Player) return;
-
-        $item = $damager instanceof Player ? $damager->getInventory()->getItemInHand() : ($damager instanceof ForsakenChampion ? $damager->getCombatItem() : null);
-        if ($item === null || !CustomEnchantmentManager::hasEnchantment($item, "disarmor")) return;
-
-        $forcedProc = $damager instanceof Player && BrotherhoodEnchant::consumeForcedProc($damager, "disarmor");
-        if (!$forcedProc) {
-            $chance = EnchantTuningManager::getLevelInt("disarmor", "chance-by-level", $level, 2 + ($level * 2));
-            if (!ProcLuckManager::roll($damager, "disarmor", $chance, 2, 10)) return;
+        if (!$damager instanceof Living || !$victim instanceof Player) {
+            return;
         }
 
-        $session = $damager instanceof Player ? PlayerManager::getInstance()->getSession($damager) : null;
-        $cooldown = max(0, EnchantTuningManager::getInt("disarmor", "cooldown", 12));
-        if (!$forcedProc && $session !== null && $cooldown > 0 && $session->isOnCooldown("disarmor")) return;
+        $item = $damager instanceof Player ? $damager->getInventory()->getItemInHand() : ($damager instanceof ForsakenChampion ? $damager->getCombatItem() : null);
+        if ($item === null || !CustomEnchantmentManager::hasEnchantment($item, "disarmor")) {
+            return;
+        }
 
-        if ($damager instanceof Player) {
-            $chest = $victim->getArmorInventory()->getChestplate();
-            if (CustomEnchantmentManager::getLevel($chest, "mirrorbrand") > 0
-                && ProcLuckManager::roll($victim, "mirrorbrand", min(20, 4 * CustomEnchantmentManager::getLevel($chest, "mirrorbrand")), 1, 5)) {
-                if (!KerbusEnchant::consumeProtection($damager)) {
-                    $dInv = $damager->getArmorInventory();
-                    $dSlots = [];
-                    foreach ($dInv->getContents() as $s => $a) {
-                        if (!$a->isNull()) {
-                            $dSlots[] = $s;
-                        }
-                    }
-                    if ($dSlots !== []) {
-                        $ds = $dSlots[array_rand($dSlots)];
-                        $r = $dInv->getItem($ds);
-                        $dInv->setItem($ds, VanillaItems::AIR());
-                        foreach ($damager->getInventory()->addItem($r) as $leftover) {
-                            $damager->getWorld()->dropItem($damager->getPosition(), $leftover);
-                        }
-                        $victim->sendMessage(C::colorize("&r&6Mirrorbrand &7reflected your disarm!"));
-                    }
-                }
-                if (!$forcedProc && $session !== null && $cooldown > 0) {
-                    $session->addCooldown("disarmor", $cooldown);
-                }
+        $forcedProc = $damager instanceof Player && BrotherhoodEnchant::consumeForcedProc($damager, "disarmor");
+        $session = $damager instanceof Player ? PlayerManager::getInstance()->getSession($damager) : null;
+        $cooldownSeconds = EnchantTuningManager::cooldownSeconds("disarmor", $level, 12);
+
+        $result = null;
+        if (!$forcedProc) {
+            $result = EnchantProcManager::attempt(
+                $damager,
+                "disarmor",
+                $level,
+                EnchantTuningManager::chance("disarmor", $level, 4.0),
+                $cooldownSeconds,
+                static fn() => max(0, (int) ($session?->getCooldown("disarmor") ?? 0))
+            );
+            if (!$result->success) {
                 return;
             }
         }
 
+        if (!self::forceDisarmor($damager instanceof Player ? $damager : null, $victim)) {
+            return;
+        }
+
+        if ($damager instanceof Player) {
+            MirrorbrandProcManager::record($damager, "disarmor", static function (Player $reflector, Player $attacker): bool {
+                return self::forceDisarmor($reflector, $attacker);
+            });
+            $damager->sendMessage(C::colorize("&r&4Disarmor &r&7ripped a piece of armor loose."));
+            $brotherhoodLevel = CustomEnchantmentManager::getLevel($item, "brotherhood");
+            BrotherhoodEnchant::tryDistributeFromMasteryProc($damager, $brotherhoodLevel, "disarmor");
+        }
+
+        if (!$forcedProc && $result !== null) {
+            EnchantProcManager::applyCooldownIfNeeded($result, static function (int $seconds) use ($session): void {
+                $session?->addCooldown("disarmor", $seconds);
+            });
+            EnchantProcManager::debugAppliedValues($damager, $result, [
+                "removed_armor" => true,
+            ]);
+        }
+    }
+
+    public static function forceDisarmor(?Player $attacker, Player $victim): bool
+    {
+        if (RingManager::playerBlocksEnchant($victim, "disarmor")) {
+            self::sendRingBlockedMessage($victim);
+            return false;
+        }
+
         $inv = $victim->getArmorInventory();
         if (KerbusEnchant::consumeProtection($victim)) {
-            return;
+            return false;
         }
+
         $slots = [];
         foreach ($inv->getContents() as $slot => $armor) {
-            if (!$armor->isNull() && $damager instanceof Player && AdvancedEnchantState::isFetterSlotLocked($victim, $slot)) {
+            if ($armor->isNull()) {
                 continue;
             }
-            if (!$armor->isNull()) {
-                $slots[] = $slot;
+            if ($attacker !== null && AdvancedEnchantState::isFetterSlotLocked($victim, $slot)) {
+                continue;
             }
+            $slots[] = $slot;
         }
         if ($slots === []) {
-            return;
+            return false;
         }
 
         $slot = $slots[array_rand($slots)];
@@ -95,22 +118,27 @@ final class DisarmorEnchant implements EntityDamageByEntityEnchantmentHandler
             $victim->getWorld()->dropItem($victim->getPosition(), $leftover);
         }
 
-        if ($damager instanceof Player) {
-            $fl = CustomEnchantmentManager::getLevel($damager->getArmorInventory()->getBoots(), "fetter");
-            if ($fl > 0) {
-                AdvancedEnchantState::lockFetterSlot($victim, $slot, 3 * $fl);
+        if ($attacker !== null) {
+            $fetterLevel = CustomEnchantmentManager::getLevel($attacker->getArmorInventory()->getBoots(), "soulshackle");
+            if ($fetterLevel > 0) {
+                $secondsPerLevel = max(1, EnchantTuningManager::getInt("soulshackle", "lock-seconds-per-level", 3));
+                AdvancedEnchantState::lockFetterSlot($victim, $slot, $secondsPerLevel * $fetterLevel);
             }
         }
 
-        if ($damager instanceof Player) {
-            $damager->sendMessage(C::colorize("&r&4Disarmor &r&7ripped a piece of armor loose."));
-            $brotherhoodLevel = CustomEnchantmentManager::getLevel($item, "brotherhood");
-            BrotherhoodEnchant::tryDistributeFromMasteryProc($damager, $brotherhoodLevel, "disarmor");
+        return true;
+    }
+
+    private static function sendRingBlockedMessage(Player $victim): void
+    {
+        $key = strtolower($victim->getName());
+        $now = microtime(true);
+        $nextAllowed = self::$ringNoticeCooldowns[$key] ?? 0.0;
+        if ($nextAllowed > $now) {
+            return;
         }
 
-        if (!$forcedProc && $session !== null && $cooldown > 0) {
-            $session->addCooldown("disarmor", $cooldown);
-        }
+        self::$ringNoticeCooldowns[$key] = $now + 2.5;
+        $victim->sendMessage(C::colorize("&r&dDisarmor Ring &7protected your items from being disarmored."));
     }
 }
-

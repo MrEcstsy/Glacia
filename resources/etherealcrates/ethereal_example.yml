@@ -2,6 +2,7 @@ id: ethereal_example
 name: "&d&lEthereal Crate"
 title: "&r&8Ethereal Crate"
 item-name: "&r&d&lExample Ethereal Crate"
+icon: "glacia:ethereal_crate_icon"
 item-lore:
   - "&r&7Unlocked at &fstore.example.com &7by &f{player}"
   - ""
@@ -58,6 +59,14 @@ sounds:
   bonus-roll-tick: ["random.click", "random.pop2", "note.pling"]
   bonus-roll-finish: ["random.levelup", "random.anvil_use"]
 
+# Loot tables accept the same reward entries as lootboxes, kits, envoy, fishing, etc.
+# To give another YAML ethereal crate (any file in etherealcrates/*.yml), use either:
+#   type: ethereal_crate
+#   id: <crate_id>
+# or shorthand on one line:
+#   ethereal_crate: <crate_id>
+# or: type: crate  with  id: / crate:  (alias for ethereal_crate)
+# The legacy Glacia item keys (ethereal_*_chest) still work as type: item + id: ...
 loot-tables:
   admin:
     - chance: 10

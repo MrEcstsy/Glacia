@@ -144,7 +144,7 @@ final class Faction {
 
             foreach ($chunk->getTiles() as $tile) {
                 if ($tile instanceof SpawnerTile) {
-                    $total += $tile->getSpawnerValue() * $tile->getStackCount();
+                    $total += $tile->getFactionWorthContribution();
                     $tile->refreshFactionWorthContribution();
                 }
             }

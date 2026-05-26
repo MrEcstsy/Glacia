@@ -24,7 +24,7 @@ final class CustomTNTPattern {
             $pos = $source->getPosition()->add($offset->x, $offset->y, $offset->z);
 
             $explosion = new Explosion(new Position($pos->getX(), $pos->getY(), $pos->getZ(), $source->getWorld()), $radius, $source);
-            $explosion->explodeA();
+            // No block list: obsidian wear still uses the same offset positions (CustomTNTListener sphere scan); physical break is the primary cuboid only.
             $explosion->explodeB();
         }
     }
@@ -38,12 +38,13 @@ final class CustomTNTPattern {
         ];
     }
 
+    /** Tight ring so each extra blast has its own particles/sound while obsidian near the core still catches all five pulses. */
     private static function getLethalOffsets(): array {
         return [
-            new Vector3(0, 0, 0),
-            new Vector3(0, 0, 0),
-            new Vector3(0, 0, 0),
-            new Vector3(0, 0, 0),
+            new Vector3(1.0, 0.0, 0.0),
+            new Vector3(-1.0, 0.0, 0.0),
+            new Vector3(0.0, 1.0, 0.0),
+            new Vector3(0.0, 0.0, 1.0),
         ];
     }
 }

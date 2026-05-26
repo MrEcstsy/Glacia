@@ -1,12 +1,13 @@
-<?php 
+<?php
 
 declare(strict_types=1);
 
 namespace ecstsy\Glacia\server\enchantments\enchants\chestplate;
 
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
-use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantProcManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use pocketmine\entity\Living;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\player\Player;
@@ -18,26 +19,27 @@ final class BlazedEnchant implements EntityDamageByEntityEnchantmentHandler {
             return;
         }
 
-        $victim = $event->getEntity();     
-        $attacker = $event->getDamager(); 
-
-        if (!$victim instanceof Player) return;
-        if (!$attacker instanceof Living) return;
-
-        $chestplate = $victim->getArmorInventory()->getChestplate();
-        if ($chestplate === null || $chestplate->isNull()) return;
-
-        if (!CustomEnchantmentManager::hasEnchantment($chestplate, "blazed")) {
+        $victim = $event->getEntity();
+        $attacker = $event->getDamager();
+        if (!$victim instanceof Player || !$attacker instanceof Living) {
             return;
         }
 
-        $level = CustomEnchantmentManager::getLevel($chestplate, "blazed");
-
-        $chance = $level * 20; 
-        if (mt_rand(1, 100) > $chance) {
+        $chance = EnchantTuningManager::chance("blazed", $level, 20.0);
+        $cooldownSeconds = EnchantTuningManager::cooldownSeconds("blazed", $level, 0);
+        $result = EnchantProcManager::attempt($victim, "blazed", $level, $chance, $cooldownSeconds);
+        if (!$result->success) {
             return;
         }
 
-        $attacker->setOnFire(3 + $level);
+        $fireSeconds = max(0, EnchantTuningManager::valueInt("blazed", "fire-seconds", $level, 4));
+        if ($fireSeconds > 0) {
+            $attacker->setOnFire($fireSeconds);
+        }
+
+        EnchantProcManager::debugAppliedValues($victim, $result, [
+            "fire_seconds" => $fireSeconds,
+            "attacker" => $attacker->getNameTag(),
+        ]);
     }
 }

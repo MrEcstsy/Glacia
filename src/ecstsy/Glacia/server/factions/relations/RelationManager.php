@@ -101,4 +101,9 @@ final class RelationManager {
             }
         }
     }
+
+    public function resetSeasonState(): void
+    {
+        $this->relations = [];
+    }
 }

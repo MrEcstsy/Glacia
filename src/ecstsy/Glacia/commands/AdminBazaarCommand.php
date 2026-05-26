@@ -8,11 +8,11 @@ use CortexPE\Commando\BaseCommand;
 use CortexPE\Commando\args\RawStringArgument;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\adminbazaar\AdminBazaarManager;
+use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\Glacia\utils\screens\adminbazaar\AdminBazaarScreen;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
-use pocketmine\utils\TextFormat as C;
 
 final class AdminBazaarCommand extends BaseCommand
 {
@@ -37,9 +37,16 @@ final class AdminBazaarCommand extends BaseCommand
             return;
         }
 
+        if (in_array($action, ["buy", "purchase"], true)) {
+            AdminBazaarManager::purchase($sender);
+            return;
+        }
+
         if (in_array($action, ["balance", "bal", "coins"], true)) {
             $session = Loader::getPlayerManager()->getSession($sender);
-            $sender->sendMessage(C::colorize("&r&6Admin Coins: &f" . number_format((int) ($session?->getAdminCoins() ?? 0))));
+            $sender->sendMessage(GlaciaUtils::format("adminbazaar.command.balance", [
+                "amount" => number_format((int) ($session?->getAdminCoins() ?? 0)),
+            ]));
             return;
         }
 
@@ -52,23 +59,23 @@ final class AdminBazaarCommand extends BaseCommand
 
         if ($action === "reroll") {
             if (!$sender->hasPermission("glacia.admin")) {
-                $sender->sendMessage(C::colorize("&r&cYou do not have permission to reroll the Admin Bazaar."));
+                $sender->sendMessage(GlaciaUtils::format("adminbazaar.command.reroll.no_permission"));
                 return;
             }
 
             $forcedKey = strtolower(trim((string) ($args["arg1"] ?? "")));
             if (!AdminBazaarManager::rollNextListing(true, $forcedKey !== "" ? $forcedKey : null)) {
-                $sender->sendMessage(C::colorize("&r&cFailed to roll an Admin Bazaar listing."));
+                $sender->sendMessage(GlaciaUtils::format("adminbazaar.command.reroll.failed"));
                 return;
             }
 
-            $sender->sendMessage(C::colorize("&r&aAdmin Bazaar listing rerolled."));
+            $sender->sendMessage(GlaciaUtils::format("adminbazaar.command.reroll.success"));
             return;
         }
 
         if ($action === "grant" || $action === "take" || $action === "set") {
             if (!$sender->hasPermission("glacia.admin")) {
-                $sender->sendMessage(C::colorize("&r&cYou do not have permission to modify Admin Coins."));
+                $sender->sendMessage(GlaciaUtils::format("adminbazaar.command.modify.no_permission"));
                 return;
             }
 
@@ -76,13 +83,13 @@ final class AdminBazaarCommand extends BaseCommand
             $amount = max(0, (int) ($args["arg2"] ?? 0));
             $target = PlayerUtils::getPlayerByPrefix($targetArg);
             if (!$target instanceof Player) {
-                $sender->sendMessage(C::colorize("&r&cThat player is not online."));
+                $sender->sendMessage(GlaciaUtils::format("player.error.invalid", ["name" => $targetArg]));
                 return;
             }
 
             $session = Loader::getPlayerManager()->getSession($target);
             if ($session === null) {
-                $sender->sendMessage(C::colorize("&r&cThat player's session is unavailable."));
+                $sender->sendMessage(GlaciaUtils::format("player.error.no_session"));
                 return;
             }
 
@@ -92,19 +99,25 @@ final class AdminBazaarCommand extends BaseCommand
                 "set" => $session->setAdminCoins($amount),
             };
 
-            $sender->sendMessage(C::colorize("&r&aUpdated &f{$target->getName()}&a's Admin Coins to &f" . number_format($session->getAdminCoins()) . "&a."));
+            $sender->sendMessage(GlaciaUtils::format("adminbazaar.command.modify.sender", [
+                "player" => $target->getName(),
+                "amount" => number_format($session->getAdminCoins()),
+            ]));
             if ($target !== $sender) {
-                $target->sendMessage(C::colorize("&r&6Your Admin Coin balance is now &f" . number_format($session->getAdminCoins()) . "&6."));
+                $target->sendMessage(GlaciaUtils::format("adminbazaar.command.modify.target", [
+                    "amount" => number_format($session->getAdminCoins()),
+                ]));
             }
             return;
         }
 
-        $sender->sendMessage(C::colorize("&r&d/ab &7- open the Admin Bazaar"));
-        $sender->sendMessage(C::colorize("&r&d/ab balance &7- view your Admin Coins"));
-        $sender->sendMessage(C::colorize("&r&d/ab status &7- view listing timers"));
+        $sender->sendMessage(GlaciaUtils::format("adminbazaar.help.open"));
+        $sender->sendMessage(GlaciaUtils::format("adminbazaar.help.buy"));
+        $sender->sendMessage(GlaciaUtils::format("adminbazaar.help.balance"));
+        $sender->sendMessage(GlaciaUtils::format("adminbazaar.help.status"));
         if ($sender->hasPermission("glacia.admin")) {
-            $sender->sendMessage(C::colorize("&r&d/ab reroll [key] &7- reroll the listing"));
-            $sender->sendMessage(C::colorize("&r&d/ab grant|take|set <player> <amount> &7- manage Admin Coins"));
+            $sender->sendMessage(GlaciaUtils::format("adminbazaar.help.reroll"));
+            $sender->sendMessage(GlaciaUtils::format("adminbazaar.help.manage"));
         }
     }
 

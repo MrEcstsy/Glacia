@@ -16,10 +16,13 @@ final class TitleManager{
 
     /** @var array<string, array<string, mixed>> */
     private static array $titles = [];
+    /** @var array<string, mixed> */
+    private static array $voucherDefaults = [];
 
     public static function loadFromConfig(): void{
         $config = GeneralUtils::getConfiguration(Loader::getInstance(), "titles.yml");
         $rawTitles = (array) ($config?->get("titles", []) ?? []);
+        self::$voucherDefaults = self::normalizeVoucherDefaults((array) ($config?->get("voucher-defaults", []) ?? []));
         self::$titles = [];
 
         foreach($rawTitles as $id => $data){
@@ -38,19 +41,21 @@ final class TitleManager{
                 continue;
             }
 
+            $voucherMaterial = (string) ($data["voucher-material"] ?? self::$voucherDefaults["voucher-material"]);
+            $voucherName = (string) ($data["voucher-name"] ?? self::$voucherDefaults["voucher-name"]);
+            $voucherLore = $data["voucher-lore"] ?? self::$voucherDefaults["voucher-lore"];
+            if (!is_array($voucherLore)) {
+                $voucherLore = (array) self::$voucherDefaults["voucher-lore"];
+            }
+
             self::$titles[$titleId] = [
                 "display" => $display,
                 "format" => $format,
                 "description" => (string) ($data["description"] ?? "&r&8Unlockable title."),
                 "permission" => (string) ($data["permission"] ?? self::getPermission($titleId)),
-                "voucher-material" => (string) ($data["voucher-material"] ?? "paper"),
-                "voucher-name" => (string) ($data["voucher-name"] ?? "&r&l&eTitle Voucher: &r{display}"),
-                "voucher-lore" => (array) ($data["voucher-lore"] ?? [
-                    "&r&8Unlockable",
-                    "",
-                    "&r&8Claim this voucher to permanently unlock",
-                    "&r{format}",
-                ]),
+                "voucher-material" => $voucherMaterial,
+                "voucher-name" => $voucherName,
+                "voucher-lore" => $voucherLore,
             ];
         }
 
@@ -145,6 +150,32 @@ final class TitleManager{
 
     private static function normalizeId(string $id): string{
         return strtolower(trim(str_replace([" ", "-"], "_", $id)));
+    }
+
+    /**
+     * @param array<string, mixed> $defaults
+     * @return array<string, mixed>
+     */
+    private static function normalizeVoucherDefaults(array $defaults): array
+    {
+        $lore = $defaults["voucher-lore"] ?? [
+            "&r&8Unlock Voucher",
+            "",
+            "&r&8Claim to permanently unlock:",
+            "&r{format}",
+            "",
+            "&r&8Status in /title:",
+            "&r&8LOCKED / UNLOCKED",
+        ];
+        if (!is_array($lore)) {
+            $lore = [];
+        }
+
+        return [
+            "voucher-material" => (string) ($defaults["voucher-material"] ?? "paper"),
+            "voucher-name" => (string) ($defaults["voucher-name"] ?? "&r&l&eTitle Voucher &8- &r{display}"),
+            "voucher-lore" => $lore,
+        ];
     }
 }
 

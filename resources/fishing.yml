@@ -1,7 +1,7 @@
 settings:
   enabled: true
   # If true, uses a real fishing hook entity (vanilla-style) instead of particles + server bite timer.
-  use-vanilla-hook-entity: false
+  use-vanilla-hook-entity: true
   # If true, players must be in Warzone region to fish.
   warzone-only: false
   # Optional world whitelist. Leave empty to allow all worlds.
@@ -9,7 +9,7 @@ settings:
   require-water: true
   # First water along your look ray must be at least this many blocks away horizontally from your eyes.
   # Stops "stare at the ground" casts that only hit water under your feet without aiming outward.
-  min-horizontal-cast-to-water: 1.25
+  min-horizontal-cast-to-water: 0.75
   cast-range: 14
   # Particles + sounds along cast / bite / catch (Bedrock sound IDs).
   show-cast-fx: true
@@ -27,6 +27,21 @@ settings:
     invalid-location: "&r&cYou need nearby water to fish."
     reel-empty: "&r&7You reel in the line."
     caught: "&r&aYou caught &f{item} &7x&f{count}&a."
+  rod-leveling:
+    enabled: true
+    max-level: 25
+    base-xp: 35
+    xp-per-level: 18
+    progress-bar-length: 12
+    bite-speed-bonus-per-level: 0.04
+    rare-weight-bonus-per-level: 0.06
+    common-weight-reduction-per-level: 0.04
+    xp-message: "&r&bRod XP &f+{xp} &7({percent}%)"
+    xp-per-catch:
+      common: 5
+      uncommon: 8
+      rare: 12
+      epic: 20
 
 # Uses the same reward style as lootboxes/envoys/zones through RewardResolver.
 # Supported identifiers and aliases are exactly the same as other reward pools.

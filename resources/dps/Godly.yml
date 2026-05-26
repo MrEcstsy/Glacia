@@ -1,5 +1,19 @@
 settings:
   pick-amount: 5
+  # Weighted roll for godly-drop-package panes. Only pools listed under godly-loot.* can roll.
+  # Omit this block to use built-in tier defaults from DropPackageRarityRoller (with yaml pools).
+  # Example (weights are proportional only; they do not need to sum to 100):
+  pane-rarity-weights:
+    simple:
+      roll: 45
+    unique:
+      roll: 30
+    elite:
+      roll: 15
+    exotic:
+      roll: 6
+    legendary:
+      roll: 3
 
 godly-loot:
   simple:
@@ -331,10 +345,10 @@ godly-loot:
       id: astral_devourer
       chance: 2
     - type: item
-      id: purity_wisp
+      id: puritywisp
       chance: 6
     - type: item
-      id: gale_fox
+      id: galefox
       chance: 6
     - type: item
       id: shatterfang

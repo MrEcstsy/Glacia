@@ -13,7 +13,7 @@ final class EnchanterFormScreen {
 
     public static function display(Player $player): void
     {
-        $books = array_values(EnchanterRepository::getBooks());
+        $books = array_values(EnchanterRepository::getBooks($player));
 
         $form = new SimpleForm(function(Player $player, mixed $data) use ($books): void {
             if (!is_string($data) || !ctype_digit($data) || !isset($books[(int) $data])) {

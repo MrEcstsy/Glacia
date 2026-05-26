@@ -7,6 +7,7 @@ namespace ecstsy\Glacia\commands;
 use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseCommand;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\factions\FactionNameBlocklist;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -14,7 +15,7 @@ use pocketmine\utils\TextFormat as C;
 
 final class NickCommand extends BaseCommand
 {
-    private const MAX_LENGTH = 16;
+    private const MAX_LENGTH = 15;
 
     public function prepare(): void
     {
@@ -47,7 +48,8 @@ final class NickCommand extends BaseCommand
             return;
         }
 
-        $clean = preg_replace('/[§&][0-9a-fk-or]/i', '', $input) ?? "";
+        $clean = ltrim($input, "~");
+        $clean = preg_replace('/[\x{00A7}&][0-9a-fk-or]/iu', '', $clean) ?? "";
         $clean = preg_replace('/[^A-Za-z0-9_]/', '', $clean) ?? "";
         $clean = trim($clean);
 
@@ -61,13 +63,20 @@ final class NickCommand extends BaseCommand
             return;
         }
 
-        $session->setSetting("nickname", $clean);
+        $violation = FactionNameBlocklist::firstGenericNameViolation($input, $clean, "nickname");
+        if ($violation !== null) {
+            $sender->sendMessage(C::colorize("&r&c" . $violation));
+            return;
+        }
+
+        $nickname = "~" . $clean;
+        $session->setSetting("nickname", $nickname);
         GlaciaUtils::refreshNametagsForTarget($sender);
-        $sender->sendMessage(C::colorize("&r&aNickname set to &f{$clean}&a."));
+        $sender->sendMessage(C::colorize("&r&aNickname set to &f{$nickname}&a."));
     }
 
     public function getPermission(): string
     {
-        return "glacia.default";
+        return "glacia.command.nick";
     }
 }

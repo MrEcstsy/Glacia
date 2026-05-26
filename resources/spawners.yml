@@ -14,6 +14,8 @@ worths:
   mooshroom: 2000
   enderman: 8000
   blaze: 10000
+  bee: 1250
   ghast: 12000
   magma_cube: 7000
   iron_golem: 25000
+  warden: 50000

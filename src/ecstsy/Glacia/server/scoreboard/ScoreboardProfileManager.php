@@ -10,6 +10,7 @@ use ecstsy\Glacia\server\factions\claims\ClaimManager;
 use ecstsy\Glacia\server\factions\relations\RelationManager;
 use ecstsy\Glacia\server\world\theme\DimensionThemeManager;
 use ecstsy\Glacia\server\zones\ZoneManager;
+use ecstsy\Glacia\server\zones\ZoneMobManager;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\player\Player;
 
@@ -287,6 +288,9 @@ final class ScoreboardProfileManager {
         $faction = $session?->getFaction();
         $zone = ZoneManager::getZoneAt($player->getPosition());
         $theme = DimensionThemeManager::getThemeForPlayer($player);
+        $zoneId = strtolower((string) ($zone["id"] ?? ""));
+        $zoneMobStatus = $zoneId !== "" ? ZoneMobManager::getSpawnerStatus($zoneId) : null;
+        $inSafeArea = $zone !== null && ZoneManager::isInsideSafeArea($player->getPosition(), $zone);
 
         $tokens = [
             "{date}" => date("M d, Y"),
@@ -309,6 +313,13 @@ final class ScoreboardProfileManager {
             "{zone_name}" => (string) ($zone["display"] ?? "Wilderness"),
             "{zone_recommended}" => number_format((int) ($zone["recommended_level"] ?? 1)),
             "{zone_unlock}" => number_format((int) ($zone["unlock_level"] ?? 1)),
+            "{zone_pvp}" => ($zone !== null && ZoneManager::isPvpEnabled($zone) && !$inSafeArea) ? "Enabled" : "Disabled",
+            "{zone_safe}" => $inSafeArea ? "Safe Area" : "Combat Area",
+            "{zone_alive}" => (string) (int) ($zoneMobStatus["alive"] ?? 0),
+            "{zone_desired}" => (string) (int) ($zoneMobStatus["desired"] ?? 0),
+            "{zone_players}" => (string) (int) ($zoneMobStatus["players"] ?? 0),
+            "{zone_streak}" => (string) ZoneMobManager::getPlayerZoneStreak($player),
+            "{zone_exit}" => self::formatZoneExit($zone),
             "{theme_name}" => (string) ($theme["display"] ?? "Frontier"),
             "{theme_name_upper}" => self::strtoupperPreserveMinecraftAmpersandFormats((string) ($theme["display"] ?? "Frontier")),
             "{coords_short}" => $player->getPosition()->getFloorX() . ", " . $player->getPosition()->getFloorZ(),
@@ -391,6 +402,24 @@ final class ScoreboardProfileManager {
 
         $progress = \ecstsy\Glacia\server\factions\contribution\FactionContributionManager::getProgressBarData($factionId);
         return (string) ((int) round(((float) ($progress["percent"] ?? 0.0)) * 100)) . "%";
+    }
+
+    private static function formatZoneExit(?array $zone) : string
+    {
+        if ($zone === null) {
+            return "None";
+        }
+
+        $portal = $zone["exit"]["portal"] ?? null;
+        $pos1 = is_array($portal["pos1"] ?? null) ? $portal["pos1"] : null;
+        $pos2 = is_array($portal["pos2"] ?? null) ? $portal["pos2"] : null;
+        if ($pos1 === null || $pos2 === null) {
+            return "None";
+        }
+
+        $x = (int) round((((float) ($pos1["x"] ?? 0)) + ((float) ($pos2["x"] ?? 0))) / 2);
+        $z = (int) round((((float) ($pos1["z"] ?? 0)) + ((float) ($pos2["z"] ?? 0))) / 2);
+        return $x . ", " . $z;
     }
 
     private static function formatKdr(int $kills, int $deaths, float $ratio) : string

@@ -142,6 +142,39 @@ final class FactionContributionManager
         return self::getFactionState($factionId)["points"];
     }
 
+    public static function transferFactionPoints(string $fromFactionId, string $toFactionId, float $percent, string $source): int
+    {
+        if (!self::isEnabled() || $fromFactionId === $toFactionId) {
+            return 0;
+        }
+
+        $percent = max(0.0, min(1.0, $percent));
+        if ($percent <= 0.0) {
+            return 0;
+        }
+
+        $from = self::getFactionState($fromFactionId);
+        $amount = (int) floor($from["points"] * $percent);
+        if ($amount <= 0) {
+            return 0;
+        }
+
+        $from["points"] = max(0, $from["points"] - $amount);
+        $from["milestone"] = self::calculateMilestoneForState($from);
+        self::$factions[$fromFactionId] = $from;
+
+        $to = self::getFactionState($toFactionId);
+        $to["points"] += $amount;
+        self::$factions[$toFactionId] = $to;
+
+        self::tryUnlockMilestones($toFactionId);
+
+        Loader::getFactionManager()->getFactionById($fromFactionId)?->refreshScoreboards();
+        Loader::getFactionManager()->getFactionById($toFactionId)?->refreshScoreboards();
+        self::save();
+        return $amount;
+    }
+
     public static function getFactionMilestone(string $factionId): int
     {
         return self::getFactionState($factionId)["milestone"];
@@ -283,6 +316,25 @@ final class FactionContributionManager
             }
         }
         return true;
+    }
+
+    private static function calculateMilestoneForState(array $state): int
+    {
+        $milestones = self::getMilestones();
+        $level = 0;
+        while (isset($milestones[$level])) {
+            $current = $milestones[$level];
+            $requiredPoints = max(0, (int) ($current["points"] ?? 0));
+            if ((int) ($state["points"] ?? 0) < $requiredPoints) {
+                break;
+            }
+            if (!self::areTasksMet($state, (array) ($current["tasks"] ?? []))) {
+                break;
+            }
+            ++$level;
+        }
+
+        return $level;
     }
 
     private static function notifyFactionUnlocked(string $factionId, int $milestoneNumber): void

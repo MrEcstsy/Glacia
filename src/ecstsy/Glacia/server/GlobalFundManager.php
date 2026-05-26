@@ -118,9 +118,29 @@ final class GlobalFundManager
             return C::colorize("&r&cThis fund is already fully funded.");
         }
 
-        $contribution = min($amount, $remaining);
+        $contributors = (array) ($this->activeFund["contributors"] ?? []);
+        $uuid = $player->getUniqueId()->toString();
+        $entry = is_array($contributors[$uuid] ?? null) ? $contributors[$uuid] : [];
+        $goal = max(1, (int) ($this->activeFund["goal"] ?? 1));
+        $maxPerPlayer = max(1, (int) floor($goal * 0.10));
+        $alreadyContributed = (int) ($entry["amount"] ?? 0);
+        $remainingAllowance = max(0, $maxPerPlayer - $alreadyContributed);
+        if ($remainingAllowance <= 0) {
+            return C::colorize(
+                "&r&cYou have already reached the personal cap for this fund. " .
+                "&7(Max: &f$" . number_format($maxPerPlayer) . "&7)"
+            );
+        }
+
+        $contribution = min($amount, $remaining, $remainingAllowance);
         $minimum = $this->getMinimumContribution();
         if ($contribution < $minimum && $remaining > $minimum) {
+            if ($remainingAllowance < $minimum) {
+                return C::colorize(
+                    "&r&cYou can only contribute up to &f$" . number_format($remainingAllowance) .
+                    "&c more to this fund because of the personal cap."
+                );
+            }
             return C::colorize("&r&cMinimum fund contribution is &f$" . number_format($minimum) . "&c.");
         }
 
@@ -130,9 +150,6 @@ final class GlobalFundManager
 
         $session->removeBalance($contribution);
         $this->activeFund["contributed"] = (int) ($this->activeFund["contributed"] ?? 0) + $contribution;
-        $contributors = (array) ($this->activeFund["contributors"] ?? []);
-        $uuid = $player->getUniqueId()->toString();
-        $entry = is_array($contributors[$uuid] ?? null) ? $contributors[$uuid] : [];
         $entry["name"] = $player->getName();
         $entry["amount"] = (int) ($entry["amount"] ?? 0) + $contribution;
         $contributors[$uuid] = $entry;

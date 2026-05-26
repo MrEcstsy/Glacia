@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\items\armor;
 
 use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
+use ecstsy\Glacia\server\items\lore\ItemLoreLayout;
 use pocketmine\color\Color;
 use pocketmine\inventory\ArmorInventory;
 use pocketmine\item\Armor;
@@ -195,6 +196,81 @@ final class HeroicArmorDurabilityManager
         self::syncLore($item);
     }
 
+    /**
+     * Fully refills heroic buffer when depleted but vanilla durability is untouched (repair commands, etc.).
+     */
+    public static function replenishHeroicBufferFully(Durable $item): bool
+    {
+        if (!self::isHeroicArmor($item)) {
+            return false;
+        }
+
+        self::initializeItem($item);
+
+        $root = $item->getNamedTag();
+        $glacia = $root->getCompoundTag("Glacia");
+        if ($glacia === null) {
+            return false;
+        }
+
+        $max = max(0, $glacia->getInt(self::TAG_MAX, 0));
+        if ($max <= 0) {
+            return false;
+        }
+
+        $current = max(0, $glacia->getInt(self::TAG_CURRENT, 0));
+        if ($current >= $max) {
+            return false;
+        }
+
+        $glacia->setInt(self::TAG_CURRENT, $max);
+        $root->setTag("Glacia", $glacia);
+        $item->setNamedTag($root);
+        self::syncLore($item);
+        return true;
+    }
+
+    /**
+     * Repairs heroic buffer by a fraction of max buffer size (similar to shaving a % off vanilla durability).
+     * Returns true when the buffer was increased.
+     */
+    public static function replenishHeroicBufferFractionOfMax(Durable $item, float $fraction): bool
+    {
+        if ($fraction <= 0.0 || !self::isHeroicArmor($item)) {
+            return false;
+        }
+
+        self::initializeItem($item);
+
+        $root = $item->getNamedTag();
+        $glacia = $root->getCompoundTag("Glacia");
+        if ($glacia === null) {
+            return false;
+        }
+
+        $max = max(0, $glacia->getInt(self::TAG_MAX, 0));
+        if ($max <= 0) {
+            return false;
+        }
+
+        $current = max(0, $glacia->getInt(self::TAG_CURRENT, 0));
+        if ($current >= $max) {
+            return false;
+        }
+
+        $repairUnits = max(1, (int) ceil($max * $fraction));
+        $after = min($max, $current + $repairUnits);
+        if ($after <= $current) {
+            return false;
+        }
+
+        $glacia->setInt(self::TAG_CURRENT, $after);
+        $root->setTag("Glacia", $glacia);
+        $item->setNamedTag($root);
+        self::syncLore($item);
+        return true;
+    }
+
     private static function consumeBuffer(Durable $item, int $amount): int
     {
         $root = $item->getNamedTag();
@@ -232,18 +308,16 @@ final class HeroicArmorDurabilityManager
         $piece = strtolower($glacia->getString("armorPiece", ""));
         $armorValue = self::getHeroicArmorValue($piece);
 
-        $linePrefix = C::colorize("&r&3Heroic Durability: ");
-        $newLine = C::colorize("&r&3Heroic Durability: &f{$current}&7/&f{$max}");
+        $linePrefix = C::colorize("&r&7Heroic Durability: ");
+        $newLine = C::colorize("&r&7Heroic Durability: {$current}/{$max}");
 
         $armorValueLine = $armorValue > 0
             ? C::colorize("&r&7+{$armorValue} Armor Value")
             : null;
-        $maxDurabilityLine = C::colorize("&r&7{$max} Durability");
 
-        $lore = $item->getLore();
+        $lore = self::stripPlainNumericDurabilityLines($item->getLore());
         $replaced = false;
         $armorValueReplaced = false;
-        $maxDurabilityReplaced = false;
         foreach ($lore as $i => $line) {
             if (str_starts_with((string) $line, $linePrefix)) {
                 $lore[$i] = $newLine;
@@ -260,11 +334,6 @@ final class HeroicArmorDurabilityManager
                 $armorValueReplaced = true;
                 continue;
             }
-
-            if (!$maxDurabilityReplaced && str_ends_with($clean, " Durability") && !str_contains($clean, "Heroic Durability")) {
-                $lore[$i] = $maxDurabilityLine;
-                $maxDurabilityReplaced = true;
-            }
         }
 
         if (!$replaced) {
@@ -276,11 +345,28 @@ final class HeroicArmorDurabilityManager
             $lore[] = $armorValueLine;
         }
 
-        if (!$maxDurabilityReplaced) {
-            $lore[] = $maxDurabilityLine;
+        $item->setLore($lore);
+        ItemLoreLayout::normalizeForCombatGear($item);
+    }
+
+    /**
+     * Removes standalone "{max} Durability" lore lines; heroic ratio already encodes max.
+     *
+     * @param list<string> $lore
+     * @return list<string>
+     */
+    private static function stripPlainNumericDurabilityLines(array $lore): array
+    {
+        $out = [];
+        foreach ($lore as $line) {
+            $clean = C::clean((string) $line);
+            if (preg_match('/^[\d,]+\s+Durability$/', $clean) === 1) {
+                continue;
+            }
+            $out[] = $line;
         }
 
-        $item->setLore($lore);
+        return $out;
     }
 
     private static function getHeroicArmorValue(string $piece): int
@@ -393,6 +479,7 @@ final class HeroicArmorDurabilityManager
 
         $lore[] = $newLine;
         $item->setLore($lore);
+        ItemLoreLayout::normalizeForCombatGear($item);
     }
 }
 

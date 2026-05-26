@@ -8,6 +8,7 @@ use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\item\Durable;
 use pocketmine\player\Player;
@@ -43,7 +44,12 @@ final class DiminishEnchant implements EntityDamageByEntityEnchantmentHandler {
             4 => ["chance" => 25, "cd" => 2, "durabilityDamage" => 4],
         ];
 
-        $cfg = $data[$level] ?? $data[1];
+        $row = $data[$level] ?? $data[1];
+        $cfg = [
+            "chance" => EnchantTuningManager::getLevelInt("diminish", "proc-percent-by-level", $level, $row["chance"]),
+            "cd" => EnchantTuningManager::getLevelInt("diminish", "cooldown-seconds-by-level", $level, $row["cd"]),
+            "durabilityDamage" => EnchantTuningManager::getLevelInt("diminish", "armor-damage-per-piece-by-level", $level, $row["durabilityDamage"]),
+        ];
 
         if (mt_rand(1, 100) > $cfg["chance"]) return;
         if ($session->isOnCooldown("diminish")) return;

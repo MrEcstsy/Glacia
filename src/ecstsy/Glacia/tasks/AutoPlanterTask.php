@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\tasks;
 
+use ecstsy\Glacia\server\collectionchests\HarvesterCropRegistry;
+use ecstsy\Glacia\server\farming\FarmLevelRequirementManager;
 use pocketmine\block\Beetroot;
 use pocketmine\block\Block;
 use pocketmine\block\Carrot;
@@ -42,7 +44,17 @@ final class AutoPlanterTask extends Task
                 };
 
                 if ($newCrop === null) {
-                    return;
+                    continue;
+                }
+
+                $family = HarvesterCropRegistry::getFarmFamilyForBlock($newCrop);
+                if (
+                    $family !== null
+                    && FarmLevelRequirementManager::isEnabled()
+                    && !FarmLevelRequirementManager::meetsRequirement($player, $family)
+                ) {
+                    FarmLevelRequirementManager::notifyRequirementFailed($player, $family);
+                    continue;
                 }
 
                 $world->setBlock($pos, $newCrop, true, true);

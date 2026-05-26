@@ -6,6 +6,7 @@ namespace ecstsy\Glacia\server\items;
 
 use ecstsy\Glacia\blocks\CustomSpawner;
 use ecstsy\Glacia\blocks\tiles\SpawnerTile;
+use ecstsy\Glacia\utils\GlaciaUtils;
 use pocketmine\block\Block;
 use pocketmine\block\BlockBreakInfo;
 use pocketmine\block\BlockIdentifier;
@@ -92,6 +93,8 @@ final class GlaciaSpawnerItem {
             38 => "enderman",
             41 => "ghast",
             42 => "magma_cube",
+            122 => "bee",
+            131 => "warden",
         ];
 
         foreach ($nameToMeta as $legacyId => $shortName) {
@@ -132,6 +135,22 @@ final class GlaciaSpawnerItem {
         $namedtag = $item->getNamedTag();
         $namedtag->setInt('SpawnerEntityId', $id);
         $item->setNamedTag($namedtag);
+        return $item;
+    }
+
+    public static function createMobSpawner(int $legacyId, int $count = 1): Item
+    {
+        $shortName = GlaciaUtils::convertMobIdToName($legacyId);
+        $item = $shortName !== "unknown"
+            ? StringToItemParser::getInstance()->parse($shortName . "_spawner")
+            : null;
+
+        if (!$item instanceof Item) {
+            $item = clone self::MONSTER_SPAWNER()->asItem();
+            $item = self::setSpawnerEntityId($item, $legacyId);
+        }
+
+        $item->setCount($count);
         return $item;
     }
 

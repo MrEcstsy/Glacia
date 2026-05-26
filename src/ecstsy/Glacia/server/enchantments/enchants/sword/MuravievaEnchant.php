@@ -7,10 +7,12 @@ namespace ecstsy\Glacia\server\enchantments\enchants\sword;
 use ecstsy\Glacia\server\blackmarket\BlackMarketAuctionManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\handler\EntityDeathEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantDebugManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantProcManager;
 use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
-use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDeathEvent;
+use pocketmine\item\Item;
 use pocketmine\player\Player;
 
 final class MuravievaEnchant implements EntityDeathEnchantmentHandler
@@ -22,9 +24,13 @@ final class MuravievaEnchant implements EntityDeathEnchantmentHandler
     {
         $entity = $event->getEntity();
         $cause = $entity->getLastDamageCause();
-        if (!$cause instanceof EntityDamageByEntityEvent) return;
+        if (!$cause instanceof EntityDamageByEntityEvent) {
+            return;
+        }
         $killer = $cause->getDamager();
-        if (!$killer instanceof Player) return;
+        if (!$killer instanceof Player) {
+            return;
+        }
 
         if ((self::$x5LootUntil[$killer->getUniqueId()->toString()] ?? 0) > time()) {
             $drops = $event->getDrops();
@@ -35,23 +41,41 @@ final class MuravievaEnchant implements EntityDeathEnchantmentHandler
                 }
             }
             $event->setDrops(array_merge($drops, $extra));
+            EnchantDebugManager::logPassiveValues($killer, "blackhand", $level, [
+                "x5_loot_active" => true,
+                "drop_count" => count($event->getDrops()),
+            ]);
         }
 
-        $chance = EnchantTuningManager::getLevelInt("muravieva", "chance-by-level", $level, $level * 3);
-        if (!ProcLuckManager::roll($killer, "muravieva", $chance, 1, 8)) return;
+        $result = EnchantProcManager::attempt(
+            $killer,
+            "blackhand",
+            $level,
+            EnchantTuningManager::chance("blackhand", $level, 3.0),
+            EnchantTuningManager::cooldownSeconds("blackhand", $level, 0)
+        );
+        if (!$result->success) {
+            return;
+        }
 
+        $grantedItem = false;
         $pool = BlackMarketAuctionManager::getInstance()->getPoolEntries($killer);
         if ($pool !== []) {
             $pick = $pool[array_rand($pool)];
             $item = $pick["item"] ?? null;
-            if ($item instanceof \pocketmine\item\Item) {
+            if ($item instanceof Item) {
                 foreach ($killer->getInventory()->addItem(clone $item) as $leftover) {
                     $killer->getWorld()->dropItem($killer->getPosition(), $leftover);
                 }
+                $grantedItem = true;
             }
         }
 
-        $duration = max(1, EnchantTuningManager::getInt("muravieva", "x5-loot-duration-seconds", 30));
+        $duration = max(1, EnchantTuningManager::valueInt("blackhand", "x5-loot-duration-seconds", $level, 30));
         self::$x5LootUntil[$killer->getUniqueId()->toString()] = time() + $duration;
+        EnchantProcManager::debugAppliedValues($killer, $result, [
+            "granted_item" => $grantedItem,
+            "x5_loot_duration_seconds" => $duration,
+        ]);
     }
 }

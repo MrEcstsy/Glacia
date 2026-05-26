@@ -26,3 +26,7 @@ order:
   - "lootbox_vote"
   - "lootbox_sotw"
   - "lootbox_aurora"
+ethereal-crate-order:
+  - "november_2024"
+  - "december_2024"
+  - "january_2026"

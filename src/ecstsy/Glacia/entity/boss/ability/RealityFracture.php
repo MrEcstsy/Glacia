@@ -8,6 +8,7 @@ use ecstsy\Glacia\entity\boss\BossAbility;
 use ecstsy\Glacia\entity\boss\BossEntity;
 use ecstsy\Glacia\entity\boss\BossParticles;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\utils\CustomParticleEffectManager;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
@@ -55,10 +56,10 @@ final class RealityFracture extends BossAbility
             default => 4.0,
         };
         $damage = match ($phase) {
-            1 => 11.0,
-            2 => 16.0,
-            3 => 22.0,
-            default => 11.0,
+            1 => 13.0,
+            2 => 18.0,
+            3 => 24.0,
+            default => 13.0,
         };
         $blindTicks = match ($phase) {
             1 => 60,
@@ -84,16 +85,42 @@ final class RealityFracture extends BossAbility
                         $epicenter,
                         $radius,
                         BossParticles::warningParticle(),
-                        max(20, (int) ($radius * 6.0)),
-                        0.05
+                        max(12, (int) ($radius * 3.5)),
+                        0.04
                     );
-                    BossParticles::ring(
+                    CustomParticleEffectManager::stackedRing(
                         $world,
                         $epicenter,
-                        $radius * 0.55,
-                        BossParticles::portalParticle(),
-                        max(12, (int) ($radius * 3.0)),
-                        0.4
+                        $radius,
+                        CustomParticleEffectManager::WARNING_RING,
+                        3,
+                        max(22, (int) ($radius * 6.0)),
+                        0.18,
+                        48.0
+                    );
+                    CustomParticleEffectManager::columnVariants(
+                        $world,
+                        $epicenter->add(0, 0.12, 0),
+                        [
+                            CustomParticleEffectManager::ASTRAL_PULSE,
+                            CustomParticleEffectManager::ASTRAL_BEAM_SPARK,
+                        ],
+                        1.8,
+                        7,
+                        48.0
+                    );
+                    CustomParticleEffectManager::burstVariants(
+                        $world,
+                        $epicenter->add(0, 0.24, 0),
+                        [
+                            CustomParticleEffectManager::ASTRAL_BEAM,
+                            CustomParticleEffectManager::ASTRAL_BEAM_CORE,
+                            CustomParticleEffectManager::ASTRAL_BEAM_SPARK,
+                        ],
+                        12,
+                        max(0.55, $radius * 0.22),
+                        0.36,
+                        48.0
                     );
                 }
             ), $t);
@@ -113,9 +140,44 @@ final class RealityFracture extends BossAbility
                     $world,
                     $epicenter,
                     BossParticles::portalParticle(),
-                    50,
-                    $radius * 0.6,
-                    1.2
+                    18,
+                    $radius * 0.4,
+                    0.9
+                );
+                CustomParticleEffectManager::stackedRing(
+                    $world,
+                    $epicenter,
+                    $radius * 0.9,
+                    CustomParticleEffectManager::WARNING_RING,
+                    3,
+                    max(24, (int) ($radius * 6.5)),
+                    0.20,
+                    56.0
+                );
+                CustomParticleEffectManager::columnVariants(
+                    $world,
+                    $epicenter->add(0, 0.12, 0),
+                    [
+                        CustomParticleEffectManager::ASTRAL_PULSE,
+                        CustomParticleEffectManager::ASTRAL_BEAM_CORE,
+                    ],
+                    2.4,
+                    9,
+                    56.0
+                );
+                CustomParticleEffectManager::burstVariants(
+                    $world,
+                    $epicenter->add(0, 0.22, 0),
+                    [
+                        CustomParticleEffectManager::ASTRAL_BEAM,
+                        CustomParticleEffectManager::ASTRAL_BEAM_CORE,
+                        CustomParticleEffectManager::ASTRAL_BEAM_SPARK,
+                        CustomParticleEffectManager::ASTRAL_PULSE,
+                    ],
+                    32,
+                    $radius * 0.42,
+                    0.95,
+                    56.0
                 );
 
                 $radiusSq = $radius * $radius;
@@ -131,7 +193,7 @@ final class RealityFracture extends BossAbility
                         continue;
                     }
 
-                    $player->attack(new EntityDamageByEntityEvent($boss, $player, EntityDamageEvent::CAUSE_MAGIC, $damage, [], 0.0, 0.0));
+                    $boss->dealBossTrueDamage($player, $damage);
                     $player->getEffects()->add(new EffectInstance(VanillaEffects::BLINDNESS(), $blindTicks, 0));
                     $player->getEffects()->add(new EffectInstance(VanillaEffects::SLOWNESS(), $blindTicks, 1));
 

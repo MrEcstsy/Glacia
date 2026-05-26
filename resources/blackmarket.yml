@@ -1,4 +1,6 @@
 settings:
+  # Pool key under "pool:" used for the next auction roll instead of weighted random (cleared after that auction starts).
+  next-auction-entry: ""
   interval: 1800
   anti-snipe-seconds: 10
   history-limit: 50

@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\server\enchantments\enchants\sword;
 
+use ecstsy\Glacia\entity\MummifiedRemnant;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantProcManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
+use ecstsy\Glacia\server\enchantments\manager\MirrorbrandProcManager;
 use ecstsy\Glacia\server\enchantments\manager\SilenceManager;
+use pocketmine\entity\Living;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\player\Player;
 
@@ -22,36 +27,43 @@ final class SilenceEnchant implements EntityDamageByEntityEnchantmentHandler {
         $damager = $event->getDamager();
         $victim  = $event->getEntity();
 
-        if (!$damager instanceof Player || !$victim instanceof Player) {
+        if (!$damager instanceof Living || !$victim instanceof Player) {
             return;
         }
 
-        $item = $damager->getInventory()->getItemInHand();
+        $item = $damager instanceof Player ? $damager->getInventory()->getItemInHand() : ($damager instanceof MummifiedRemnant ? $damager->getCombatItem() : null);
+        if ($item === null) {
+            return;
+        }
         if (!CustomEnchantmentManager::hasEnchantment($item, "silence")) {
             return;
         }
 
-        $session = PlayerManager::getInstance()->getSession($damager);
+        $session = $damager instanceof Player ? PlayerManager::getInstance()->getSession($damager) : null;
 
-        if ($session->isOnCooldown("silence")) {
+        $chance = EnchantTuningManager::chance("silence", $level, 10.0);
+        $cooldownSeconds = EnchantTuningManager::cooldownSeconds("silence", $level, 12);
+        $durationSeconds = max(0.1, EnchantTuningManager::value("silence", "duration", $level, 1.5));
+        $result = EnchantProcManager::attempt(
+            $damager,
+            "silence",
+            $level,
+            $chance,
+            $cooldownSeconds,
+            static fn() => $session?->getCooldown("silence") ?? 0
+        );
+        if (!$result->success) {
             return;
         }
 
-        $cfg = match ($level) {
-            1 => ["chance" => 10, "duration" => 1.5, "cd" => 12],
-            2 => ["chance" => 15, "duration" => 2.5, "cd" => 12],
-            3 => ["chance" => 20, "duration" => 3.5, "cd" => 12],
-            4 => ["chance" => 25, "duration" => 4.5, "cd" => 12],
-            5 => ["chance" => 30, "duration" => 5.0, "cd" => 12],
-            default => ["chance" => 10, "duration" => 1.5, "cd" => 12],
-        };
-
-        if (mt_rand(1, 100) > $cfg["chance"]) {
-            return;
+        SilenceManager::silence($victim, $durationSeconds);
+        if ($damager instanceof Player) {
+            MirrorbrandProcManager::record($damager, "silence", static function (Player $reflector, Player $attacker) use ($durationSeconds): bool {
+                SilenceManager::silence($attacker, $durationSeconds);
+                return true;
+            });
         }
-
-        SilenceManager::silence($victim, $cfg["duration"]);
-
-        $session->addCooldown("silence", $cfg["cd"]);
+        EnchantProcManager::applyCooldownIfNeeded($result, static fn(int $seconds) => $session?->addCooldown("silence", $seconds));
+        EnchantProcManager::debugAppliedValues($damager, $result, ["duration_seconds" => $durationSeconds]);
     }
 }

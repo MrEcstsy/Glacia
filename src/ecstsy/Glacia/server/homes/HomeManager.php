@@ -6,6 +6,8 @@ namespace ecstsy\Glacia\server\homes;
 
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\player\GlaciaPlayer;
+use ecstsy\Glacia\server\factions\FactionNameBlocklist;
+use ecstsy\Glacia\utils\PermissionTierUtils;
 use ecstsy\Glacia\utils\QueryStmts;
 use pocketmine\player\Player;
 use pocketmine\utils\SingletonTrait;
@@ -65,6 +67,16 @@ final class HomeManager
      */
     public function createHome(Player $player, string $home_name) : void
     {
+        $home_name = trim($home_name);
+        if ($home_name === "") {
+            throw new \RuntimeException("Home name cannot be empty.");
+        }
+
+        $violation = FactionNameBlocklist::firstGenericNameViolation($home_name, $home_name, "home name");
+        if ($violation !== null) {
+            throw new \RuntimeException($violation);
+        }
+
         $uuid = $player->getUniqueId()->toString();
         $currentHomes = $this->getHomeList($player->getUniqueId()) ?? [];
         if (count($currentHomes) >= $this->getMaxHomes($player->getUniqueId())) {
@@ -185,7 +197,7 @@ final class HomeManager
         $this->setMaxHomes($uuid, $current + $amount);
     }
 
-    public function setMaxHomes(UuidInterface $uuid, int $amount = 3): void
+    public function setMaxHomes(UuidInterface $uuid, int $amount = 5): void
     {
         $maxHomes = max(1, $amount);
         $this->maxHomesByUuid[$uuid->toString()] = $maxHomes;
@@ -197,14 +209,24 @@ final class HomeManager
 
 
     public function getMaxHomes(UuidInterface $uuid) : int {
+        $maxHomes = $this->maxHomesByUuid[$uuid->toString()] ?? $this->limit;
+
         if (($session = $this->getSession($uuid)) !== null) {
             $setting = $session->getSetting("max_homes");
             if (is_int($setting) || is_float($setting) || (is_string($setting) && is_numeric($setting))) {
-                return max(1, (int) $setting);
+                $maxHomes = max($maxHomes, max(1, (int) $setting));
+            }
+
+            $player = $session->getPlayer();
+            if ($player instanceof Player) {
+                $maxHomes = max(
+                    $maxHomes,
+                    PermissionTierUtils::getHighestIntPermission($player, "glacia.home.limit.", $this->limit, 100)
+                );
             }
         }
 
-        return $this->maxHomesByUuid[$uuid->toString()] ?? $this->limit;
+        return $maxHomes;
     }
 
     private function updateDb(UuidInterface $uuid): void
@@ -225,6 +247,12 @@ final class HomeManager
     private function getSession(UuidInterface $uuid) : ?GlaciaPlayer
     {
         return Loader::getPlayerManager()->getSessionByUuid($uuid);
+    }
+
+    public function resetSeasonState(): void
+    {
+        $this->homes = [];
+        $this->maxHomesByUuid = [];
     }
 
 }

@@ -7,6 +7,7 @@ namespace ecstsy\Glacia\commands\sub\factions;
 use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseSubCommand;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\factions\guardian\FactionGuardianManager;
 use ecstsy\Glacia\utils\FactionPermissions;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use pocketmine\command\CommandSender;
@@ -40,7 +41,7 @@ final class CreateSubCommand extends BaseSubCommand {
         $result = GlaciaUtils::validateName($name);
         if ($result !== null) {
             [$filteredName, $error] = $result;
-            $sender->sendMessage(C::RED . $error);
+            $sender->sendMessage(C::colorize("&c" . $error));
             return;
         }
 
@@ -54,6 +55,7 @@ final class CreateSubCommand extends BaseSubCommand {
         }
 
         $session->joinFaction($factionId, "leader");
+        FactionGuardianManager::registerFactionCreated($f, $sender);
         Loader::getDatabase()->waitAll();
         $f->refreshScoreboards();
 

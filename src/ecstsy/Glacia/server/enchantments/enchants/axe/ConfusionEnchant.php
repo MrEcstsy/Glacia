@@ -8,6 +8,9 @@ use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantProcManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
+use ecstsy\Glacia\server\enchantments\manager\MirrorbrandProcManager;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\entity\Living;
@@ -28,35 +31,45 @@ final class ConfusionEnchant implements EntityDamageByEntityEnchantmentHandler {
 
         $session = PlayerManager::getInstance()->getSession($damager);
 
-        $data = [
-            1 => ["chance" => 13, "cd" => 4, "duration" => 40],
-            2 => ["chance" => 19, "cd" => 5, "duration" => 80],
-            3 => ["chance" => 24, "cd" => 6, "duration" => 120],
-        ];
-
-        $cfg = $data[$level] ?? $data[1];
         $item = $damager->getInventory()->getItemInHand();
 
         if (!CustomEnchantmentManager::hasEnchantment($item, "confusion")) {
             return;
         }
 
-        if (mt_rand(1, 100) > $cfg["chance"]) {
+        $chance = EnchantTuningManager::chance("confusion", $level, 13.0);
+        $cooldownSeconds = EnchantTuningManager::cooldownSeconds("confusion", $level, 4);
+        $durationTicks = max(1, EnchantTuningManager::valueInt("confusion", "duration-ticks", $level, 40));
+        $result = EnchantProcManager::attempt(
+            $damager,
+            "confusion",
+            $level,
+            $chance,
+            $cooldownSeconds,
+            static fn() => $session->getCooldown("confusion")
+        );
+        if (!$result->success) {
             return;
         }
-
-        if ($session->isOnCooldown("confusion")) {
-            return;
-        }
-
-        $session->addCooldown("confusion", $cfg["cd"]);
 
         $victim->getEffects()->add(
             new EffectInstance(
                 VanillaEffects::NAUSEA(),
-                $cfg["duration"] * 20, 
+                $durationTicks, 
                 0
             )
         );
+        if ($victim instanceof Player) {
+            MirrorbrandProcManager::record($damager, "confusion", static function (Player $reflector, Player $attacker) use ($durationTicks): bool {
+                $attacker->getEffects()->add(new EffectInstance(
+                    VanillaEffects::NAUSEA(),
+                    $durationTicks,
+                    0
+                ));
+                return true;
+            });
+        }
+        EnchantProcManager::applyCooldownIfNeeded($result, static fn(int $seconds) => $session->addCooldown("confusion", $seconds));
+        EnchantProcManager::debugAppliedValues($damager, $result, ["duration_ticks" => $durationTicks]);
     }
 }

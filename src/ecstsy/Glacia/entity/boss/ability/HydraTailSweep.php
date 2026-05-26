@@ -9,6 +9,7 @@ use ecstsy\Glacia\entity\boss\BossEntity;
 use ecstsy\Glacia\entity\boss\BossParticles;
 use ecstsy\Glacia\entity\boss\bosses\GlacialHydra;
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\utils\CustomParticleEffectManager;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
@@ -42,14 +43,36 @@ final class HydraTailSweep extends BossAbility
         $center = $boss->getPosition()->asVector3()->add(0, 1.0, 0);
         $radius = 6.5 + min(1.0, max(0, $boss->getEngagedPlayerCount(10.0) - 1) * 0.25);
         $damage = match ($boss->getPhase()) {
-            2 => 11.5,
-            3 => 16.5,
-            default => 9.0,
+            2 => 10.5,
+            3 => 14.5,
+            default => 8.5,
         } * $boss->getPressureDamageMultiplier();
 
         $boss->broadcastEntityAnimation("tail_sweep", "", "", 0.12);
         $boss->broadcastAbility(C::colorize("&r&cThe Hydra coils its tail for a crushing sweep!"), 36);
         $boss->playAbilitySound("mob.enderdragon.growl", 1.2, 0.85, 36);
+        CustomParticleEffectManager::stackedRing(
+            $world,
+            $center,
+            $radius * 0.92,
+            CustomParticleEffectManager::HYDRA_WARNING,
+            2,
+            max(22, (int) ($radius * 3.5)),
+            0.18,
+            48.0
+        );
+        CustomParticleEffectManager::ringVariants(
+            $world,
+            $center,
+            $radius * 0.74,
+            [
+                CustomParticleEffectManager::HYDRA_WARNING,
+                CustomParticleEffectManager::HYDRA_WARNING_ARC,
+            ],
+            max(16, (int) ($radius * 2.4)),
+            0.12,
+            48.0
+        );
 
         Loader::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(
             static function () use ($boss, $world, $center, $damage, $radius): void {
@@ -61,9 +84,28 @@ final class HydraTailSweep extends BossAbility
                     $world,
                     $center,
                     new BlockBreakParticle(VanillaBlocks::OBSIDIAN()),
-                    36,
-                    3.8,
-                    1.3
+                    14,
+                    2.4,
+                    0.8
+                );
+                CustomParticleEffectManager::burst(
+                    $world,
+                    $center->add(0, 0.18, 0),
+                    CustomParticleEffectManager::HYDRA_FROST,
+                    24,
+                    1.9,
+                    0.9,
+                    56.0
+                );
+                CustomParticleEffectManager::stackedRing(
+                    $world,
+                    $center,
+                    $radius,
+                    CustomParticleEffectManager::HYDRA_WARNING,
+                    2,
+                    max(24, (int) ($radius * 3.6)),
+                    0.20,
+                    56.0
                 );
 
                 foreach ($boss->getPlayersInRange($radius) as $player) {
@@ -73,7 +115,7 @@ final class HydraTailSweep extends BossAbility
                         continue;
                     }
 
-                    $player->attack(new EntityDamageByEntityEvent($boss, $player, EntityDamageEvent::CAUSE_ENTITY_ATTACK, $damage, [], 0.0, 0.0));
+                    $boss->dealBossTrueDamage($player, $damage);
                     $boss->applyBossMotion($player, new Vector3(
                         ($delta->x / $length) * 0.95,
                         0.36,

@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\listeners;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\entity\zones\ZoneMob;
+use ecstsy\Glacia\server\duels\DuelManager;
 use ecstsy\Glacia\server\scoreboard\ScoreboardHelper;
+use ecstsy\Glacia\server\world\events\WorldEventManager;
 use ecstsy\Glacia\server\world\theme\DimensionThemeManager;
 use ecstsy\Glacia\server\zones\ZoneManager;
 use ecstsy\Glacia\server\zones\ZoneMobManager;
@@ -14,12 +17,14 @@ use ecstsy\MartianUtilities\utils\PlayerUtils;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\block\BlockPlaceEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\event\entity\EntitySpawnEvent;
 use pocketmine\event\entity\EntityTeleportEvent;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\event\player\PlayerItemUseEvent;
 use pocketmine\event\player\PlayerMoveEvent;
 use pocketmine\event\player\PlayerQuitEvent;
+use pocketmine\entity\monster\Monster;
 use pocketmine\item\ItemTypeIds;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
@@ -220,16 +225,16 @@ final class ZoneListener implements Listener {
     public function onBlockBreak(BlockBreakEvent $event) : void
     {
         $player = $event->getPlayer();
+        if (WorldEventManager::handleNodeBreak($event)) {
+            return;
+        }
+
         if ($player->hasPermission("glacia.admin")) {
             return;
         }
 
         $zone = ZoneManager::getZoneAt($event->getBlock()->getPosition());
         if ($zone === null) {
-            return;
-        }
-
-        if (ZoneManager::shouldRegenerateOre($zone, $event->getBlock())) {
             return;
         }
 
@@ -244,7 +249,18 @@ final class ZoneListener implements Listener {
             return;
         }
 
-        $zone = ZoneManager::getZoneAt($player->getPosition());
+        $zone = null;
+        foreach ($event->getTransaction()->getBlocks() as [$x, $y, $z, $block]) {
+            $zone = ZoneManager::getZoneAt($block->getPosition());
+            if ($zone !== null) {
+                break;
+            }
+        }
+
+        if ($zone === null) {
+            $zone = ZoneManager::getZoneAt($player->getPosition());
+        }
+
         if ($zone === null) {
             return;
         }
@@ -258,6 +274,10 @@ final class ZoneListener implements Listener {
         $victim = $event->getEntity();
         $attacker = $event->getDamager();
         if (!$victim instanceof Player || !$attacker instanceof Player) {
+            return;
+        }
+
+        if ($this->isAllowedDuelCombat($attacker, $victim)) {
             return;
         }
 
@@ -276,6 +296,41 @@ final class ZoneListener implements Listener {
             ? "&r&cPvP is disabled in this &fsafe pocket&r&c."
             : "&r&cPvP is disabled in &f" . (string) $zone["display"] . "&r&c.";
         $this->sendBoundaryMessage($attacker, $zone, $message);
+    }
+
+    private function isAllowedDuelCombat(Player $attacker, Player $victim): bool
+    {
+        if (!DuelManager::isInitialized()) {
+            return false;
+        }
+
+        $duelManager = DuelManager::getInstance();
+        if (!$duelManager->isInDuel($attacker) || !$duelManager->isInDuel($victim)) {
+            return false;
+        }
+
+        $opponent = $duelManager->getOpponent($attacker);
+        return $opponent !== null && $opponent->getUniqueId()->equals($victim->getUniqueId());
+    }
+
+    public function onEntitySpawn(EntitySpawnEvent $event) : void
+    {
+        $entity = $event->getEntity();
+        if ($entity instanceof ZoneMob || !$entity instanceof Monster) {
+            return;
+        }
+
+        $zone = ZoneManager::getZoneAt($entity->getPosition());
+        if ($zone === null) {
+            return;
+        }
+
+        $zoneId = (string) ($zone["id"] ?? "");
+        if ($zoneId === "" || ZoneMobManager::getZoneConfig($zoneId) === null) {
+            return;
+        }
+
+        $event->cancel();
     }
 
     /**
@@ -300,6 +355,21 @@ final class ZoneListener implements Listener {
         $zone = ZoneManager::getZoneAt($event->getBlock()->getPosition());
         if ($zone === null || !ZoneManager::shouldRegenerateOre($zone, $event->getBlock())) {
             return;
+        }
+
+        $premiumMultiplier = max(1.0, (float) (($zone["ore-sell-multiplier"] ?? 1.0)));
+        if ($premiumMultiplier > 1.0) {
+            $drops = [];
+            foreach ($event->getDrops() as $drop) {
+                $tag = $drop->getNamedTag();
+                $glacia = $tag->getCompoundTag("Glacia") ?? new \pocketmine\nbt\tag\CompoundTag();
+                $glacia->setFloat("zone_ore_sell_multiplier", $premiumMultiplier);
+                $glacia->setString("zone_ore_sell_zone", strtolower((string) ($zone["id"] ?? $zone["name"] ?? "zone")));
+                $tag->setTag("Glacia", $glacia);
+                $drop->setNamedTag($tag);
+                $drops[] = $drop;
+            }
+            $event->setDrops($drops);
         }
 
         ZoneManager::queueOreRespawn($event->getBlock()->getPosition(), $event->getBlock(), $zone);

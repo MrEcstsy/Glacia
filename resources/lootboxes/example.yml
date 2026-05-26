@@ -1,5 +1,6 @@
 name: "&r&l&dArcane Cache"
 title: "&r&8Arcane Cache"
+animation-type: "classic"
 aliases:
   - "arcane"
   - "cache"

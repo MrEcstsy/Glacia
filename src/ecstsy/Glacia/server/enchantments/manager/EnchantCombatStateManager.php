@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\server\enchantments\manager;
 
+use ecstsy\Glacia\server\enchantments\essence\EnchantEssenceManager;
 use pocketmine\player\Player;
 
 final class EnchantCombatStateManager
@@ -13,7 +14,11 @@ final class EnchantCombatStateManager
     /** @var array<string, int> */
     private static array $petDisabledUntil = [];
     /** @var array<string, int> */
+    private static array $customEnchantDisabledUntil = [];
+    /** @var array<string, int> */
     private static array $procBonusUntil = [];
+    /** @var array<string, int> */
+    private static array $procBonusAmount = [];
     /** @var array<string, int> */
     private static array $plagueWeakenedUntil = [];
     /** @var array<string, int> */
@@ -43,14 +48,32 @@ final class EnchantCombatStateManager
         return self::isActive(self::$petDisabledUntil, $player);
     }
 
-    public static function grantProcBonus(Player $player, int $seconds): void
+    public static function disableCustomEnchants(Player $player, int $seconds): void
     {
-        self::$procBonusUntil[$player->getUniqueId()->toString()] = time() + max(1, $seconds);
+        self::$customEnchantDisabledUntil[$player->getUniqueId()->toString()] = time() + max(1, $seconds);
+    }
+
+    public static function areCustomEnchantsDisabled(Player $player): bool
+    {
+        return self::isActive(self::$customEnchantDisabledUntil, $player);
+    }
+
+    public static function grantProcBonus(Player $player, int $seconds, int $bonusPercent = 5): void
+    {
+        $key = $player->getUniqueId()->toString();
+        self::$procBonusUntil[$key] = time() + max(1, $seconds);
+        self::$procBonusAmount[$key] = max(0, $bonusPercent);
     }
 
     public static function getProcBonus(Player $player): int
     {
-        return self::isActive(self::$procBonusUntil, $player) ? 5 : 0;
+        $key = $player->getUniqueId()->toString();
+        if (!self::isActive(self::$procBonusUntil, $player)) {
+            unset(self::$procBonusAmount[$key]);
+            return 0;
+        }
+
+        return max(0, (int) (self::$procBonusAmount[$key] ?? 5));
     }
 
     public static function applyPlagueWeaken(Player $player, int $seconds): void
@@ -98,7 +121,13 @@ final class EnchantCombatStateManager
             }
         }
 
-        return min(70.0, $activeAttackers * 7.0);
+        $base = min(70.0, $activeAttackers * 7.0);
+        $perExtra = (float) EnchantEssenceManager::resolveArmorValue($victim, "flourish", "extra-reduction-percent-per-additional-attacker", 0.0);
+        if ($perExtra > 0.0 && $activeAttackers >= 2) {
+            $base += ($activeAttackers - 1) * $perExtra;
+        }
+
+        return min(70.0, $base);
     }
 
     private static function isActive(array &$store, Player $player): bool
@@ -130,4 +159,5 @@ final class EnchantCombatStateManager
         }
         return $n;
     }
+
 }

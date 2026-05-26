@@ -30,7 +30,12 @@ final class BackCommand extends BaseCommand {
             return;
         }
 
-        $world = $sender->getServer()->getWorldManager()->getWorldByName($back["world"]);
+        $worldManager = $sender->getServer()->getWorldManager();
+        $world = $worldManager->getWorldByName($back["world"]);
+        if ($world === null && $back["world"] !== "" && $worldManager->loadWorld($back["world"])) {
+            $world = $worldManager->getWorldByName($back["world"]);
+        }
+
         if ($world === null) {
             $sender->sendMessage(C::colorize(MessageTemplates::render("back.error.world_unloaded")));
             return;

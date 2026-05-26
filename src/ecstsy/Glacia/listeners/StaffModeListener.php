@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\listeners;
 
 use ecstsy\Glacia\server\staff\StaffModeManager;
+use ecstsy\Glacia\server\staff\VanishManager;
+use ecstsy\Glacia\server\staff\HiddenStaffTargeting;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\block\BlockPlaceEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
@@ -16,6 +18,7 @@ use pocketmine\event\player\PlayerDropItemEvent;
 use pocketmine\event\player\PlayerItemUseEvent;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerQuitEvent;
+use pocketmine\event\server\QueryRegenerateEvent;
 use pocketmine\event\server\DataPacketSendEvent;
 use pocketmine\inventory\ArmorInventory;
 use pocketmine\inventory\Inventory;
@@ -35,6 +38,7 @@ final class StaffModeListener implements Listener {
 
     public function onJoin(PlayerJoinEvent $event) : void {
         StaffModeManager::onPlayerJoinVisible($event->getPlayer());
+        VanishManager::syncJoin($event->getPlayer());
     }
 
     public function onQuit(PlayerQuitEvent $event) : void {
@@ -42,6 +46,7 @@ final class StaffModeListener implements Listener {
         if (StaffModeManager::isInStaffMode($player)) {
             StaffModeManager::restoreSnapshotForDisconnect($player);
         }
+        VanishManager::handleQuit($player);
     }
 
     public function onItemUse(PlayerItemUseEvent $event) : void {
@@ -89,7 +94,7 @@ final class StaffModeListener implements Listener {
 
     public function onDamage(EntityDamageEvent $event) : void {
         $entity = $event->getEntity();
-        if ($entity instanceof Player && StaffModeManager::isInStaffMode($entity)) {
+        if ($entity instanceof Player && HiddenStaffTargeting::isUntargetable($entity)) {
             $event->cancel();
             return;
         }
@@ -103,35 +108,60 @@ final class StaffModeListener implements Listener {
 
     public function onPickup(EntityItemPickupEvent $event) : void {
         $collector = $event->getEntity();
-        if ($collector instanceof Player && StaffModeManager::isInStaffMode($collector)) {
+        if ($collector instanceof Player && (StaffModeManager::isInStaffMode($collector) || VanishManager::isVanished($collector))) {
             $event->cancel();
         }
     }
 
+    public function onQueryRegenerate(QueryRegenerateEvent $event) : void {
+        $visibleNames = [];
+        $visibleCount = 0;
+        foreach (Server::getInstance()->getOnlinePlayers() as $player) {
+            if (VanishManager::isVanished($player)) {
+                continue;
+            }
+            $visibleNames[] = $player->getName();
+            ++$visibleCount;
+        }
+        $event->getQueryInfo()->setPlayerList($visibleNames);
+        $event->getQueryInfo()->setPlayerCount($visibleCount);
+    }
+
     public function onDataPacketSend(DataPacketSendEvent $event) : void {
         $targets = $event->getTargets();
-        if (count($targets) !== 1) {
-            return;
-        }
-        $session = reset($targets);
-        if (!$session instanceof NetworkSession) {
-            return;
-        }
-        $viewer = $session->getPlayer();
         $out = [];
         foreach ($event->getPackets() as $packet) {
-            if (
-                $packet instanceof MobEquipmentPacket ||
-                $packet instanceof MobArmorEquipmentPacket ||
-                $packet instanceof SetActorDataPacket
-            ) {
+            if ($packet instanceof MobEquipmentPacket || $packet instanceof MobArmorEquipmentPacket || $packet instanceof SetActorDataPacket) {
                 $entity = Server::getInstance()->getWorldManager()->findEntity($packet->actorRuntimeId);
-                if ($entity instanceof Player && StaffModeManager::shouldHideStaffFromViewer($viewer, $entity)) {
-                    continue;
+                if ($entity instanceof Player && VanishManager::isVanished($entity)) {
+                    $shouldSuppress = false;
+                    foreach ($targets as $session) {
+                        if (!$session instanceof NetworkSession) {
+                            continue;
+                        }
+                        $viewer = $session->getPlayer();
+                        if ($viewer !== $entity) {
+                            $shouldSuppress = true;
+                            break;
+                        }
+                    }
+                    if ($shouldSuppress) {
+                        continue;
+                    }
                 }
             }
             if ($packet instanceof PlayerListPacket && $packet->type === PlayerListPacket::TYPE_ADD && $packet->entries !== []) {
-                $filtered = StaffModeManager::filterPlayerListAddEntries($packet->entries, $viewer);
+                $filtered = $packet->entries;
+                foreach ($targets as $session) {
+                    if (!$session instanceof NetworkSession) {
+                        continue;
+                    }
+                    $viewer = $session->getPlayer();
+                    $filtered = VanishManager::filterPlayerListAddEntries($filtered, $viewer);
+                    if ($filtered === []) {
+                        break;
+                    }
+                }
                 if ($filtered === []) {
                     continue;
                 }

@@ -1,0 +1,90 @@
+items:
+  frost_admin_blade:
+    aliases:
+      - frostblade
+      - frost_admin
+    material: diamond_sword
+    category: admin_items
+    category-display: "Admin Items"
+    name: "&r&b&lFrost Admin Blade"
+    lore:
+      - "&r&8Admin Config Item"
+      - "&r&7Example custom sword loaded from"
+      - "&r&7the &fadmin_items.yml &r&7config."
+      - ""
+      - "&r&7Use this as a template for your own"
+      - "&r&7custom weapons, tools, and armor."
+    unbreakable: true
+    vanilla-enchants:
+      sharpness: 5
+      unbreaking: 3
+    custom-enchants:
+      lifesteal: 3
+      execute: 2
+    nbt:
+      admin_item: frost_admin_blade
+    # Usage:
+    # /gi frost_admin_blade
+    # /gi frostblade
+    #
+    # Loot table examples:
+    # - id: frost_admin_blade
+    # - item: frost_admin_blade
+    #
+    # Supported template fields here include:
+    # material, name, lore, vanilla-enchants, custom-enchants, nbt,
+    # unbreakable, keep-on-death, category, category-display, aliases
+    #
+    # Reward-style decorators also work on admin items:
+    # enchantments, transmogged, essence, rune, heroic, protected,
+    # holy_whitescroll / holy_water, soul_conduit, souls, soul_group
+
+  luv_tomahawk:
+    material: diamond_axe
+    category: admin_items
+    category-display: "Admin Items"
+    name: "&r&8✦ &fLuvmythrillz's &d&lTomahawk &5⛧"
+    lore:
+      - "&r&7Forged during a late-night"
+      - "&r&7coding session gone too far."
+    transmogged: true
+    essence: insanity
+    enchantments:
+      - enchant: sharpness
+        level: 6
+      - enchant: unbreaking
+        level: 6
+      - enchant: leviathan
+        level: 6
+      - enchant: beastbond
+        level: 4
+      - enchant: disarmor
+        level: 3
+      - enchant: hexlock
+        level: 5
+      - enchant: runevein
+        level: 2
+      - enchant: vampiric_devour
+        level: 3
+      - enchant: alembic
+        level: 6
+      - enchant: bleed
+        level: 6
+      - enchant: divine_chains
+        level: 3
+      - enchant: insanity
+        level: 5
+      - enchant: lifesteal
+        level: 5
+      - enchant: rage
+        level: 5
+      - enchant: cleave
+        level: 4
+      - enchant: holy
+        level: 5
+      - enchant: marauder
+        level: 7
+      - enchant: pummel
+        level: 5
+      - enchant: third_eye
+        level: 3

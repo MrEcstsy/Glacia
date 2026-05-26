@@ -34,6 +34,7 @@ final class SchemaMigrationManager
             "slot_credits" => "INT DEFAULT 0",
             "item_flip_credits" => "INT DEFAULT 0",
             "title" => "TEXT DEFAULT NULL",
+            "playtime_seconds" => "INT NOT NULL DEFAULT 0",
         ],
         "glacia_factions" => [
             "max_members" => "INT DEFAULT 5",
@@ -48,11 +49,16 @@ final class SchemaMigrationManager
         ],
         "glacia_combat_loggers" => [
             "dead_on_login" => "INT DEFAULT 0",
+            "offhand" => "TEXT DEFAULT ''",
         ],
         "glacia_ranks" => [
             "parent_rank" => "VARCHAR(32) DEFAULT NULL",
             "chat_format" => "TEXT NOT NULL DEFAULT ''",
             "nametag_format" => "TEXT NOT NULL DEFAULT ''",
+        ],
+        "glacia_jackpot" => [
+            "draw_at" => "INT NOT NULL DEFAULT 0",
+            "tickets_json" => "TEXT NOT NULL DEFAULT '{}'",
         ],
     ];
 

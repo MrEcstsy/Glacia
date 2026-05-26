@@ -1,0 +1,135 @@
+---
+# Example flexible enchant schema for future migration.
+# This file is only a reference example and is not loaded by the server.
+# For a smaller rollout, see `ce_values.test_bundle.example.yml`.
+# New-style `proc:` enchants are tuning-owned by default. Legacy proc caps/gates/bonuses
+# stay off unless you explicitly enable them under `proc.legacy`.
+# Tuning note:
+# - Some enchant fields are read as whole numbers with valueInt(), so decimals get rounded.
+# - Safe decimal fields are usually real damage/heal/multipliers/fractions/percent values.
+# - Int-only fields are usually amplifier, duration-ticks, cooldown-seconds, stack counts,
+#   radius blocks, effect duration seconds, and similar "count-like" values.
+# - If you're unsure, assume these names are int-only:
+#   amplifier, duration-ticks, cooldown-seconds, cooldown-ticks, count, stacks,
+#   max-stacks, radius, range, slot, hits, attack-cooldown-ticks.
+# - If you're unsure, assume these names are decimal-safe:
+#   damage, heal, multiplier, fraction, percent, chance, velocity, speed, reach.
+
+settings:
+  version: 4
+  debug:
+    enabled: true
+    console: true
+    owner: false
+    owner-targets-only: false
+    staff-permission: glacia.admin
+    targets: [] # usernames ig
+
+enchants:
+  vampire:
+    enabled: true
+    max-level: 3
+    trigger: attack
+    cooldown-ticks: 60
+    chance:
+      base: 4
+      per-level: 3
+      max: 100
+    heal:
+      base: 0.25
+      per-level: 0.25
+      max: 1.5
+
+  stormlash:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    cooldown-seconds:
+      base: 4
+      max: 4
+    chance:
+      formula: min(base + ((level - 1) * per_level), max)
+      base: 1
+      per-level: 0.5
+      max: 3
+    damage:
+      base: 2
+      per-level: 0
+      max: 2
+
+  lifesteal:
+    enabled: true
+    max-level: 5
+    trigger: attack
+    cooldown-seconds: 0
+    chance:
+      base: 1
+      per-level: 0.25
+      max: 2
+    heal:
+      base: 2
+      per-level: 1.5
+      max: 8
+    damage:
+      base: 1
+      per-level: 0.5
+      max: 3
+
+  angelic:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    proc:
+      chance:
+        base: 10
+        per-level: 10
+        max: 95
+      cooldown-seconds: 8
+    values:
+      heal-per-pulse:
+        base: 0.5
+        per-level: 0.25
+        max: 1.5
+      duration-seconds:
+        base: 2
+        max: 2
+      pulse-interval-ticks:
+        base: 20
+        max: 20
+        # int-only example: 20.5 would get rounded
+
+  armored:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    values:
+      damage-reduction-fraction:
+        base: 0.0075
+        per-level: 0.0075
+        max: 0.0375
+        # decimal-safe example
+
+  redeemer:
+    enabled: true
+    max-level: 5
+    trigger: damaged
+    proc:
+      chance:
+        base: 9
+        per-level: 4
+        max: 25
+      cooldown-seconds:
+        base: 9
+        max: 9
+        # int-only example
+    values:
+      buff-duration-seconds:
+        base: 1
+        per-level: 1
+        max: 5
+        # int-only example: 1.5 becomes 2
+      strength-amplifier:
+        base: 0
+        per-level: 1
+        max: 4
+        # int-only example: 0.5 becomes 1

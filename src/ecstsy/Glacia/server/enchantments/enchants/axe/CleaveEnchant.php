@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 declare(strict_types=1);
 
@@ -8,6 +8,8 @@ use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantProcManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\player\Player;
 
@@ -15,59 +17,69 @@ final class CleaveEnchant implements EntityDamageByEntityEnchantmentHandler {
 
     public static function handle(EntityDamageByEntityEvent $event, CustomEnchantment $enchant, int $level): void
     {
-        if ($event->isCancelled()) return;
+        if ($event->isCancelled()) {
+            return;
+        }
 
         $damager = $event->getDamager();
         $victim = $event->getEntity();
-
-        if (!$damager instanceof Player) return;
-        if (!$victim instanceof Player) return;
+        if (!$damager instanceof Player || !$victim instanceof Player) {
+            return;
+        }
 
         $session = PlayerManager::getInstance()->getSession($damager);
-
         $item = $damager->getInventory()->getItemInHand();
-        if (!CustomEnchantmentManager::hasEnchantment($item, "cleave")) return;
+        if (!CustomEnchantmentManager::hasEnchantment($item, "cleave")) {
+            return;
+        }
 
-        $data = [
-            1 => ["chance" => 5, "cd" => 8, "radius" => 1],
-            2 => ["chance" => 7, "cd" => 8, "radius" => 2],
-            3 => ["chance" => 9, "cd" => 9, "radius" => 3],
-            4 => ["chance" => 12, "cd" => 10, "radius" => 4],
-        ];
+        $cooldownSeconds = EnchantTuningManager::cooldownSeconds("cleave", $level, 8);
+        $result = EnchantProcManager::attempt(
+            $damager,
+            "cleave",
+            $level,
+            EnchantTuningManager::chance("cleave", $level, 5.0),
+            $cooldownSeconds,
+            static fn() => max(0, (int) ($session?->getCooldown("cleave") ?? 0))
+        );
+        if (!$result->success) {
+            return;
+        }
 
-        $cfg = $data[$level] ?? $data[1];
+        $radius = max(1.0, EnchantTuningManager::value("cleave", "aoe-radius-blocks", $level, 1.0));
+        $extraDamageMin = EnchantTuningManager::valueInt("cleave", "extra-damage-min", $level, 1);
+        $extraDamageMax = max($extraDamageMin, EnchantTuningManager::valueInt("cleave", "extra-damage-max", $level, 3));
+        $extraDamage = mt_rand($extraDamageMin, $extraDamageMax);
+        $baseDamage = $event->getFinalDamage();
+        $affected = 0;
 
-        if (mt_rand(1, 100) > $cfg["chance"]) return;
-        if ($session->isOnCooldown("cleave")) return;
-
-        $session->addCooldown("cleave", $cfg["cd"]);
-
-        $radius = $cfg["radius"];
-
-        $world = $damager->getWorld();
-        $entities = $world->getNearbyEntities(
+        $entities = $damager->getWorld()->getNearbyEntities(
             $damager->getBoundingBox()->expandedCopy($radius, $radius, $radius),
             $damager
         );
-
-        $extraDamage = mt_rand(1, 3); 
-        $baseDamage = $event->getFinalDamage();
-
         foreach ($entities as $entity) {
-            if (!$entity instanceof Player) continue;
-            if ($entity === $victim) continue;
-            if ($entity === $damager) continue;
+            if (!$entity instanceof Player || $entity === $victim || $entity === $damager) {
+                continue;
+            }
 
             $damage = $baseDamage + $extraDamage;
-
             $aoe = new EntityDamageByEntityEvent(
                 $damager,
                 $entity,
                 EntityDamageByEntityEvent::CAUSE_ENTITY_ATTACK,
                 $damage
             );
-
             $entity->attack($aoe);
+            $affected++;
         }
+
+        EnchantProcManager::applyCooldownIfNeeded($result, static function (int $seconds) use ($session): void {
+            $session?->addCooldown("cleave", $seconds);
+        });
+        EnchantProcManager::debugAppliedValues($damager, $result, [
+            "aoe_radius" => $radius,
+            "extra_damage" => $extraDamage,
+            "affected_targets" => $affected,
+        ]);
     }
 }

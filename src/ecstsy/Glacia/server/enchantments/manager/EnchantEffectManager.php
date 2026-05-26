@@ -6,6 +6,7 @@ namespace ecstsy\Glacia\server\enchantments\manager;
 
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
+use ecstsy\Glacia\server\enchantments\essence\EnchantEssenceManager;
 use ecstsy\Glacia\server\items\runes\RuneManager;
 use pocketmine\entity\effect\Effect;
 use pocketmine\entity\effect\EffectInstance;
@@ -24,6 +25,9 @@ final class EnchantEffectManager {
 
     /** @var array<string, array<string, true>> */
     private static array $suppressedArmorDebuffs = [];
+
+    /** @var array<string, array<string, array<string, true>>> */
+    private static array $externalSuppressedArmorDebuffs = [];
 
     /** @var array<string, true> */
     private static array $refreshingArmorEffects = [];
@@ -92,6 +96,62 @@ final class EnchantEffectManager {
     }
 
     /**
+     * @param list<string> $effectIds
+     */
+    public static function setExternalArmorDebuffSuppression(Player $player, string $source, array $effectIds): void
+    {
+        $source = strtolower(trim($source));
+        if ($source === "") {
+            return;
+        }
+
+        $normalizedEffects = [];
+        foreach ($effectIds as $effectId) {
+            $normalized = self::normalizeEffectId($effectId);
+            if ($normalized !== null) {
+                $normalizedEffects[$normalized] = true;
+            }
+        }
+
+        $key = $player->getUniqueId()->toString();
+        $current = self::$externalSuppressedArmorDebuffs[$key][$source] ?? [];
+        if ($current === $normalizedEffects) {
+            return;
+        }
+
+        if ($normalizedEffects === []) {
+            unset(self::$externalSuppressedArmorDebuffs[$key][$source]);
+            if ((self::$externalSuppressedArmorDebuffs[$key] ?? []) === []) {
+                unset(self::$externalSuppressedArmorDebuffs[$key]);
+            }
+        } else {
+            self::$externalSuppressedArmorDebuffs[$key][$source] = $normalizedEffects;
+        }
+
+        self::scheduleArmorRefresh($player);
+    }
+
+    public static function clearExternalArmorDebuffSuppression(Player $player, string $source): void
+    {
+        $source = strtolower(trim($source));
+        if ($source === "") {
+            return;
+        }
+
+        $key = $player->getUniqueId()->toString();
+        if (!isset(self::$externalSuppressedArmorDebuffs[$key][$source])) {
+            return;
+        }
+
+        unset(self::$externalSuppressedArmorDebuffs[$key][$source]);
+        if (self::$externalSuppressedArmorDebuffs[$key] === []) {
+            unset(self::$externalSuppressedArmorDebuffs[$key]);
+        }
+
+        self::scheduleArmorRefresh($player);
+    }
+
+    /**
      * @return list<string>
      */
     public static function getActiveArmorDebuffIds(Player $player): array
@@ -154,7 +214,9 @@ final class EnchantEffectManager {
                         if ($effect !== null) {
                             $current = $player->getEffects()->get($effect);
                             if ($current !== null && $current->getAmplifier() < $maxLevel) {
-                                $player->getEffects()->remove($effect);
+                                if (!self::shouldPreserveManagedEffect($player, $effect)) {
+                                    $player->getEffects()->remove($effect);
+                                }
                             }
                         }
                     }
@@ -193,7 +255,9 @@ final class EnchantEffectManager {
 
                     if ($effect !== null && ($current = $player->getEffects()->get($effect))) {
                         if ($current->getAmplifier() < $maxLevel) {
-                            $player->getEffects()->remove($effect);
+                            if (!self::shouldPreserveManagedEffect($player, $effect)) {
+                                $player->getEffects()->remove($effect);
+                            }
                         }
                     }
                 }
@@ -247,15 +311,18 @@ final class EnchantEffectManager {
 
                     $current = $player->getEffects()->get($effect);
                     if ($activeLevel <= 0) {
-                        if ($current !== null && self::isManagedArmorEffect($current)) {
+                        if ($current !== null && self::isManagedArmorEffect($current) && !self::shouldPreserveManagedEffect($player, $effect)) {
                             $player->getEffects()->remove($effect);
                         }
                         continue;
                     }
 
                     $amplifier = $amplifierResolver($activeLevel);
+                    if ($enchant === "bounce") {
+                        $amplifier = self::applyBounceEssenceJumpAmplifier($player, $amplifier);
+                    }
                     if ($effect->isBad() && self::isArmorDebuffSuppressed($player, $effectId)) {
-                        if ($current !== null && self::isManagedArmorEffect($current)) {
+                        if ($current !== null && self::isManagedArmorEffect($current) && !self::shouldPreserveManagedEffect($player, $effect)) {
                             $player->getEffects()->remove($effect);
                         }
                         continue;
@@ -296,6 +363,32 @@ final class EnchantEffectManager {
         return isset(self::$refreshingArmorEffects[$player->getUniqueId()->toString()]);
     }
 
+    private static function applyBounceEssenceJumpAmplifier(Player $player, int $baseAmplifier): int
+    {
+        $best = $baseAmplifier;
+        foreach ($player->getArmorInventory()->getContents() as $piece) {
+            if ($piece->isNull()) {
+                continue;
+            }
+            if (!CustomEnchantmentManager::hasEnchantment($piece, "bounce")) {
+                continue;
+            }
+            $essenceAmp = (int) round(EnchantEssenceManager::resolveGearEssenceFloat(
+                $piece,
+                "bounce",
+                "jump-boost-amplifier-with-essence",
+                0.0
+            ));
+            if ($essenceAmp <= 0) {
+                continue;
+            }
+            $best = max($best, $essenceAmp);
+        }
+
+        // Jump Boost IV = amplifier 3; cap so Bounce + essence never reaches V.
+        return max(0, min(3, min(10, $best)));
+    }
+
     private static function isManagedArmorEffect(EffectInstance $effect): bool
     {
         return $effect->getDuration() > self::MANAGED_EFFECT_DURATION_THRESHOLD;
@@ -308,7 +401,18 @@ final class EnchantEffectManager {
             return false;
         }
 
-        return isset(self::$suppressedArmorDebuffs[$player->getUniqueId()->toString()][$normalized]);
+        $key = $player->getUniqueId()->toString();
+        if (isset(self::$suppressedArmorDebuffs[$key][$normalized])) {
+            return true;
+        }
+
+        foreach (self::$externalSuppressedArmorDebuffs[$key] ?? [] as $effects) {
+            if (isset($effects[$normalized])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static function normalizeEffectId(string $effectId): ?string
@@ -449,14 +553,14 @@ final class EnchantEffectManager {
 
                 $current = $player->getEffects()->get($effect);
                 if ($activeLevel <= 0) {
-                    if ($current !== null && self::isManagedArmorEffect($current)) {
+                    if ($current !== null && self::isManagedArmorEffect($current) && !self::shouldPreserveManagedEffect($player, $effect)) {
                         return true;
                     }
                     continue;
                 }
 
                 if ($effect->isBad() && self::isArmorDebuffSuppressed($player, $effectId)) {
-                    if ($current !== null && self::isManagedArmorEffect($current)) {
+                    if ($current !== null && self::isManagedArmorEffect($current) && !self::shouldPreserveManagedEffect($player, $effect)) {
                         return true;
                     }
                     continue;
@@ -500,6 +604,17 @@ final class EnchantEffectManager {
         };
     }
 
+    private static function shouldPreserveManagedEffect(Player $player, Effect $effect): bool
+    {
+        return $effect === VanillaEffects::NIGHT_VISION() && self::hasPersistentNightVisionEnabled($player);
+    }
+
+    private static function hasPersistentNightVisionEnabled(Player $player): bool
+    {
+        $session = Loader::getPlayerManager()->getSession($player);
+        return $session !== null && (bool) $session->getSetting("night_vision");
+    }
+
     // NEEDED?
     public static function onArmorContentsChange(ArmorInventory $inventory, array $oldContents): void {
         foreach ($oldContents as $slot => $oldItem) {
@@ -536,6 +651,7 @@ final class EnchantEffectManager {
         $key = $player->getUniqueId()->toString();
         unset(
             self::$suppressedArmorDebuffs[$key],
+            self::$externalSuppressedArmorDebuffs[$key],
             self::$refreshingArmorEffects[$key],
             self::$pendingArmorRefreshes[$key],
             self::$armorEffectSignatures[$key]

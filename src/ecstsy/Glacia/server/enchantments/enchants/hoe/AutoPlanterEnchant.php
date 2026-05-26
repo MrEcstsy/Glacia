@@ -7,6 +7,8 @@ namespace ecstsy\Glacia\server\enchantments\enchants\hoe;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\BlockBreakEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantDebugManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use ecstsy\Glacia\tasks\AutoPlanterTask;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use pocketmine\block\Beetroot;
@@ -30,6 +32,9 @@ final class AutoPlanterEnchant implements BlockBreakEnchantmentHandler {
         if ($event->isCancelled() || $level < 1) {
             return;
         }
+        if (!EnchantTuningManager::getBool("autoplanter", "enabled", true)) {
+            return;
+        }
 
         $player = $event->getPlayer();
         $block  = $event->getBlock();
@@ -50,6 +55,11 @@ final class AutoPlanterEnchant implements BlockBreakEnchantmentHandler {
 
         if (self::$task !== null) {
             self::$task->add($block, $player, $seed);
+            EnchantDebugManager::logPassiveValues($player, "autoplanter", $level, [
+                "crop" => $block->getName(),
+                "seed" => $seed->getName(),
+                "queued" => true,
+            ]);
         }
     }
 

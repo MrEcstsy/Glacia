@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\enchantments\enchants\sword;
 
 use ecstsy\Glacia\entity\gkits\ForsakenChampion;
+use ecstsy\Glacia\entity\MummifiedRemnant;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantProcManager;
 use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
-use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
+use ecstsy\Glacia\server\enchantments\manager\MirrorbrandProcManager;
 use pocketmine\entity\Living;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\player\Player;
@@ -29,37 +31,56 @@ final class ExecuteEnchant implements EntityDamageByEntityEnchantmentHandler {
         if (!$victim instanceof Living) return;
 
         $session = $damager instanceof Player ? PlayerManager::getInstance()->getSession($damager) : null;
-        $item = $damager instanceof Player ? $damager->getInventory()->getItemInHand() : ($damager instanceof ForsakenChampion ? $damager->getCombatItem() : null);
+        $item = $damager instanceof Player ? $damager->getInventory()->getItemInHand() : (($damager instanceof ForsakenChampion || $damager instanceof MummifiedRemnant) ? $damager->getCombatItem() : null);
         if ($item === null) return;
         if (!CustomEnchantmentManager::hasEnchantment($item, "execute")) return;
 
-        $chance = match($level) {
-            1 => 4,
-            2 => 5,
-            3 => 6,
-            4 => 7,
-            5 => 8,
-            default => 4
-        };
-        $chance = EnchantTuningManager::getLevelInt("execute", "chance-by-level", $level, $chance);
+        $chance = EnchantTuningManager::chance("execute", $level, 4.0);
 
         $maxHealth = $victim->getMaxHealth();
-        if ($maxHealth <= 0 || $victim->getHealth() / $maxHealth > 0.25) return;
+        if ($maxHealth <= 0) return;
 
-        if (!ProcLuckManager::roll($damager, "execute", $chance, 2, 10)) return;
-        if ($session !== null && $session->isOnCooldown("execute")) return;
+        $threshold = max(0.0, EnchantTuningManager::value("execute", "threshold-health", $level, 6.0));
+        $strict = true;
+        $h = $victim->getHealth();
+        if ($strict ? ($h >= $threshold) : ($h > $threshold)) {
+            return;
+        }
 
+        $cooldownSeconds = EnchantTuningManager::cooldownSeconds("execute", $level, 0);
+        $result = EnchantProcManager::attempt(
+            $damager,
+            "execute",
+            $level,
+            $chance,
+            $cooldownSeconds,
+            static fn() => $session?->getCooldown("execute") ?? 0
+        );
+        if (!$result->success) return;
+
+        $rawDamage = EnchantTuningManager::value("execute", "damage", $level, 1.5);
+        $minFloor = max(0.0, EnchantTuningManager::value("execute", "damage-min-floor", $level, 1.5));
+        $capFloor = max(0.0, EnchantTuningManager::value("execute", "damage-cap-min-floor", $level, 1.5));
+        $capFrac = max(0.0, EnchantTuningManager::value("execute", "damage-cap-max-health-fraction", $level, 0.08));
         $damage = min(
-            max(1.5, 0.5 + ($level * 0.4)),
-            max(1.5, $maxHealth * 0.08)
+            max($minFloor, $rawDamage),
+            max($capFloor, $maxHealth * $capFrac)
         );
 
         $newHealth = max(0, $victim->getHealth() - $damage);
         $victim->setHealth($newHealth);
-
-        if ($session !== null) {
-            $session->addCooldown("execute", max(0, EnchantTuningManager::getInt("execute", "cooldown", 1)));
+        if ($damager instanceof Player && $victim instanceof Player) {
+            MirrorbrandProcManager::record($damager, "execute", static function (Player $reflector, Player $attacker) use ($damage): bool {
+                $attacker->setHealth(max(0.0, $attacker->getHealth() - $damage));
+                return true;
+            });
         }
+        EnchantProcManager::applyCooldownIfNeeded($result, static fn(int $seconds) => $session?->addCooldown("execute", $seconds));
+        EnchantProcManager::debugAppliedValues($damager, $result, [
+            "threshold_health" => $threshold,
+            "damage" => $damage,
+            "victim_health_after" => $newHealth,
+        ]);
 
         if ($damager instanceof Player) {
             $damager->sendMessage(C::colorize("&r&b&l** &r&bExecute &l** &r&7You struck a finishing blow."));

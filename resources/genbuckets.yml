@@ -1,11 +1,25 @@
 enabled: true
 
+# Paid lava-wall lines (north/east/… gen buckets). Lava placed this way still follows vanilla flow for regens.
+# Set enabled: false to turn off lava gen items everywhere (sand/cobble/obsidian unchanged).
+lava-wall-gen:
+  enabled: true
+
 # Safety cap so buckets do not try to generate forever in open space.
 max-length: 256
 blocks-per-step: 1
 step-interval-ticks: 1
-use-cooldown-seconds: 0
+# Prefer use-cooldown-ms; if omitted, use-cooldown-seconds is read and multiplied by 1000 for backward compatibility.
+use-cooldown-ms: 500
 require-sneak-to-start: true
+# Allow starting without sneak when flight is allowed/in use (easier mid-air placing).
+relax-sneak-for-flight-capable: true
+# Parallel wall / tower chains per player (starting a new gen no longer cancels the previous).
+max-concurrent-chains-per-player: 24
+# Placement audio: short block place at the build site, chunked like vanilla (not full-world dig.stone).
+placement-step-sounds-enabled: true
+# Play that sound every N gen task runs (reduces “infinite drill” when interval is 1 tick).
+step-sound-interval-ticks: 4
 allow-water-pass: true
 stop-on-generated-break: true
 
@@ -13,6 +27,7 @@ costs:
   sand: 1250
   cobble: 950
   obsidian: 3200
+  lava: 3500
 
 ocean-buster:
   enabled: true

@@ -13,7 +13,8 @@ final class MaliceWeaponRegistry
     private const NEGATIVE = [
         "disarmor", "slowness", "blind", "iceaspect", "confusion", "curse", "insomnia", "fear", "holy", "pummel",
         "vampire", "hexlock", "silence", "brotherhood", "execute", "deathbringer", "diminish", "thunderfamine",
-        "demonicfinisher", "siegebreaker", "muravieva", "jeopardy", "trapped", "vampiricdevour", "plague", "furylash",
+        "demonicfinisher", "siegebreaker", "blackhand", "jeopardy", "vampiricdevour", "plague", "wrathbreak",
+        "stormlash", "divinechains", "dreadanchor", "anatomy",
     ];
 
     public static function isNegativeWeaponEnchant(string $name): bool

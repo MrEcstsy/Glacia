@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\server\enchantments\enchants\sword;
 
+use ecstsy\Glacia\entity\MummifiedRemnant;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
-use ecstsy\MartianUtilities\utils\GeneralUtils;
+use ecstsy\Glacia\server\enchantments\manager\EnchantProcManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\entity\Living;
@@ -22,30 +24,37 @@ final class FeatherweightEnchant implements EntityDamageByEntityEnchantmentHandl
         if ($event->isCancelled()) return;
 
         $damager = $event->getDamager();
-        if (!$damager instanceof Player) return;
+        if (!$damager instanceof Living) return;
 
-        $session = PlayerManager::getInstance()->getSession($damager);
+        $session = $damager instanceof Player ? PlayerManager::getInstance()->getSession($damager) : null;
 
-        $item = $damager->getInventory()->getItemInHand();
+        $item = $damager instanceof Player ? $damager->getInventory()->getItemInHand() : ($damager instanceof MummifiedRemnant ? $damager->getCombatItem() : null);
+        if ($item === null) return;
         if (!CustomEnchantmentManager::hasEnchantment($item, "featherweight")) return;
 
-        $data = [
-            1 => ["chance" => 35, "cd" => 2, "duration" => 60,  "effectLevel" => 0],
-            2 => ["chance" => 55, "cd" => 2, "duration" => 80,  "effectLevel" => 1],
-            3 => ["chance" => 75, "cd" => 2, "duration" => 100, "effectLevel" => 2],
-        ];
-
-        $cfg = $data[$level] ?? $data[1];
-
-        if (mt_rand(1, 100) > $cfg["chance"]) return;
-        if ($session->isOnCooldown("featherweight")) return;
-
-        $session->addCooldown("featherweight", $cfg["cd"]);
+        $chance = EnchantTuningManager::chance("featherweight", $level, 35.0);
+        $cooldownSeconds = EnchantTuningManager::cooldownSeconds("featherweight", $level, 2);
+        $durationTicks = max(1, EnchantTuningManager::valueInt("featherweight", "duration-ticks", $level, 60));
+        $effectLevel = max(0, EnchantTuningManager::valueInt("featherweight", "amplifier", $level, 0));
+        $result = EnchantProcManager::attempt(
+            $damager,
+            "featherweight",
+            $level,
+            $chance,
+            $cooldownSeconds,
+            static fn() => $session?->getCooldown("featherweight") ?? 0
+        );
+        if (!$result->success) return;
 
         $damager->getEffects()->add(new EffectInstance(
             VanillaEffects::HASTE(),
-            $cfg["duration"],
-            $cfg["effectLevel"]
+            $durationTicks,
+            $effectLevel
         ));
+        EnchantProcManager::applyCooldownIfNeeded($result, static fn(int $seconds) => $session?->addCooldown("featherweight", $seconds));
+        EnchantProcManager::debugAppliedValues($damager, $result, [
+            "duration_ticks" => $durationTicks,
+            "amplifier" => $effectLevel,
+        ]);
     }
 }

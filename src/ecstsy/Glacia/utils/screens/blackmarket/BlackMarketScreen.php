@@ -8,6 +8,7 @@ use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\tasks\BlackMarketCenterUpdateTask;
 use ecstsy\Glacia\utils\inventory\CustomSizedInvMenu;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
+use ecstsy\MartianUtilities\utils\PlayerUtils;
 use ecstsy\MartianUtilities\utils\screens\BaseScreen;
 use muqsit\invmenu\InvMenu;
 use muqsit\invmenu\transaction\DeterministicInvMenuTransaction;
@@ -72,12 +73,14 @@ final class BlackMarketScreen extends BaseScreen {
 
             switch ($slot) {
                 case 0:
+                    PlayerUtils::playSound($player, "random.click");
                     $player->removeCurrentWindow();
                     $transaction->then(function() use ($player): void {
                         BlackMarketHistoryScreen::display($player);
                     });
                     break;
                 case 8:
+                    PlayerUtils::playSound($player, "random.click");
                     $player->removeCurrentWindow();
                     $transaction->then(function() use ($player): void {
                         BlackMarketLootTableScreen::display($player);
@@ -86,9 +89,11 @@ final class BlackMarketScreen extends BaseScreen {
                 CASE self::CENTER_SLOT:
                     if(!Loader::getBlackMarketAuctionInstance()->isEnabled() || !Loader::getBlackMarketAuctionInstance()->hasStarted()){
                         $player->sendMessage(C::colorize("&r&cThere is no active auction right now."));
+                        PlayerUtils::playSound($player, "note.bass");
                         return;
                     }
-    
+
+                    PlayerUtils::playSound($player, "random.orb");
                     $player->removeCurrentWindow();
                     $transaction->then(function() use ($player): void {
                         BlackMarketConfirmScreen::display($player);
@@ -194,6 +199,7 @@ final class BlackMarketScreen extends BaseScreen {
     {
         $screen = new self($player);
         $screen->getMenu()->send($player);
+        PlayerUtils::playSound($player, "random.click", 1.0, 1.05);
 
         $screen->startUpdateTask();
     }

@@ -132,21 +132,32 @@ final class LootboxAnimationScreen extends BaseScreen {
         }
 
         $session = Loader::getPlayerManager()->getSession($this->viewer);
-        foreach ($this->viewer->getInventory()->addItem(...array_map(static fn(Item $item): Item => clone $item, $this->finalRewards)) as $leftover) {
-            if ($session !== null) {
-                $session->addItemToCollection($leftover);
-            } else {
-                $this->viewer->getWorld()->dropItem($this->viewer->getPosition(), $leftover);
+        $recipient = $session?->getPlayer();
+        $rewardCopies = array_map(static fn(Item $item): Item => clone $item, $this->finalRewards);
+
+        if (!$recipient instanceof Player || !$recipient->isConnected()) {
+            foreach ($rewardCopies as $reward) {
+                $session?->addItemToCollection($reward);
             }
+            return;
+        }
+
+        $leftovers = $recipient->getInventory()->addItem(...$rewardCopies);
+        foreach ($leftovers as $leftover) {
+            $session?->addItemToCollection($leftover);
+        }
+
+        if ($leftovers !== [] && $session === null) {
+            $recipient->sendMessage(C::colorize("&r&eSome rewards could not be delivered because your collection is unavailable."));
         }
 
         RewardAnnouncer::announce(
-            $this->viewer,
+            $recipient,
             "Lootbox",
             (string) ($this->definition["name"] ?? $this->definition["title"] ?? "Mystery"),
             $this->finalRewards
         );
-        $this->playThrottledSound("random.levelup", 1.1);
+        PlayerUtils::playSound($recipient, "random.levelup");
     }
 
     private function renderFrame(int $remainingSeconds): void

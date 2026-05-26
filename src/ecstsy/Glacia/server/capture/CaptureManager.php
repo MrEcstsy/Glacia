@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\server\capture;
 
+use ecstsy\Glacia\entity\FloatingTextEntity;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use ecstsy\Glacia\server\factions\Faction;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
+use pocketmine\entity\Location;
 use pocketmine\player\Player;
 use pocketmine\Server;
 use pocketmine\utils\Config;
@@ -17,6 +19,7 @@ use pocketmine\world\Position;
 use pocketmine\world\World;
 
 final class CaptureManager {
+    private const OUTPOST_DECAY_PER_TICK = 2;
 
     private ?Config $config = null;
     /** @var array<string, array<string, mixed>> */
@@ -33,17 +36,29 @@ final class CaptureManager {
     private array $outpostCapturingFaction = [];
     /** @var array<string, int> */
     private array $outpostCaptureProgress = [];
+    /** @var array<string, string|null> */
+    private array $outpostActiveFaction = [];
+    /** @var array<string, bool> */
+    private array $outpostContested = [];
     /** @var array<string, int> */
     private array $outpostAnnounceCooldown = [];
+    /** @var array<string, FloatingTextEntity> */
+    private array $outpostFloatingTexts = [];
 
     public function load() : void
     {
         $this->config = GeneralUtils::getConfiguration(Loader::getInstance(), "capturepoints.yml");
+        $this->clearOutpostFloatingTexts();
         $this->outposts = [];
         $this->koths = [];
         $this->activeKothId = null;
         $this->activeKothFactionId = null;
         $this->activeKothProgress = 0.0;
+        $this->outpostCapturingFaction = [];
+        $this->outpostCaptureProgress = [];
+        $this->outpostActiveFaction = [];
+        $this->outpostContested = [];
+        $this->outpostAnnounceCooldown = [];
 
         foreach ((array) ($this->config?->get("outposts", []) ?? []) as $id => $data) {
             if (is_array($data)) {
@@ -56,6 +71,8 @@ final class CaptureManager {
                 $this->koths[strtolower((string) $id)] = $data;
             }
         }
+
+        $this->refreshOutpostFloatingTexts();
     }
 
     public function tick() : void
@@ -94,14 +111,16 @@ final class CaptureManager {
 
         $this->outposts[$id] = [
             "display" => ucwords(str_replace("_", " ", $id)),
-            "type" => strtolower(trim($type)) === "" ? "economy" : strtolower(trim($type)),
+            "type" => $this->normalizeOutpostType($type),
             "world" => "",
             "x" => 0,
             "y" => 80,
             "z" => 0,
             "radius" => 5,
-            "capture-time" => 90,
+            "capture-time" => 45,
             "owner-faction" => "",
+            "benefit-multiplier" => 1.25,
+            "hologram-offset-y" => 3.0,
         ];
         $this->writeOutposts();
         return true;
@@ -114,7 +133,15 @@ final class CaptureManager {
             return false;
         }
 
-        unset($this->outposts[$id], $this->outpostCapturingFaction[$id], $this->outpostCaptureProgress[$id], $this->outpostAnnounceCooldown[$id]);
+        unset(
+            $this->outposts[$id],
+            $this->outpostCapturingFaction[$id],
+            $this->outpostCaptureProgress[$id],
+            $this->outpostActiveFaction[$id],
+            $this->outpostContested[$id],
+            $this->outpostAnnounceCooldown[$id]
+        );
+        $this->removeOutpostFloatingText($id);
         $this->writeOutposts();
         return true;
     }
@@ -131,6 +158,7 @@ final class CaptureManager {
         $this->outposts[$id]["y"] = $position->getFloorY();
         $this->outposts[$id]["z"] = $position->getFloorZ();
         $this->writeOutposts();
+        $this->refreshOutpostFloatingText($id);
         return true;
     }
 
@@ -143,6 +171,7 @@ final class CaptureManager {
 
         $this->outposts[$id]["radius"] = max(1, $radius);
         $this->writeOutposts();
+        $this->refreshOutpostFloatingText($id);
         return true;
     }
 
@@ -155,7 +184,44 @@ final class CaptureManager {
 
         $this->outposts[$id]["capture-time"] = max(10, $seconds);
         $this->writeOutposts();
+        $this->refreshOutpostFloatingText($id);
         return true;
+    }
+
+    public function getOutpost(string $id) : ?array
+    {
+        return $this->outposts[strtolower(trim($id))] ?? null;
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getOutpostTypes() : array
+    {
+        return ["economy", "experience"];
+    }
+
+    public function getOutpostTypeMultiplierForPlayer(Player $player, string $type, float $default = 1.0): float
+    {
+        $factionId = Loader::getPlayerManager()->getSession($player)?->getFactionId();
+        if ($factionId === null) {
+            return $default;
+        }
+
+        $best = $default;
+        $type = $this->normalizeOutpostType($type);
+        foreach ($this->outposts as $outpost) {
+            if (
+                $this->normalizeOutpostType((string) ($outpost["type"] ?? "")) !== $type ||
+                (string) ($outpost["owner-faction"] ?? "") !== $factionId
+            ) {
+                continue;
+            }
+
+            $best = max($best, max(1.0, (float) ($outpost["benefit-multiplier"] ?? 1.25)));
+        }
+
+        return $best;
     }
 
     public function createKoth(string $id) : bool
@@ -284,8 +350,22 @@ final class CaptureManager {
             $radius = max(1, (int) ($outpost["radius"] ?? 5));
             $factions = $this->getFactionsInRadius($center, $radius);
             $ownerFactionId = (string) ($outpost["owner-faction"] ?? "");
+            $captureTime = max(10, (int) ($outpost["capture-time"] ?? 90));
 
-            if (count($factions) !== 1) {
+            if (count($factions) > 1) {
+                $this->outpostContested[$id] = true;
+                $this->outpostActiveFaction[$id] = null;
+                foreach ($this->getPlayersInRadius($center, $radius) as $player) {
+                    $player->sendActionBarMessage(C::colorize("&r&6Outpost &8| &r&cContested"));
+                }
+                $this->refreshOutpostFloatingText($id);
+                continue;
+            }
+            $this->outpostContested[$id] = false;
+
+            if ($factions === []) {
+                $this->outpostActiveFaction[$id] = null;
+                $this->decayOutpostProgress($id, $outpost, $captureTime);
                 continue;
             }
 
@@ -295,39 +375,83 @@ final class CaptureManager {
             }
 
             $factionId = $faction->getFactionId();
-            if ($ownerFactionId !== "" && $ownerFactionId === $factionId) {
-                $this->outpostCapturingFaction[$id] = null;
-                $this->outpostCaptureProgress[$id] = 0;
-                continue;
-            }
+            $this->outpostActiveFaction[$id] = $factionId;
 
-            if (($this->outpostCapturingFaction[$id] ?? null) !== $factionId) {
+            [$controlFactionId, $progress] = $this->getOutpostControlState($id, $outpost, $captureTime);
+
+            if ($controlFactionId === null) {
                 $this->outpostCapturingFaction[$id] = $factionId;
                 $this->outpostCaptureProgress[$id] = 0;
+                $controlFactionId = $factionId;
+                $progress = 0;
                 $this->announceOutpostProgress($id, $outpost, $faction, true);
             }
 
-            $this->outpostCaptureProgress[$id] = ($this->outpostCaptureProgress[$id] ?? 0) + 1;
-            $captureTime = max(10, (int) ($outpost["capture-time"] ?? 90));
-            $progress = $this->outpostCaptureProgress[$id];
+            if ($ownerFactionId !== "" && $ownerFactionId === $factionId && $controlFactionId === $factionId && $progress >= $captureTime) {
+                $this->refreshOutpostFloatingText($id);
+                continue;
+            }
+
+            if ($controlFactionId !== $factionId) {
+                if (($this->outpostAnnounceCooldown[$id] ?? 0) <= time()) {
+                    $this->announceOutpostProgress($id, $outpost, $faction, true);
+                }
+
+                $progress = max(0, $progress - 1);
+                $this->outpostCapturingFaction[$id] = $controlFactionId;
+                $this->outpostCaptureProgress[$id] = $progress;
+                $neutralizePercent = min(100, (int) round((($captureTime - $progress) / $captureTime) * 100));
+
+                foreach ($this->getFactionPlayersInRadius($center, $radius, $factionId) as $player) {
+                    $player->sendActionBarMessage(C::colorize("&r&6Outpost &8| &r&f" . (string) $outpost["display"] . " &7- &cNeutralizing &f{$neutralizePercent}%"));
+                }
+
+                if ($progress <= 0) {
+                    if ($ownerFactionId !== "" && $ownerFactionId === $controlFactionId) {
+                        $this->outposts[$id]["owner-faction"] = "";
+                        $this->writeOutposts();
+                    }
+                    $this->outpostCapturingFaction[$id] = null;
+                    $this->outpostCaptureProgress[$id] = 0;
+                }
+                $this->refreshOutpostFloatingText($id);
+                continue;
+            }
+
+            $progress = min($captureTime, $progress + 1);
+            $this->outpostCapturingFaction[$id] = $factionId;
+            $this->outpostCaptureProgress[$id] = $progress;
             $percent = min(100, (int) round(($progress / $captureTime) * 100));
+            $action = $ownerFactionId === $factionId ? "Stabilizing" : "Capturing";
 
             foreach ($this->getFactionPlayersInRadius($center, $radius, $factionId) as $player) {
-                $player->sendActionBarMessage(C::colorize("&r&6Outpost &8| &r&f" . (string) $outpost["display"] . " &7- &f{$percent}%"));
+                $player->sendActionBarMessage(C::colorize("&r&6Outpost &8| &r&f" . (string) $outpost["display"] . " &7- &e{$action} &f{$percent}%"));
             }
 
             if ($progress < $captureTime) {
+                $this->refreshOutpostFloatingText($id);
+                continue;
+            }
+
+            if ($ownerFactionId === $factionId) {
+                $this->refreshOutpostFloatingText($id);
                 continue;
             }
 
             $this->outposts[$id]["owner-faction"] = $factionId;
             $this->writeOutposts();
-            $this->outpostCapturingFaction[$id] = null;
-            $this->outpostCaptureProgress[$id] = 0;
+            $this->outpostCapturingFaction[$id] = $factionId;
+            $this->outpostCaptureProgress[$id] = $captureTime;
+            $this->refreshOutpostFloatingText($id);
 
             Server::getInstance()->broadcastMessage(C::colorize(
                 "&r&6Outpost &8| &r&f" . $faction->getName() . " &7captured &f" . (string) $outpost["display"] . "&7."
             ));
+            foreach ($this->getFactionPlayersInRadius($center, $radius, $factionId) as $member) {
+                Loader::getQuestBoardManager()->recordProgress($member, "outposts_captured", 1, [
+                    "outpost" => strtolower((string) ($outpost["id"] ?? $id)),
+                ]);
+            }
         }
     }
 
@@ -435,6 +559,21 @@ final class CaptureManager {
     }
 
     /**
+     * @return array<int, Player>
+     */
+    private function getPlayersInRadius(Position $center, int $radius) : array
+    {
+        $players = [];
+        foreach ($center->getWorld()->getPlayers() as $player) {
+            if ($player->getPosition()->distance($center) <= $radius) {
+                $players[] = $player;
+            }
+        }
+
+        return $players;
+    }
+
+    /**
      * @return array<string, Faction>
      */
     private function getFactionsInCuboid(World $world, array $pos1, array $pos2) : array
@@ -477,8 +616,8 @@ final class CaptureManager {
         $minZ = min((int) $pos1["z"], (int) $pos2["z"]);
         $maxZ = max((int) $pos1["z"], (int) $pos2["z"]);
 
-        $cap = max(1, EnchantTuningManager::getInt("strategist", "koth-bonus-level-cap", 8));
-        $per = max(0.0, EnchantTuningManager::getFloat("strategist", "koth-capture-bonus-per-level", 0.02));
+        $cap = max(1, EnchantTuningManager::getInt("warlordstempo", "koth-bonus-level-cap", 8));
+        $per = max(0.0, EnchantTuningManager::getFloat("warlordstempo", "koth-capture-bonus-per-level", 0.02));
         $best = 0.0;
         foreach ($world->getPlayers() as $player) {
             $pos = $player->getPosition();
@@ -492,7 +631,7 @@ final class CaptureManager {
             if (Loader::getPlayerManager()->getSession($player)?->getFactionId() !== $capturingFactionId) {
                 continue;
             }
-            $lv = CustomEnchantmentManager::getLevel($player->getArmorInventory()->getBoots(), "strategist");
+            $lv = CustomEnchantmentManager::getLevel($player->getArmorInventory()->getBoots(), "warlordstempo");
             if ($lv > 0) {
                 $best = max($best, $per * min($cap, $lv));
             }
@@ -557,7 +696,12 @@ final class CaptureManager {
             return null;
         }
 
-        return Server::getInstance()->getWorldManager()->getWorldByName($name);
+        $manager = Server::getInstance()->getWorldManager();
+        $world = $manager->getWorldByName($name);
+        if (!$world instanceof World && $manager->loadWorld($name)) {
+            $world = $manager->getWorldByName($name);
+        }
+        return $world instanceof World ? $world : null;
     }
 
     private function writeOutposts() : void
@@ -568,6 +712,145 @@ final class CaptureManager {
 
         $this->config->set("outposts", $this->outposts);
         $this->config->save();
+    }
+
+    private function normalizeOutpostType(string $type) : string
+    {
+        $type = strtolower(trim($type));
+        return match ($type) {
+            "xp", "exp", "experience" => "experience",
+            default => "economy",
+        };
+    }
+
+    private function getOutpostControlState(string $id, array $outpost, int $captureTime): array
+    {
+        $controlFactionId = $this->outpostCapturingFaction[$id] ?? null;
+        $progress = (int) ($this->outpostCaptureProgress[$id] ?? 0);
+        $ownerFactionId = trim((string) ($outpost["owner-faction"] ?? ""));
+
+        if (($controlFactionId === null || $controlFactionId === "") && $ownerFactionId !== "") {
+            return [$ownerFactionId, $captureTime];
+        }
+
+        if ($controlFactionId === "") {
+            $controlFactionId = null;
+        }
+
+        return [$controlFactionId, max(0, min($captureTime, $progress))];
+    }
+
+    private function decayOutpostProgress(string $id, array $outpost, int $captureTime): void
+    {
+        [$controlFactionId, $progress] = $this->getOutpostControlState($id, $outpost, $captureTime);
+        $ownerFactionId = trim((string) ($outpost["owner-faction"] ?? ""));
+
+        if ($progress <= 0 && $controlFactionId === null) {
+            return;
+        }
+
+        if ($ownerFactionId !== "" && $controlFactionId === $ownerFactionId) {
+            $this->refreshOutpostFloatingText($id);
+            return;
+        }
+
+        $progress = max(0, $progress - self::OUTPOST_DECAY_PER_TICK);
+        $this->outpostCaptureProgress[$id] = $progress;
+        if ($progress <= 0) {
+            $this->outpostCaptureProgress[$id] = 0;
+            $this->outpostCapturingFaction[$id] = null;
+        } elseif ($controlFactionId !== null) {
+            $this->outpostCapturingFaction[$id] = $controlFactionId;
+        }
+
+        $this->refreshOutpostFloatingText($id);
+    }
+
+    private function refreshOutpostFloatingTexts(): void
+    {
+        foreach (array_keys($this->outposts) as $id) {
+            $this->refreshOutpostFloatingText($id);
+        }
+    }
+
+    private function refreshOutpostFloatingText(string $id): void
+    {
+        $this->removeOutpostFloatingText($id);
+        $outpost = $this->outposts[$id] ?? null;
+        if (!is_array($outpost)) {
+            return;
+        }
+
+        $world = $this->getWorld((string) ($outpost["world"] ?? ""));
+        if (!$world instanceof World || trim((string) ($outpost["world"] ?? "")) === "") {
+            return;
+        }
+
+        $x = (float) ($outpost["x"] ?? 0) + 0.5;
+        $y = (float) ($outpost["y"] ?? 80) + max(2.2, (float) ($outpost["hologram-offset-y"] ?? 3.0));
+        $z = (float) ($outpost["z"] ?? 0) + 0.5;
+        $entity = new FloatingTextEntity(new Location($x, $y, $z, $world, 0.0, 0.0));
+        $entity->setText($this->buildOutpostFloatingText($id, $outpost));
+        $entity->spawnToAll();
+        $this->outpostFloatingTexts[$id] = $entity;
+    }
+
+    private function removeOutpostFloatingText(string $id): void
+    {
+        $entity = $this->outpostFloatingTexts[$id] ?? null;
+        if ($entity instanceof FloatingTextEntity && !$entity->isClosed()) {
+            $entity->flagForDespawn();
+        }
+        unset($this->outpostFloatingTexts[$id]);
+    }
+
+    private function clearOutpostFloatingTexts(): void
+    {
+        foreach (array_keys($this->outpostFloatingTexts) as $id) {
+            $this->removeOutpostFloatingText($id);
+        }
+    }
+
+    private function buildOutpostFloatingText(string $id, array $outpost): string
+    {
+        $display = (string) ($outpost["display"] ?? ucfirst($id));
+        $type = ucfirst($this->normalizeOutpostType((string) ($outpost["type"] ?? "economy")));
+        $radius = max(1, (int) ($outpost["radius"] ?? 5));
+        $captureTime = max(10, (int) ($outpost["capture-time"] ?? 45));
+        $ownerFactionId = (string) ($outpost["owner-faction"] ?? "");
+        $ownerFaction = $ownerFactionId !== "" ? Loader::getFactionManager()->getFaction($ownerFactionId) : null;
+        $ownerLine = $ownerFaction instanceof Faction
+            ? "&fHeld by: &a" . $ownerFaction->getName()
+            : "&fHeld by: &cNo faction";
+
+        $activeFactionId = $this->outpostActiveFaction[$id] ?? null;
+        if (($this->outpostContested[$id] ?? false) === true) {
+            $statusLine = "&cContested";
+        } else {
+            [$controlFactionId, $progress] = $this->getOutpostControlState($id, $outpost, $captureTime);
+            if ($activeFactionId !== null && $controlFactionId !== null && $activeFactionId !== $controlFactionId) {
+                $activeFaction = Loader::getFactionManager()->getFaction($activeFactionId);
+                $activeName = $activeFaction?->getName() ?? "Unknown";
+                $percent = min(100, (int) round((($captureTime - $progress) / max(1, $captureTime)) * 100));
+                $statusLine = "&7Contesting: &e{$activeName} &7({$percent}%)";
+            } elseif ($controlFactionId !== null && $progress > 0 && ($ownerFactionId === "" || $progress < $captureTime || $controlFactionId !== $ownerFactionId)) {
+                $controlFaction = Loader::getFactionManager()->getFaction($controlFactionId);
+                $controlName = $controlFaction?->getName() ?? "Unknown";
+                $percent = min(100, (int) round(($progress / max(1, $captureTime)) * 100));
+                $label = $ownerFactionId !== "" && $controlFactionId === $ownerFactionId ? "Stabilizing" : "Capturing";
+                $statusLine = "&7{$label}: &e{$controlName} &7({$percent}%)";
+            } else {
+                $statusLine = "&7Stand inside to capture";
+            }
+        }
+
+        return implode("\n", [
+            "&r&6&lOUTPOST",
+            "&f{$display} &8({$type}&8)",
+            $ownerLine,
+            $statusLine,
+            "&7Radius: &f{$radius} &8| &7Time: &f{$captureTime}s",
+        ]);
     }
 
     private function writeKoths() : void

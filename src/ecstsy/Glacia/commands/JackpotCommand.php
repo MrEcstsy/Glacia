@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\commands;
 
 use CortexPE\Commando\BaseCommand;
+use ecstsy\Glacia\commands\sub\jackpot\JackpotAddTimeSubCommand;
 use ecstsy\Glacia\commands\sub\jackpot\JackpotBuySubCommand;
+use ecstsy\Glacia\commands\sub\jackpot\JackpotDrawSubCommand;
+use ecstsy\Glacia\commands\sub\jackpot\JackpotRemoveTimeSubCommand;
+use ecstsy\Glacia\commands\sub\jackpot\JackpotTimeSubCommand;
 use ecstsy\Glacia\Loader;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\command\CommandSender;
@@ -18,6 +22,10 @@ final class JackpotCommand extends BaseCommand {
         $this->setPermission($this->getPermission());
 
         $this->registerSubCommand(new JackpotBuySubCommand(Loader::getInstance(), "buy", "Buy jackpot tickets"));
+        $this->registerSubCommand(new JackpotTimeSubCommand(Loader::getInstance(), "time", "Set the jackpot timer"));
+        $this->registerSubCommand(new JackpotAddTimeSubCommand(Loader::getInstance(), "addtime", "Add time to the jackpot timer"));
+        $this->registerSubCommand(new JackpotRemoveTimeSubCommand(Loader::getInstance(), "removetime", "Remove time from the jackpot timer", ["subtime"]));
+        $this->registerSubCommand(new JackpotDrawSubCommand(Loader::getInstance(), "draw", "Force the jackpot to draw now"));
     }
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void

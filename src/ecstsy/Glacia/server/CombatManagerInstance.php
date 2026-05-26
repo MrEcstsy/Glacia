@@ -14,6 +14,7 @@ use ecstsy\MartianUtilities\utils\ItemUtils;
 use pocketmine\entity\Location;
 use pocketmine\item\Item;
 use pocketmine\player\Player;
+use pocketmine\scheduler\ClosureTask;
 use pocketmine\Server;
 use pocketmine\utils\TextFormat as C;
 
@@ -26,6 +27,7 @@ final class CombatManagerInstance {
      *   npc: ?CombatLoggerEntity,
      *   inventory: array,
      *   armor: array,
+     *   offhand?: ?Item,
      *   deadOnLogin: bool,
      *   opponents: array<string,string>,
      *   xp?: int,
@@ -60,6 +62,7 @@ final class CombatManagerInstance {
                     'npc' => null,
                     'inventory' => $this->deserializeItems(StorageUtils::decodeJsonString((string) $row["inventory"], "combat logger inventory for {$lower}") ?? []),
                     'armor' => $this->deserializeItems(StorageUtils::decodeJsonString((string) $row["armor"], "combat logger armor for {$lower}") ?? []),
+                    'offhand' => $this->deserializeSingleItem((string) ($row["offhand"] ?? "")),
                     'deadOnLogin' => (bool)$row["dead_on_login"],
                     'opponents' => [],
                     'xp' => (int)$row["xp"],
@@ -126,6 +129,7 @@ final class CombatManagerInstance {
                 'npc' => null,
                 'inventory' => $invContents,
                 'armor' => $armorContents,
+                'offhand' => clone $player->getOffHandInventory()->getItem(0),
                 'deadOnLogin' => false,
                 'opponents' => [],
             ];
@@ -226,6 +230,7 @@ final class CombatManagerInstance {
 
         $this->combatPlayers[$lower]['inventory'] = $player->getInventory()->getContents();
         $this->combatPlayers[$lower]['armor'] = $player->getArmorInventory()->getContents();
+        $this->combatPlayers[$lower]['offhand'] = clone $player->getOffHandInventory()->getItem(0);
         $this->combatPlayers[$lower]['xp'] = $player->getXpManager()->getCurrentTotalXp();
         $this->combatPlayers[$lower]['health'] = $player->getHealth();
         $this->combatPlayers[$lower]['location'] = [
@@ -241,7 +246,8 @@ final class CombatManagerInstance {
 
         $inventoryPayload = StorageUtils::encodeJsonString($this->serializeItems($player->getInventory()->getContents()), "combat logger inventory for {$lower}");
         $armorPayload = StorageUtils::encodeJsonString($this->serializeItems($player->getArmorInventory()->getContents()), "combat logger armor for {$lower}");
-        if ($inventoryPayload === null || $armorPayload === null) {
+        $offhandPayload = $this->encodeSingleItem($player->getOffHandInventory()->getItem(0));
+        if ($inventoryPayload === null || $armorPayload === null || $offhandPayload === null) {
             Loader::getInstance()->getLogger()->warning("Skipped saving combat logger for {$player->getName()} due to JSON encoding failure.");
             return;
         }
@@ -257,6 +263,7 @@ final class CombatManagerInstance {
             "pitch" => $player->getLocation()->getPitch(),
             "inventory" => $inventoryPayload,
             "armor" => $armorPayload,
+            "offhand" => $offhandPayload,
             "xp" => $player->getXpManager()->getCurrentTotalXp(),
             "health" => $player->getHealth(),
             "expires" => time() + $remaining
@@ -307,6 +314,36 @@ final class CombatManagerInstance {
         return $items;
     }
 
+    private function encodeSingleItem(Item $item): ?string
+    {
+        if ($item->isNull()) {
+            return "";
+        }
+
+        try {
+            return ItemUtils::encodeItem($item);
+        } catch (\Throwable $e) {
+            Loader::getInstance()->getLogger()->warning("Skipped invalid combat logger offhand item: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    private function deserializeSingleItem(string $encoded): ?Item
+    {
+        if ($encoded === "") {
+            return null;
+        }
+
+        try {
+            $item = ItemUtils::decodeItem($encoded);
+        } catch (\Throwable $e) {
+            Loader::getInstance()->getLogger()->warning("Skipped invalid combat logger offhand item: " . $e->getMessage());
+            return null;
+        }
+
+        return $item instanceof Item && !$item->isNull() ? $item : null;
+    }
+
     public function handleLogin(Player $player): void {
         $lower = strtolower($player->getName());
 
@@ -319,6 +356,8 @@ final class CombatManagerInstance {
         if (($data['deadOnLogin'] ?? false) === true) {
             $player->getInventory()->clearAll();
             $player->getArmorInventory()->clearAll();
+            $player->getOffHandInventory()->clearAll();
+            $player->getCursorInventory()->clearAll();
             $player->sendMessage(C::colorize("&r&cYou died while combat logged."));
 
             $sec = $data['expireSec'];
@@ -356,21 +395,39 @@ final class CombatManagerInstance {
             }
         }
 
-        $player->getInventory()->setContents($data['inventory'] ?? []);
-        $player->getArmorInventory()->setContents($data['armor'] ?? []);
+        Loader::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(
+            function () use ($player, $data, $lower): void {
+                if (!$player->isConnected()) {
+                    return;
+                }
 
-        if (isset($data['xp'])) {
-            $player->getXpManager()->setCurrentTotalXp((int) $data['xp']);
-        }
+                $player->getInventory()->clearAll();
+                $player->getArmorInventory()->clearAll();
+                $player->getOffHandInventory()->clearAll();
+                $player->getCursorInventory()->clearAll();
 
-        $player->sendMessage(C::colorize("&r&aYou survived combat logging and your items were restored."));
+                $player->getInventory()->setContents($data['inventory'] ?? []);
+                $player->getArmorInventory()->setContents($data['armor'] ?? []);
 
-        Loader::getDatabase()->executeChange(QueryStmts::COMBAT_LOGGER_DELETE, [
-            "uuid" => $player->getUniqueId()->toString()
-        ]);
+                $offhand = $data['offhand'] ?? null;
+                if ($offhand instanceof Item && !$offhand->isNull()) {
+                    $player->getOffHandInventory()->setItem(0, clone $offhand);
+                }
 
-        $this->removeFromBucket($data['expireSec'], $lower);
-        unset($this->combatPlayers[$lower]);
+                if (isset($data['xp'])) {
+                    $player->getXpManager()->setCurrentTotalXp((int) $data['xp']);
+                }
+
+                $player->sendMessage(C::colorize("&r&aYou survived combat logging and your items were restored."));
+
+                Loader::getDatabase()->executeChange(QueryStmts::COMBAT_LOGGER_DELETE, [
+                    "uuid" => $player->getUniqueId()->toString()
+                ]);
+
+                $this->removeFromBucket($data['expireSec'], $lower);
+                unset($this->combatPlayers[$lower]);
+            }
+        ), 1);
     }
 
     public function handleNPCDeath(CombatLoggerEntity $npc): void {
@@ -397,6 +454,16 @@ final class CombatManagerInstance {
             if ($item instanceof Item && !$item->isNull()) {
                 $npc->getWorld()->dropItem($npc->getPosition(), clone $item);
             }
+        }
+
+        $offhand = $npc->getStoredOffhand();
+        if (($offhand === null || $offhand->isNull()) && $data !== null) {
+            $candidate = $data['offhand'] ?? null;
+            $offhand = $candidate instanceof Item ? $candidate : null;
+        }
+
+        if ($offhand instanceof Item && !$offhand->isNull()) {
+            $npc->getWorld()->dropItem($npc->getPosition(), clone $offhand);
         }
 
         $xp = $npc->getStoredXp();
@@ -463,6 +530,15 @@ final class CombatManagerInstance {
         $npc = $entry['npc'] ?? null;
         if ($npc instanceof CombatLoggerEntity && !$npc->isClosed()) {
             $npc->flagForDespawn();
+        }
+
+        if ($player === null) {
+            $uuid = $npc instanceof CombatLoggerEntity ? $npc->getOwnerUUID() : "";
+            if ($uuid !== "") {
+                Loader::getDatabase()->executeChange(QueryStmts::COMBAT_LOGGER_DELETE, [
+                    "uuid" => $uuid
+                ]);
+            }
         }
 
         unset($this->combatPlayers[$lower]);

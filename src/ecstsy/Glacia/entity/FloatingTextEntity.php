@@ -19,12 +19,20 @@ class FloatingTextEntity extends Entity {
         $this->setNameTagAlwaysVisible(true);
         $this->setNoClientPredictions(true);
         $this->setInvisible(false);
-        
+
+        if ($this->text !== "") {
+            $this->setNameTag(C::colorize($this->text));
+        }
+
         parent::initEntity($nbt);
     }
 
     public function setText(string $text): void {
+        if ($this->text === $text) {
+            return;
+        }
         $this->text = $text;
+        $this->setNameTag($text === "" ? "" : C::colorize($text));
     }
 
     public function getText(): string {
@@ -40,11 +48,6 @@ class FloatingTextEntity extends Entity {
     }
 
     public function onUpdate(int $currentTick): bool {
-        if ($currentTick % 10 === 0) {
-            if (!empty($this->text)) {
-                $this->setNameTag(C::colorize($this->text));
-            }
-        }
         return parent::onUpdate($currentTick);
     }
 

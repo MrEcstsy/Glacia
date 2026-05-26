@@ -35,7 +35,7 @@ final class EnderSeeCommand extends BaseCommand {
             return;
         }
 
-        EnderChestScreen::displayReadonly($sender, $target);
+        EnderChestScreen::displayEditable($sender, $target);
 
         GlaciaUtils::logAdminAction("EnderSee", [
             "admin" => $sender->getName(),

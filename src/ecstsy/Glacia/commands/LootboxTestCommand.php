@@ -7,7 +7,7 @@ namespace ecstsy\Glacia\commands;
 use CortexPE\Commando\BaseCommand;
 use CortexPE\Commando\args\RawStringArgument;
 use ecstsy\Glacia\server\lootboxes\LootboxRepository;
-use ecstsy\Glacia\utils\screens\lootboxes\LootboxAnimationScreen;
+use ecstsy\Glacia\utils\screens\lootboxes\LootboxAnimationFactory;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat as C;
@@ -40,7 +40,7 @@ final class LootboxTestCommand extends BaseCommand {
             return;
         }
 
-        (new LootboxAnimationScreen($sender, $box))->display($sender);
+        LootboxAnimationFactory::display($sender, $box);
     }
 
     public function getPermission(): string

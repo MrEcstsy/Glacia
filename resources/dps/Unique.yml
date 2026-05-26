@@ -121,10 +121,10 @@ unique-loot:
       id: glacial_blessing
       chance: 4
     - type: item
-      id: purity_wisp
+      id: puritywisp
       chance: 5
     - type: item
-      id: gale_fox
+      id: galefox
       chance: 4
     - type: item
       id: hearthbloom

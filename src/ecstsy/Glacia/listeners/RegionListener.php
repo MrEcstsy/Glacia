@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\listeners;
 
+use ecstsy\Glacia\entity\InteractiveSpawnEntity;
+use ecstsy\Glacia\server\duels\DuelManager;
 use ecstsy\Glacia\server\regions\RegionManager;
 use pocketmine\block\Anvil;
 use pocketmine\block\DragonEgg;
+use pocketmine\block\Liquid;
 use pocketmine\block\Trapdoor;
 use pocketmine\block\tile\Beacon;
 use pocketmine\block\tile\Chest;
 use pocketmine\block\tile\Hopper;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\block\BlockPlaceEvent;
+use pocketmine\event\block\BlockSpreadEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\entity\EntityExplodeEvent;
@@ -117,10 +121,43 @@ final class RegionListener implements Listener {
         }
     }
 
+    public function onBlockSpread(BlockSpreadEvent $event): void
+    {
+        $source = $event->getSource();
+        $target = $event->getBlock();
+        if (!$source instanceof Liquid) {
+            return;
+        }
+
+        $sourceRegion = $this->regionManager->getRegionAt($source->getPosition());
+        $targetRegion = $this->regionManager->getRegionAt($target->getPosition());
+        $sourceName = strtolower($sourceRegion?->getName() ?? "");
+        $targetName = strtolower($targetRegion?->getName() ?? "");
+        if ($sourceName === $targetName) {
+            return;
+        }
+
+        if (
+            ($sourceRegion !== null && !$sourceRegion->permissions()->build) ||
+            ($targetRegion !== null && !$targetRegion->permissions()->build)
+        ) {
+            $event->cancel();
+        }
+    }
+
     public function onEntityDamageByEntity(EntityDamageByEntityEvent $event): void
     {
         $player = $event->getDamager();
         if (!$player instanceof Player || $player->hasPermission("glacia.admin")) {
+            return;
+        }
+
+        $victim = $event->getEntity();
+        if ($victim instanceof InteractiveSpawnEntity) {
+            return;
+        }
+
+        if ($victim instanceof Player && $this->isAllowedDuelCombat($player, $victim)) {
             return;
         }
 
@@ -263,5 +300,20 @@ final class RegionListener implements Listener {
 
         $this->denyMessageCooldowns[$key] = $now + 1;
         $player->sendMessage(C::colorize("&r&cYou can't do that here."));
+    }
+
+    private function isAllowedDuelCombat(Player $attacker, Player $victim): bool
+    {
+        if (!DuelManager::isInitialized()) {
+            return false;
+        }
+
+        $duelManager = DuelManager::getInstance();
+        if (!$duelManager->isInDuel($attacker) || !$duelManager->isInDuel($victim)) {
+            return false;
+        }
+
+        $opponent = $duelManager->getOpponent($attacker);
+        return $opponent !== null && $opponent->getUniqueId()->equals($victim->getUniqueId());
     }
 }

@@ -61,6 +61,11 @@ final class FactionUpgradeManager
         Loader::getDatabase()->executeChange(QueryStmts::FACTION_UPGRADE_BANK_DELETE, ["faction_id" => $factionId]);
     }
 
+    public function resetSeasonState(): void
+    {
+        $this->entries = [];
+    }
+
     public function getBankBalance(string $factionId): float
     {
         return (float) ($this->entries[$factionId]["bank_balance"] ?? 0.0);

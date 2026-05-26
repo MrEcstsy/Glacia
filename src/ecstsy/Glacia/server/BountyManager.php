@@ -127,4 +127,9 @@ final class BountyManager
             $online->sendMessage($formatted);
         }
     }
+
+    public function resetSeasonState(): void
+    {
+        $this->bounties = [];
+    }
 }

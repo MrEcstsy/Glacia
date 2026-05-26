@@ -24,7 +24,7 @@ final class FloatingTextInstance {
      */
     public static array $definitions  = [];
 
-    /** @var FloatingTextEntity[] */
+    /** @var array<string, FloatingTextEntity> */
     public static array $particles = [];
 
     public static function register(): void {

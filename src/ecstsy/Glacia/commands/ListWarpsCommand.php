@@ -25,7 +25,7 @@ final class ListWarpsCommand extends BaseCommand {
         $warps = $warpManager->getWarpList();
 
         if ($warps === null) {
-            $sender->sendMessage(C::DARK_RED . "No Available Warps");
+            $sender->sendMessage(C::colorize("&4No Available Warps"));
             return;
         }
 
@@ -34,8 +34,8 @@ final class ListWarpsCommand extends BaseCommand {
             $warpNames[] = $warp->getName();
         }
 
-        $warpList = implode(C::WHITE . ", " . C::RED, $warpNames);
-        $sender->sendMessage(C::GOLD . "Available Warps: " . C::RED . $warpList);
+        $warpList = implode(C::colorize("&f, &c"), $warpNames);
+        $sender->sendMessage(C::colorize("&6Available Warps: &c" . $warpList));
     }
 
     public function getPermission(): string {

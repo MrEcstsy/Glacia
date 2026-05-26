@@ -9,6 +9,10 @@ final class EnchantEventRegistry {
     /** @var array<string, array<string, callable>> */
     private static array $handlers = [];
 
+    public static function clear(): void {
+        self::$handlers = [];
+    }
+
     public static function registerHandler(string $eventType, string $enchantName, callable $handler): void {
         self::$handlers[$eventType][$enchantName] = $handler;
     }

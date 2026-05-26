@@ -22,6 +22,10 @@ final class QuestInstance {
 
     /** @var array<string, array<string, mixed>> */
     private static array $tiers = [];
+    /** @var array<string, array<string, mixed>> */
+    private static array $questTemplates = [];
+    /** @var array<string, list<array<string, mixed>>> */
+    private static array $rewardTables = [];
 
     /** @var array<string, array<string, mixed>> */
     private const DEFAULT_TIERS = [
@@ -33,191 +37,315 @@ final class QuestInstance {
             "quests" => [
                 [
                     "type" => "mine",
-                    "name" => "Coal Miner I",
+                    "name" => "Cold Start Survey",
                     "objectives" => [
-                        ["block" => "coal_ore", "amount" => 20]
+                        ["block" => "coal_ore", "amount" => 32],
+                        ["block" => "iron_ore", "amount" => 16]
                     ]
                 ],
                 [
                     "type" => "mine",
-                    "name" => "Iron Miner I",
+                    "name" => "Torchline Run",
                     "objectives" => [
-                        ["block" => "iron_ore", "amount" => 20]
+                        ["block" => "coal_ore", "amount" => 48]
                     ]
                 ],
                 [
                     "type" => "place",
-                    "name" => "Builder I",
+                    "name" => "Frontier Footing",
                     "objectives" => [
-                        ["block" => "stone", "amount" => 25]
+                        ["block" => "cobblestone", "amount" => 64],
+                        ["block" => "oak_planks", "amount" => 32]
+                    ]
+                ],
+                [
+                    "type" => "place",
+                    "name" => "Outpost Walls",
+                    "objectives" => [
+                        ["block" => "stone", "amount" => 64]
                     ]
                 ],
                 [
                     "type" => "kill",
-                    "name" => "Zombie Slayer I",
+                    "name" => "Graveyard Sweep",
                     "objectives" => [
-                        ["entity" => "zombie", "amount" => 10]
+                        ["entity" => "zombie", "amount" => 20],
+                        ["entity" => "skeleton", "amount" => 10]
+                    ]
+                ],
+                [
+                    "type" => "kill",
+                    "name" => "Webbreaker",
+                    "objectives" => [
+                        ["entity" => "spider", "amount" => 16]
                     ]
                 ],
                 [
                     "type" => "sell",
-                    "name" => "Farmers Market I",
+                    "name" => "Harvest Cart",
                     "objectives" => [
-                        ["item" => "wheat", "amount" => 15]
+                        ["item" => "wheat", "amount" => 64],
+                        ["item" => "carrot", "amount" => 48]
+                    ]
+                ],
+                [
+                    "type" => "sell",
+                    "name" => "Timber Pile",
+                    "objectives" => [
+                        ["item" => "oak_log", "amount" => 64],
+                        ["item" => "spruce_log", "amount" => 32]
                     ]
                 ],
             ],
             "rewards" => [
-                ["material" => "iron_ingot", "count" => 8],
-                ["material" => "amethyst_shard", "count" => 4],
+                ["material" => "iron_ingot", "count" => 12],
+                ["material" => "amethyst_shard", "count" => 6],
                 ["id" => "money_note", "amount" => 5000],
+                ["id" => "money_note", "amount" => 8000],
                 ["id" => "xpnote", "amount" => 2500],
+                ["id" => "xpnote", "amount" => 4000],
             ],
         ],
         "awakened" => [
             "display" => "Awakened",
             "material" => "echo_shard",
             "color" => "&5",
-            "symbol" => "*",
+            "symbol" => "+",
             "quests" => [
                 [
                     "type" => "mine",
-                    "name" => "Iron Miner II",
+                    "name" => "Deep Vein Survey",
                     "objectives" => [
-                        ["block" => "iron_ore", "amount" => 50]
+                        ["block" => "iron_ore", "amount" => 40],
+                        ["block" => "gold_ore", "amount" => 24],
+                        ["block" => "redstone_ore", "amount" => 32]
                     ]
                 ],
                 [
                     "type" => "mine",
-                    "name" => "Gold Miner I",
+                    "name" => "Blue Dust Contract",
                     "objectives" => [
-                        ["block" => "gold_ore", "amount" => 20]
+                        ["block" => "lapis_ore", "amount" => 28],
+                        ["block" => "redstone_ore", "amount" => 36]
                     ]
                 ],
                 [
                     "type" => "place",
-                    "name" => "Builder II",
+                    "name" => "Watchpost Frame",
                     "objectives" => [
-                        ["block" => "oak_planks", "amount" => 50]
+                        ["block" => "stone_bricks", "amount" => 80],
+                        ["block" => "spruce_planks", "amount" => 48]
                     ]
                 ],
                 [
                     "type" => "kill",
-                    "name" => "Mob Slayer II",
+                    "name" => "Night Shift",
                     "objectives" => [
-                        ["entity" => "zombie", "amount" => 25]
+                        ["entity" => "skeleton", "amount" => 24],
+                        ["entity" => "spider", "amount" => 24],
+                        ["entity" => "zombie", "amount" => 24]
                     ]
                 ],
                 [
                     "type" => "sell",
-                    "name" => "Farmers Market II",
+                    "name" => "Cane Syndicate",
                     "objectives" => [
-                        ["item" => "wheat", "amount" => 25],
-                        ["item" => "carrot", "amount" => 32]
+                        ["item" => "sugar_cane", "amount" => 128],
+                        ["item" => "cactus", "amount" => 64]
+                    ]
+                ],
+                [
+                    "type" => "sell",
+                    "name" => "Rot and Bone",
+                    "objectives" => [
+                        ["item" => "rotten_flesh", "amount" => 96],
+                        ["item" => "bone", "amount" => 64],
+                        ["item" => "string", "amount" => 48]
+                    ]
+                ],
+                [
+                    "type" => "sell",
+                    "name" => "Patchwork Produce",
+                    "objectives" => [
+                        ["item" => "pumpkin", "amount" => 64],
+                        ["item" => "melon", "amount" => 96],
+                        ["item" => "beetroot", "amount" => 64]
                     ]
                 ],
             ],
             "rewards" => [
-                ["material" => "gold_ingot", "count" => 6],
-                ["material" => "emerald", "count" => 2],
+                ["material" => "gold_ingot", "count" => 10],
+                ["material" => "emerald", "count" => 4],
+                ["material" => "echo_shard", "count" => 2],
                 ["id" => "money_note", "amount" => 15000],
+                ["id" => "money_note", "amount" => 22000],
                 ["id" => "xpnote", "amount" => 7500],
+                ["id" => "xpnote", "amount" => 10000],
             ],
         ],
         "ascendent" => [
             "display" => "Ascendent",
             "material" => "nether_star",
             "color" => "&e",
-            "symbol" => "*",
+            "symbol" => "#",
+            "sell-values" => [
+                "raw" => 45000,
+                "complete" => 120000
+            ],
             "quests" => [
                 [
                     "type" => "mine",
-                    "name" => "Diamond Hunter",
+                    "name" => "Gemrunner Route",
                     "objectives" => [
-                        ["block" => "diamond_ore", "amount" => 30],
-                        ["block" => "gold_ore", "amount" => 50]
+                        ["block" => "diamond_ore", "amount" => 24],
+                        ["block" => "gold_ore", "amount" => 40],
+                        ["block" => "redstone_ore", "amount" => 64]
+                    ]
+                ],
+                [
+                    "type" => "mine",
+                    "name" => "Nether Ledger",
+                    "objectives" => [
+                        ["block" => "nether_quartz_ore", "amount" => 72],
+                        ["block" => "gold_ore", "amount" => 32]
                     ]
                 ],
                 [
                     "type" => "place",
-                    "name" => "Fortress Builder",
+                    "name" => "Breach Stockpile",
                     "objectives" => [
-                        ["block" => "obsidian", "amount" => 50],
-                        ["block" => "stone_bricks", "amount" => 50]
+                        ["block" => "obsidian", "amount" => 96],
+                        ["block" => "stone_bricks", "amount" => 96]
                     ]
                 ],
                 [
                     "type" => "kill",
-                    "name" => "Elite Slayer",
+                    "name" => "Blazeline",
                     "objectives" => [
-                        ["entity" => "zombie", "amount" => 50],
-                        ["entity" => "blaze", "amount" => 20]
+                        ["entity" => "blaze", "amount" => 32],
+                        ["entity" => "skeleton", "amount" => 48]
                     ]
                 ],
                 [
                     "type" => "sell",
-                    "name" => "Market Expert",
+                    "name" => "Smelter's Dividend",
                     "objectives" => [
-                        ["item" => "carrot", "amount" => 50],
-                        ["item" => "potato", "amount" => 40]
+                        ["item" => "iron_ingot", "amount" => 96],
+                        ["item" => "gold_ingot", "amount" => 64],
+                        ["item" => "redstone", "amount" => 96]
+                    ]
+                ],
+                [
+                    "type" => "sell",
+                    "name" => "Pearl and Powder",
+                    "objectives" => [
+                        ["item" => "ender_pearl", "amount" => 32],
+                        ["item" => "gunpowder", "amount" => 96],
+                        ["item" => "blaze_rod", "amount" => 24]
+                    ]
+                ],
+                [
+                    "type" => "sell",
+                    "name" => "Nether Harvest Exchange",
+                    "objectives" => [
+                        ["item" => "nether_wart", "amount" => 160],
+                        ["item" => "cactus", "amount" => 128],
+                        ["item" => "sugar_cane", "amount" => 160]
                     ]
                 ],
             ],
             "rewards" => [
-                ["material" => "diamond", "count" => 5],
-                ["material" => "gold_ingot", "count" => 12],
-                ["id" => "money_note", "amount" => 50000],
+                ["material" => "diamond", "count" => 6],
+                ["material" => "emerald", "count" => 6],
+                ["material" => "nether_star", "count" => 1],
+                ["id" => "money_note", "amount" => 55000],
+                ["id" => "money_note", "amount" => 85000],
                 ["id" => "xpnote", "amount" => 20000],
+                ["id" => "xpnote", "amount" => 30000],
             ],
         ],
         "eternal" => [
             "display" => "Eternal",
             "material" => "dragon_egg",
             "color" => "&c",
-            "symbol" => "*",
+            "symbol" => "@",
+            "sell-values" => [
+                "raw" => 135000,
+                "complete" => 350000
+            ],
             "quests" => [
                 [
                     "type" => "mine",
-                    "name" => "Master Miner",
+                    "name" => "Crystal Treasury",
                     "objectives" => [
-                        ["block" => "diamond_ore", "amount" => 100],
-                        ["block" => "emerald_ore", "amount" => 50],
-                        ["block" => "nether_quartz_ore", "amount" => 75]
+                        ["block" => "diamond_ore", "amount" => 48],
+                        ["block" => "emerald_ore", "amount" => 36],
+                        ["block" => "nether_quartz_ore", "amount" => 96]
+                    ]
+                ],
+                [
+                    "type" => "mine",
+                    "name" => "War Chest Reserve",
+                    "objectives" => [
+                        ["block" => "redstone_ore", "amount" => 128],
+                        ["block" => "gold_ore", "amount" => 64]
                     ]
                 ],
                 [
                     "type" => "place",
-                    "name" => "Grand Architect",
+                    "name" => "Citadel Core",
                     "objectives" => [
-                        ["block" => "obsidian", "amount" => 100],
-                        ["block" => "nether_bricks", "amount" => 75],
-                        ["block" => "stone_bricks", "amount" => 100]
+                        ["block" => "obsidian", "amount" => 192],
+                        ["block" => "stone_bricks", "amount" => 128],
+                        ["block" => "nether_bricks", "amount" => 96]
                     ]
                 ],
                 [
                     "type" => "kill",
-                    "name" => "Ultimate Slayer",
+                    "name" => "Rift Cull",
                     "objectives" => [
-                        ["entity" => "zombie", "amount" => 100],
-                        ["entity" => "blaze", "amount" => 50],
-                        ["entity" => "skeleton", "amount" => 50]
+                        ["entity" => "blaze", "amount" => 72],
+                        ["entity" => "skeleton", "amount" => 96],
+                        ["entity" => "zombie", "amount" => 120]
                     ]
                 ],
                 [
                     "type" => "sell",
-                    "name" => "Tycoon",
+                    "name" => "Siege Treasury",
                     "objectives" => [
-                        ["item" => "carrot", "amount" => 100],
-                        ["item" => "potato", "amount" => 100],
-                        ["item" => "wheat", "amount" => 150]
+                        ["item" => "diamond", "amount" => 48],
+                        ["item" => "emerald", "amount" => 32],
+                        ["item" => "gold_ingot", "amount" => 128]
+                    ]
+                ],
+                [
+                    "type" => "sell",
+                    "name" => "Black Market Caravan",
+                    "objectives" => [
+                        ["item" => "gunpowder", "amount" => 160],
+                        ["item" => "blaze_rod", "amount" => 64],
+                        ["item" => "ender_pearl", "amount" => 64]
+                    ]
+                ],
+                [
+                    "type" => "sell",
+                    "name" => "Overgrowth Tax",
+                    "objectives" => [
+                        ["item" => "sugar_cane", "amount" => 256],
+                        ["item" => "nether_wart", "amount" => 192],
+                        ["item" => "pumpkin", "amount" => 128],
+                        ["item" => "cactus", "amount" => 192]
                     ]
                 ],
             ],
             "rewards" => [
-                ["material" => "diamond", "count" => 20],
-                ["material" => "emerald", "count" => 10],
+                ["material" => "diamond", "count" => 18],
+                ["material" => "emerald", "count" => 12],
+                ["material" => "nether_star", "count" => 2],
                 ["id" => "money_note", "amount" => 250000],
+                ["id" => "money_note", "amount" => 325000],
                 ["id" => "xpnote", "amount" => 100000],
+                ["id" => "xpnote", "amount" => 150000],
             ],
         ],
     ];
@@ -230,8 +358,12 @@ final class QuestInstance {
     public static function loadFromConfig(): void
     {
         self::$tiers = [];
+        self::$questTemplates = [];
+        self::$rewardTables = [];
 
         $config = GeneralUtils::getConfiguration(Loader::getInstance(), "quests.yml");
+        self::$questTemplates = self::parseQuestTemplates((array) ($config?->get("quest-templates", []) ?? []));
+        self::$rewardTables = self::parseRewardTables((array) ($config?->get("reward-tables", []) ?? []));
         $rawTiers = $config?->get("tiers");
 
         if (!is_array($rawTiers) || $rawTiers === []) {
@@ -271,6 +403,10 @@ final class QuestInstance {
         $item = $material->setCustomName(C::colorize("&r&7{$symbol} {$color}{$data['display']} Sigil &7{$symbol}"));
 
         $nbt = $item->getNamedTag();
+        $glacia = $nbt->getCompoundTag("Glacia") ?? new CompoundTag();
+        $glacia->setString("glaciaItem", "quest_sigil");
+        $glacia->setString("questTier", $tier);
+        $nbt->setTag("Glacia", $glacia);
         $nbt->setString("glacia_quest_tier", $tier);
         $nbt->setInt("glacia_quest_index", $questIndex);
         $nbt->setString("glacia_quest_type", (string) $quest["type"]);
@@ -337,6 +473,20 @@ final class QuestInstance {
 
         $lore[] = C::colorize("&r&7{$action}: " . implode("&7, ", $objectiveStrings));
         $lore[] = C::colorize(self::generateQuestProgressBar($totalProgress, $totalGoal, (string) ($data["color"] ?? "&a")));
+
+        $sellValues = (array) ($data["sell-values"] ?? []);
+        $rawValue = isset($sellValues["raw"]) ? (float) $sellValues["raw"] : null;
+        $completeValue = isset($sellValues["complete"]) ? (float) $sellValues["complete"] : null;
+        if ($rawValue !== null || $completeValue !== null) {
+            $lore[] = "";
+            if ($rawValue !== null) {
+                $lore[] = C::colorize("&r&7Raw Sale: &a$" . number_format($rawValue, 2));
+            }
+            if ($completeValue !== null) {
+                $lore[] = C::colorize("&r&7Completed Sale: &a$" . number_format($completeValue, 2));
+            }
+            $lore[] = C::colorize("&r&8Claim the reward or cash the sigil out.");
+        }
 
         if ($totalProgress >= $totalGoal) {
             $nbt->setByte("glacia_quest_complete", 1);
@@ -407,18 +557,77 @@ final class QuestInstance {
         return self::$tiers[$tier] ?? null;
     }
 
+    public static function getSellPrice(Item $item): ?float
+    {
+        $nbt = $item->getNamedTag();
+        if (!$nbt->getTag("glacia_quest_tier")) {
+            return null;
+        }
+
+        $tier = $nbt->getString("glacia_quest_tier", "");
+        $tierData = self::$tiers[$tier] ?? null;
+        if ($tierData === null) {
+            return null;
+        }
+
+        $sellValues = (array) ($tierData["sell-values"] ?? []);
+        $rawValue = isset($sellValues["raw"]) ? round((float) $sellValues["raw"], 2) : null;
+        $completeValue = isset($sellValues["complete"]) ? round((float) $sellValues["complete"], 2) : null;
+
+        if (self::isQuestItemComplete($nbt)) {
+            return $completeValue ?? $rawValue;
+        }
+
+        return $rawValue;
+    }
+
     public static function rollReward(string $tier, ?Player $player = null): ?Item
     {
+        return self::rollRewardFromTierData(self::getTierData($tier), $player);
+    }
+
+    public static function rollRewardForItem(Item $item, ?Player $player = null): ?Item
+    {
+        $nbt = $item->getNamedTag();
+        $tier = $nbt->getString("glacia_quest_tier", "");
+        $questIndex = $nbt->getInt("glacia_quest_index", -1);
         $tierData = self::getTierData($tier);
         if ($tierData === null) {
             return null;
         }
 
-        $rewards = $tierData["rewards"] ?? [];
+        $quest = $tierData["quests"][$questIndex] ?? null;
+        if (is_array($quest)) {
+            $rewardTableId = (string) ($quest["reward-table"] ?? "");
+            $rewards = self::resolveRewardSet($quest["rewards"] ?? [], $rewardTableId);
+            if ($rewards !== []) {
+                return self::rollResolvedReward($rewards, $player);
+            }
+        }
+
+        return self::rollRewardFromTierData($tierData, $player);
+    }
+
+    private static function rollRewardFromTierData(?array $tierData, ?Player $player = null): ?Item
+    {
+        if ($tierData === null) {
+            return null;
+        }
+
+        $rewardTableId = (string) ($tierData["reward-table"] ?? "");
+        $rewards = self::resolveRewardSet($tierData["rewards"] ?? [], $rewardTableId);
         if (!is_array($rewards) || $rewards === []) {
             return null;
         }
 
+        return self::rollResolvedReward($rewards, $player);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $rewards
+     */
+    private static function rollResolvedReward(array $rewards, ?Player $player = null): ?Item
+    {
         $rewardData = $rewards[array_rand($rewards)];
         if (!is_array($rewardData)) {
             return null;
@@ -466,13 +675,16 @@ final class QuestInstance {
             "material" => $material,
             "color" => $color,
             "symbol" => $symbol,
+            "sell-values" => self::normalizeSellValues((array) ($tierData["sell-values"] ?? [])),
             "quests" => $quests,
             "rewards" => $rewards,
+            "reward-table" => self::normalizeIdentifier((string) ($tierData["reward-table"] ?? "")),
         ];
     }
 
     private static function parseQuest(array $questData): ?array
     {
+        $questData = self::mergeQuestTemplate($questData);
         $type = strtolower((string) ($questData["type"] ?? ""));
         if (!in_array($type, ["mine", "place", "kill", "sell"], true)) {
             return null;
@@ -498,7 +710,144 @@ final class QuestInstance {
             "type" => $type,
             "name" => (string) ($questData["name"] ?? ucfirst($type) . " Quest"),
             "objectives" => $objectives,
+            "rewards" => self::normalizeRewardEntries((array) ($questData["rewards"] ?? [])),
+            "reward-table" => self::normalizeIdentifier((string) ($questData["reward-table"] ?? "")),
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $questData
+     * @return array<string, mixed>
+     */
+    private static function mergeQuestTemplate(array $questData): array
+    {
+        $templateId = self::normalizeIdentifier((string) ($questData["template"] ?? $questData["extends"] ?? ""));
+        if ($templateId === "" || !isset(self::$questTemplates[$templateId])) {
+            return $questData;
+        }
+
+        return self::mergeAssocRecursive(self::$questTemplates[$templateId], $questData);
+    }
+
+    /**
+     * @param array<string, mixed> $templates
+     * @return array<string, array<string, mixed>>
+     */
+    private static function parseQuestTemplates(array $templates): array
+    {
+        $parsed = [];
+        foreach ($templates as $templateId => $templateData) {
+            if (!is_array($templateData)) {
+                continue;
+            }
+
+            $normalizedId = self::normalizeIdentifier((string) $templateId);
+            if ($normalizedId === "") {
+                continue;
+            }
+
+            $parsed[$normalizedId] = $templateData;
+        }
+
+        return $parsed;
+    }
+
+    /**
+     * @param array<string, mixed> $tables
+     * @return array<string, list<array<string, mixed>>>
+     */
+    private static function parseRewardTables(array $tables): array
+    {
+        $parsed = [];
+        foreach ($tables as $tableId => $tableData) {
+            if (!is_array($tableData)) {
+                continue;
+            }
+
+            $normalizedId = self::normalizeIdentifier((string) $tableId);
+            if ($normalizedId === "") {
+                continue;
+            }
+
+            $entries = self::normalizeRewardEntries($tableData);
+            if ($entries !== []) {
+                $parsed[$normalizedId] = $entries;
+            }
+        }
+
+        return $parsed;
+    }
+
+    /**
+     * @param array<int|string, mixed> $entries
+     * @return list<array<string, mixed>>
+     */
+    private static function normalizeRewardEntries(array $entries): array
+    {
+        $normalized = [];
+        foreach ($entries as $entry) {
+            if (is_string($entry)) {
+                $entry = ["material" => $entry];
+            }
+
+            if (is_array($entry)) {
+                $normalized[] = $entry;
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param array<int|string, mixed> $inlineRewards
+     * @return list<array<string, mixed>>
+     */
+    private static function resolveRewardSet(array $inlineRewards, string $rewardTableId): array
+    {
+        $rewards = self::normalizeRewardEntries($inlineRewards);
+        if ($rewards !== []) {
+            return $rewards;
+        }
+
+        if ($rewardTableId !== "" && isset(self::$rewardTables[$rewardTableId])) {
+            return self::$rewardTables[$rewardTableId];
+        }
+
+        return [];
+    }
+
+    /**
+     * @param array<string, mixed> $base
+     * @param array<string, mixed> $override
+     * @return array<string, mixed>
+     */
+    private static function mergeAssocRecursive(array $base, array $override): array
+    {
+        foreach ($override as $key => $value) {
+            if (
+                is_string($key) &&
+                isset($base[$key]) &&
+                is_array($base[$key]) &&
+                is_array($value) &&
+                self::isAssoc($base[$key]) &&
+                self::isAssoc($value)
+            ) {
+                $base[$key] = self::mergeAssocRecursive($base[$key], $value);
+                continue;
+            }
+
+            $base[$key] = $value;
+        }
+
+        return $base;
+    }
+
+    /**
+     * @param array<mixed> $array
+     */
+    private static function isAssoc(array $array): bool
+    {
+        return array_keys($array) !== range(0, count($array) - 1);
     }
 
     private static function parseObjective(string $type, array $objectiveData): ?array
@@ -634,6 +983,32 @@ final class QuestInstance {
         }
 
         return StorageUtils::encodeJsonString($normalized, $context) ?? "[]";
+    }
+
+    /**
+     * @param array<string, mixed> $sellValues
+     * @return array<string, float>
+     */
+    private static function normalizeSellValues(array $sellValues): array
+    {
+        $normalized = [];
+
+        foreach (["raw", "complete"] as $key) {
+            $value = $sellValues[$key] ?? null;
+            if (!is_numeric($value)) {
+                continue;
+            }
+
+            $normalized[$key] = round(max(0.0, (float) $value), 2);
+        }
+
+        return $normalized;
+    }
+
+    private static function isQuestItemComplete(CompoundTag $nbt): bool
+    {
+        $completeTag = $nbt->getTag("glacia_quest_complete");
+        return ($completeTag instanceof ByteTag || $completeTag instanceof IntTag) && $completeTag->getValue() === 1;
     }
 
     private static function sendQuestMessage(Player $player, string $message): void

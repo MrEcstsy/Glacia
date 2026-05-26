@@ -20,6 +20,7 @@ use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\player\Player;
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\Server;
+use pocketmine\utils\AssumptionFailedError;
 use pocketmine\utils\TextFormat as C;
 use pocketmine\world\Position;
 use pocketmine\world\World;
@@ -334,7 +335,11 @@ final class ZoneManager {
 
     public static function getZoneAt(Position $position) : ?array
     {
-        $worldName = strtolower($position->getWorld()->getFolderName());
+        try {
+            $worldName = strtolower($position->getWorld()->getFolderName());
+        } catch (AssumptionFailedError) {
+            return null;
+        }
 
         foreach (self::$zones as $zone) {
             if (strtolower((string) $zone["world"]) !== $worldName) {
@@ -513,7 +518,10 @@ final class ZoneManager {
 
     public static function teleportPlayer(Player $player, array $zone) : bool
     {
-        $position = self::getSpawnPosition($zone) ?? self::getRandomSafePosition($zone, 14) ?? self::getPosition($zone, true) ?? self::getPosition($zone);
+        $position = self::getSpawnPosition($zone)
+            ?? self::getPosition($zone)
+            ?? self::getPosition($zone, true)
+            ?? self::getRandomSafePosition($zone, 14);
         if ($position === null) {
             return false;
         }

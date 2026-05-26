@@ -8,6 +8,9 @@ use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantProcManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
+use ecstsy\Glacia\server\enchantments\manager\MirrorbrandProcManager;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\entity\Living;
@@ -27,29 +30,41 @@ final class FearEnchant implements EntityDamageByEntityEnchantmentHandler {
 
         $session = PlayerManager::getInstance()->getSession($damager);
 
-        if ($session->isOnCooldown("fear")) return;
-
         $item = $damager->getInventory()->getItemInHand();
         if (!CustomEnchantmentManager::hasEnchantment($item, "fear")) return;
-
-        $data = [
-            1 => ["chance" => 13, "cd" => 4, "duration" => 40,  "amplifier" => 0],
-            2 => ["chance" => 19, "cd" => 5, "duration" => 80,  "amplifier" => 0],
-            3 => ["chance" => 24, "cd" => 6, "duration" => 120, "amplifier" => 0],
-            4 => ["chance" => 30, "cd" => 7, "duration" => 160, "amplifier" => 0],
-            5 => ["chance" => 35, "cd" => 8, "duration" => 200, "amplifier" => 0],
-        ];
-
-        $cfg = $data[$level] ?? $data[1];
-
-        if (mt_rand(1, 100) > $cfg["chance"]) return;
-
-        $session->addCooldown("fear", $cfg["cd"]);
+        $chance = EnchantTuningManager::chance("fear", $level, 13.0);
+        $cooldownSeconds = EnchantTuningManager::cooldownSeconds("fear", $level, 4);
+        $durationTicks = max(1, EnchantTuningManager::valueInt("fear", "duration-ticks", $level, 40));
+        $amplifier = max(0, EnchantTuningManager::valueInt("fear", "amplifier", $level, 0));
+        $result = EnchantProcManager::attempt(
+            $damager,
+            "fear",
+            $level,
+            $chance,
+            $cooldownSeconds,
+            static fn() => $session->getCooldown("fear")
+        );
+        if (!$result->success) return;
 
         $victim->getEffects()->add(new EffectInstance(
             VanillaEffects::WEAKNESS(),
-            $cfg["duration"] * 20,
-            $cfg["amplifier"]
+            $durationTicks,
+            $amplifier
         ));
+        if ($victim instanceof Player) {
+            MirrorbrandProcManager::record($damager, "fear", static function (Player $reflector, Player $attacker) use ($durationTicks, $amplifier): bool {
+                $attacker->getEffects()->add(new EffectInstance(
+                    VanillaEffects::WEAKNESS(),
+                    $durationTicks,
+                    $amplifier
+                ));
+                return true;
+            });
+        }
+        EnchantProcManager::applyCooldownIfNeeded($result, static fn(int $seconds) => $session->addCooldown("fear", $seconds));
+        EnchantProcManager::debugAppliedValues($damager, $result, [
+            "duration_ticks" => $durationTicks,
+            "amplifier" => $amplifier,
+        ]);
     }
 }

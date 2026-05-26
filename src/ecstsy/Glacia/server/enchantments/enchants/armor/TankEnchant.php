@@ -6,7 +6,11 @@ namespace ecstsy\Glacia\server\enchantments\enchants\armor;
 
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantCombatStateManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantDebugManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\item\Axe;
 use pocketmine\player\Player;
 
@@ -17,13 +21,14 @@ final class TankEnchant implements EntityDamageByEntityEnchantmentHandler {
             return;
         }
 
-        $victim = $event->getEntity();
-        if (!$victim instanceof Player) {
+        if ($event->getCause() !== EntityDamageEvent::CAUSE_ENTITY_ATTACK) {
             return;
         }
 
+        $victim = $event->getEntity();
         $damager = $event->getDamager();
-        if (!$damager instanceof Player) {
+
+        if (!$victim instanceof Player || !$damager instanceof Player) {
             return;
         }
 
@@ -32,25 +37,19 @@ final class TankEnchant implements EntityDamageByEntityEnchantmentHandler {
             return;
         }
 
-        $reductionPercent = match($level) {
-            1 => 0.2,
-            2 => 0.4,
-            3 => 0.6,
-            4 => 0.8,
-            5 => 1,
-            default => 0
-        };
-
-        if ($reductionPercent <= 0) {
-            return;
-        }
-
         $base = $event->getBaseDamage();
         if ($base <= 0) {
             return;
         }
 
-        $newDamage = $base * (1 - ($reductionPercent / 100));
+        $appliedReduction = max(0.0, EnchantTuningManager::value("tank", "damage-reduction-fraction", $level, 0.0085));
+        $newDamage = $base * (1 - $appliedReduction);
         $event->setBaseDamage($newDamage);
+
+        EnchantDebugManager::logPassiveValues($victim, "tank", $level, [
+            "base_damage" => $base,
+            "reduction_fraction" => $appliedReduction,
+            "final_damage" => $newDamage,
+        ]);
     }
 }

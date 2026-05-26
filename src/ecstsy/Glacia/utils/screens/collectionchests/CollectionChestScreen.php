@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\utils\screens\collectionchests;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\collectionchests\CollectionChestManager;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
 use muqsit\invmenu\InvMenu;
 use muqsit\invmenu\transaction\DeterministicInvMenuTransaction;
@@ -31,7 +32,7 @@ final class CollectionChestScreen {
         private Position $position
     ) {
         $this->menu = InvMenu::create(InvMenuTypeIds::TYPE_DOUBLE_CHEST);
-        $this->menu->setName(C::colorize("&r&8Collection Chest"));
+        $this->menu->setName(C::colorize($this->isHarvesterChest() ? "&r&8Harvester Chest" : "&r&8Collection Chest"));
         $this->menu->setListener(InvMenu::readonly(function(DeterministicInvMenuTransaction $transaction): void {
             $slot = $transaction->getAction()->getSlot();
             $player = $transaction->getPlayer();
@@ -46,11 +47,11 @@ final class CollectionChestScreen {
             if ($slot === 49) {
                 $result = $manager->sellAll($this->position, $player);
                 if (($result["money"] ?? 0.0) <= 0.0) {
-                    $player->sendMessage(C::colorize("&r&cThis collection chest has nothing sellable right now."));
+                    $player->sendMessage(C::colorize("&r&cThis chest has nothing sellable right now."));
                     PlayerUtils::playSound($player, "note.bass");
                 } else {
                     $multiplierText = ($result["multiplier"] ?? 1.0) > 1.0 ? " &r&7(x" . rtrim(rtrim(number_format((float) $result["multiplier"], 2), "0"), ".") . " Multiplier)" : "";
-                    $player->sendMessage(C::colorize("&r&aSold &f" . number_format((int) $result["items"]) . " &aitems from the collection chest for &b$" . number_format((float) $result["money"], 2) . "{$multiplierText}&r&a."));
+                    $player->sendMessage(C::colorize("&r&aSold &f" . number_format((int) $result["items"]) . " &aitems from this chest for &b$" . number_format((float) $result["money"], 2) . "{$multiplierText}&r&a."));
                     PlayerUtils::playSound($player, "random.orb");
                 }
                 $this->build();
@@ -63,7 +64,7 @@ final class CollectionChestScreen {
                     $player->sendMessage(C::colorize("&r&cThere is no stored XP to claim."));
                     PlayerUtils::playSound($player, "note.bass");
                 } else {
-                    $player->sendMessage(C::colorize("&r&aClaimed &f" . number_format($claimed) . " &aXP from the collection chest."));
+                    $player->sendMessage(C::colorize("&r&aClaimed &f" . number_format($claimed) . " &aXP from this chest."));
                     PlayerUtils::playSound($player, "random.levelup");
                 }
                 $this->build();
@@ -100,9 +101,9 @@ final class CollectionChestScreen {
                 }
 
                 if ($overflowed) {
-                    $player->sendMessage(C::colorize("&r&eSome of those items stayed in the collection chest because your inventory is full."));
+                    $player->sendMessage(C::colorize("&r&eSome of those items stayed in this chest because your inventory is full."));
                 } else {
-                    $player->sendMessage(C::colorize("&r&aWithdrawn items from the collection chest."));
+                    $player->sendMessage(C::colorize("&r&aWithdrawn items from this chest."));
                 }
                 PlayerUtils::playSound($player, "random.pop");
                 $this->build();
@@ -153,18 +154,27 @@ final class CollectionChestScreen {
         }
 
         $info = VanillaBlocks::CHEST()->asItem();
-        $info->setCustomName(C::colorize("&r&eChunk Collector"));
-        $info->setLore([
-            C::colorize("&r&7Collects mob drops and XP from"),
-            C::colorize("&r&7this chunk while it remains placed."),
-        ]);
+        if ($this->isHarvesterChest()) {
+            $info->setCustomName(C::colorize("&r&eFarm Collector"));
+            $info->setLore([
+                C::colorize("&r&7Collects crop and farm block drops"),
+                C::colorize("&r&7from this chunk (breaks and loose"),
+                C::colorize("&r&7items such as invalid sugar cane)."),
+            ]);
+        } else {
+            $info->setCustomName(C::colorize("&r&eChunk Collector"));
+            $info->setLore([
+                C::colorize("&r&7Collects mob drops and XP from"),
+                C::colorize("&r&7this chunk while it remains placed."),
+            ]);
+        }
         $inv->setItem(47, $info);
 
         $sellAll = VanillaItems::GOLD_INGOT();
         $sellAll->setCustomName(C::colorize("&r&aSell All"));
         $sellAll->setLore([
             C::colorize("&r&7Sell every sellable item stored"),
-            C::colorize("&r&7inside this collection chest."),
+            C::colorize("&r&7inside this chest."),
         ]);
         $inv->setItem(49, $sellAll);
 
@@ -201,5 +211,15 @@ final class CollectionChestScreen {
     private static function positionKey(Position $position): string
     {
         return $position->getWorld()->getFolderName() . ":" . $position->getFloorX() . ":" . $position->getFloorY() . ":" . $position->getFloorZ();
+    }
+
+    private function isHarvesterChest(): bool
+    {
+        $entry = Loader::getCollectionChestManager()->getChestAt($this->position);
+        if ($entry === null) {
+            return false;
+        }
+
+        return ((string) ($entry["chest_type"] ?? CollectionChestManager::CHEST_TYPE_COLLECTION)) === CollectionChestManager::CHEST_TYPE_HARVESTER;
     }
 }

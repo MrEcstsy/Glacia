@@ -1,0 +1,353 @@
+# Glacia Factions - in-game guide
+# Reload after edits: /greload reload guide
+
+main_menu_title: "&l&bGlacia &fGuide"
+main_menu_content: "&7Learn the main loops: where to grind, how progression works, and what Glacia systems are actually for."
+
+order:
+  - getting_started
+  - progression
+  - zones
+  - enchanting
+  - factions
+  - economy
+  - pvp_warzone
+  - farming
+  - fishing
+  - loot_crates
+  - commands
+
+aliases:
+  start: getting_started
+  begin: getting_started
+  new: getting_started
+  progress: progression
+  progression: progression
+  level: progression
+  zone: zones
+  zones: zones
+  enchant: enchanting
+  enchants: enchanting
+  enchanting: enchanting
+  ge: enchanting
+  ce: enchanting
+  faction: factions
+  factions: factions
+  f: factions
+  eco: economy
+  economy: economy
+  money: economy
+  pvp: pvp_warzone
+  warzone: pvp_warzone
+  wz: pvp_warzone
+  farm: farming
+  farming: farming
+  fish: fishing
+  fishing: fishing
+  loot: loot_crates
+  crates: loot_crates
+  crate: loot_crates
+  cmd: commands
+  cmds: commands
+  commands: commands
+
+guide:
+  getting_started:
+    title: "&bGetting Started"
+    summary: "First steps and core loop"
+    pages:
+      first_session:
+        title: "&bYour First 15 Minutes"
+        summary: "&7Spawn in, learn the leveling loop, and get moving without overthinking every item."
+        lines:
+          - "&7Your main early goal is simple: &flevel up, unlock zones, and turn mob drops into money."
+          - "&71. Check &f/zones &7and go to the best early zone you currently have unlocked."
+          - "&72. Kill mobs, collect drops, and use &f/sellall &7for money."
+          - "&73. Watch your &f/level &7because that unlocks stronger zones and more systems."
+          - "&74. Use &f/settings &7for QoL once you know what actually annoys you."
+        commands:
+          - "/zones - Zone list and teleports"
+          - "/level - Your progression level"
+          - "/sellall - Sell mob and grind drops"
+          - "/spawn - Reset and regroup"
+      what_matters:
+        title: "&bWhat Actually Matters Early"
+        summary: "&7Ignore the item flood at first. Learn the server loops before worrying about every custom piece."
+        lines:
+          - "&7You do &fnot &7need to understand every item lore line on day one."
+          - "&7Focus on these systems first:"
+          - "&f- Progression: &7your Glacia level and zone unlocks."
+          - "&f- Money: &7selling drops, using shops, and eventually trading."
+          - "&f- Gear: &7getting usable enchants, then improving success rates later."
+          - "&7Once those make sense, the rest becomes much easier to read naturally."
+      join_a_faction:
+        title: "&bWhy Join a Faction?"
+        summary: "&7Factions are not just for PvP. They give claims, upgrades, storage, and shared progression."
+        lines:
+          - "&7A faction gives you land claims, teammates, upgrades, and a home base."
+          - "&7If you're solo, you can still grind zones and economy first, then join a faction once you understand the basics."
+          - "&7If you already have friends on, joining a faction early helps because your money and drops can start feeding shared progress."
+        commands:
+          - "/f help - Faction command tree"
+          - "/f map - View claim borders"
+
+  progression:
+    title: "&dProgression"
+    summary: "Level, gear, unlock, repeat"
+    pages:
+      main_loop:
+        title: "&dThe Main Loop"
+        summary: "&7Almost everything on Glacia feeds this cycle."
+        lines:
+          - "&7Kill mobs in the best zone you can handle."
+          - "&7Sell or store the drops."
+          - "&7Use the money and loot to improve your gear."
+          - "&7Push your &fGlacia level &7high enough to unlock the next zone."
+          - "&7Move up when the current zone stops feeling rewarding."
+      early_mid_late:
+        title: "&dEarly, Mid, Late Game"
+        summary: "&7Know what stage you're in so you stop comparing your account to endgame players too early."
+        lines:
+          - "&7&fEarly game:&7 Your first unlocked zones. Learn selling, basic enchants, and starter gear."
+          - "&7&fMid game:&7 The middle grind zones where better drops and stronger enchants start to matter."
+          - "&7&fLate game:&7 Endgame zones, Warzone, bosses, and refined custom gear."
+          - "&7If you feel weak, it usually means your &fzone, gear, and level &7are out of sync."
+      stuck:
+        title: "&dIf You Feel Stuck"
+        summary: "&7Most progression walls come from one of three things."
+        lines:
+          - "&7If you're stuck, check this order:"
+          - "&f1. Level wall:&7 You may simply need more Glacia levels."
+          - "&f2. Gear wall:&7 Your enchants, success rates, or armor quality may be behind."
+          - "&f3. Economy wall:&7 You may need to grind and sell more before forcing the next leap."
+          - "&7Going back one zone to farm faster is normal. It is not wasted time if it funds the next jump."
+        commands:
+          - "/level - Check current progress"
+          - "/zones - Compare unlocks"
+          - "/guide enchanting - Gear improvement loop"
+
+  zones:
+    title: "&5Zones"
+    summary: "Where to grind and why"
+    pages:
+      what_zones_are:
+        title: "&5What Zones Are For"
+        summary: "&7Zones are where you grind XP, money, progression drops, and event loot."
+        lines:
+          - "&7Each zone is a farming space with its own difficulty, drops, and progression role."
+          - "&7The right zone is usually the one you can clear &ffast and safely&7, not the highest one you can barely survive."
+          - "&7Use &f/zones &7to compare your live unlocks, recommended levels, and teleport options."
+        commands:
+          - "/zones - Zone browser"
+          - "/sellall - Convert drops into money"
+      choosing_zone:
+        title: "&5Which Zone Should I Be In?"
+        summary: "&7Choose by efficiency, not ego."
+        lines:
+          - "&7If a zone is slow, dangerous, or burns all your healing, drop back one tier."
+          - "&7Good grinding feels like consistent kills, steady drops, and manageable damage."
+          - "&7Bad grinding feels like panic healing, low kill speed, and almost no inventory value."
+          - "&7When in doubt, use the zone where your clears feel smooth and your bags fill quickly."
+      elites_events:
+        title: "&5Elites, Events, and Spikes"
+        summary: "&7Zone intensity can suddenly jump even if the base mobs felt easy."
+        lines:
+          - "&7Elites and event mobs are meant to break routine and force movement, healing, or target priority."
+          - "&7World events are the best time to jump into a zone early if you want boosted rewards."
+          - "&7If an event or elite modifier feels cooked, backing off and re-engaging is fine. Don't treat every pull like it must be face-tanked."
+      astral_veil:
+        title: "&5Astral Veil"
+        summary: "&7Astral Veil is not a normal zone. It mixes endgame PvE with PvP risk."
+        lines:
+          - "&7Astral Veil has a safe spawn structure, but &fPvP turns on outside it&7."
+          - "&7Treat it like endgame grind space, not a casual leveling zone."
+          - "&7Bring real gear, real healing, and know where the exit portal is before pushing out."
+          - "&7If you're just unlocking it, your goal is usually learning the layout and survival rhythm before hard grinding it."
+        commands:
+          - "/zones - Reopen zone teleports"
+          - "/guide pvp_warzone - PvP readiness mindset"
+
+  enchanting:
+    title: "&6Enchanting"
+    summary: "Books, dust, scrolls, souls"
+    pages:
+      book_loop:
+        title: "&6The Enchanting Loop"
+        summary: "&7Enchanting is about improving odds over time, not expecting every book to land raw."
+        lines:
+          - "&7Open books, find enchants you want, then improve the odds before forcing them onto expensive gear."
+          - "&7The normal loop is: &fget book -> add dust -> protect item if needed -> apply -> repeat&7."
+          - "&7If you skip the setup steps and just raw-send everything, you burn resources much faster."
+        commands:
+          - "/ge list - Browse custom enchants"
+          - "/ge info <enchant> - Read one enchant"
+      success_and_protection:
+        title: "&6Success Rates, Dust, and Scrolls"
+        summary: "&7Most confusion here comes from not knowing what each support item is supposed to solve."
+        lines:
+          - "&7&fDust &7improves book success. It helps the book land."
+          - "&7&fWhite Scrolls &7protect the item if the book fails."
+          - "&7&fTransmog Scrolls &7reorder enchants so the item lore is cleaner."
+          - "&7&fBlack Scrolls &7remove enchants off existing gear."
+          - "&7Think of these as setup tools, not loot filler."
+      soul_system:
+        title: "&6Souls, Conduits, and Proc Costs"
+        summary: "&7Souls matter once your gear starts using proc-based enchants."
+        lines:
+          - "&7Some enchants consume souls when they trigger."
+          - "&7Those souls come from a merged &fsoul conduit/gem &7on the item, not from thin air."
+          - "&7Different conduit types change how expensive those procs are."
+          - "&7If an enchant says it needs a conduit merged, that means the gear is missing its soul source."
+        commands:
+          - "/withdrawsouls - Move souls from a tracker"
+      what_to_learn_first:
+        title: "&6What New Players Should Learn First"
+        summary: "&7Don't start with the deepest enchanting tech."
+        lines:
+          - "&7First learn what enchants you want on your main gear pieces."
+          - "&7Then learn how to improve success rates and use White Scrolls."
+          - "&7After that, learn souls, conduits, orbs, mastery, and advanced item refinement."
+          - "&7The system becomes readable once you stop trying to memorize every support item on day one."
+
+  factions:
+    title: "&bFactions"
+    summary: "Claims, roles, team progress"
+    pages:
+      claims:
+        title: "&bClaims and Land"
+        summary: "&7Claims are how your faction secures builds and creates a real base."
+        lines:
+          - "&7Claim around your base so other players cannot freely build into it."
+          - "&7Use &f/f map &7often. Border awareness saves more bases than panic fixing later."
+          - "&7Claims cost power to maintain, so don't overextend just because land looks empty."
+        commands:
+          - "/f claim"
+          - "/f unclaim"
+          - "/f map"
+      upgrades_roles:
+        title: "&bUpgrades and Roles"
+        summary: "&7Good factions organize who can do what and where money should go."
+        lines:
+          - "&7Faction upgrades turn shared money into team-wide power."
+          - "&7Roles matter because not everyone should be able to invite, kick, or change land."
+          - "&7If you're leading, set up structure early instead of fixing mistakes after drama starts."
+      contribution:
+        title: "&bContribution and Shared Progress"
+        summary: "&7Many systems quietly feed faction progress."
+        lines:
+          - "&7Grinding, challenges, and certain reward systems can help your faction beyond just your own inventory."
+          - "&7That means even PvE-focused players still matter to a faction's long-term strength."
+          - "&7If you're recruiting, explain that to new members so they understand why their grind is valuable."
+
+  economy:
+    title: "&aEconomy"
+    summary: "Sell, trade, and scale up"
+    pages:
+      money_flow:
+        title: "&aHow Money Is Made"
+        summary: "&7Most players earn by grinding first, then scaling into markets and events."
+        lines:
+          - "&7Your early economy is mostly zone drops and &f/sellall&7."
+          - "&7Later, money also comes from events, boss loot, auctions, jackpots, flips, and better item knowledge."
+          - "&7A strong economy lets you skip weak gear phases instead of forcing every upgrade manually."
+        commands:
+          - "/balance"
+          - "/sellall"
+          - "/pay"
+      player_markets:
+        title: "&aAuction House and Bazaar"
+        summary: "&7Player markets are for value checking, flipping, and buying time back."
+        lines:
+          - "&7Use &f/ah &7to compare prices before panic buying or undercutting."
+          - "&7Use &f/bah &7for timed black market style item opportunities."
+          - "&7Not every grind drop should be sold instantly. Some things are worth more to players than to &f/sellall&7."
+        commands:
+          - "/ah"
+          - "/bah"
+
+  pvp_warzone:
+    title: "&cPvP and Warzone"
+    summary: "Risk, bosses, and pressure"
+    pages:
+      warzone_basics:
+        title: "&cWhat Warzone Is"
+        summary: "&7Warzone is not just random PvP. It is where high-traffic risk and event value stack together."
+        lines:
+          - "&7Expect player fights, event rushes, and opportunistic third parties."
+          - "&7If you bring gear there, assume you may have to actually use it."
+          - "&7Go in with a reason: envoys, boss event, PvP, scouting, or pressure on other players."
+      combat_readiness:
+        title: "&cHow to Know If You're Ready"
+        summary: "&7Readiness is about survivability and confidence, not just one strong item."
+        lines:
+          - "&7Can you tank normal pressure for more than a few seconds?"
+          - "&7Do you have enough healing to stay in a fight and not just trade once?"
+          - "&7Do you know your escape path, your pearl routes, or where your faction support is?"
+          - "&7If not, you're probably still in the preparation stage."
+      bosses_and_events:
+        title: "&cWarzone Bosses and Events"
+        summary: "&7These are meant to create conflict, not free loot."
+        lines:
+          - "&7Warzone boss events draw both grinders and PvPers."
+          - "&7If you commit to one, expect contest pressure even if the boss itself is manageable."
+          - "&7A good team uses positioning, peel, and timing. A bad team just tunnels the boss and dies rich."
+
+  farming:
+    title: "&eFarming"
+    summary: "Crop level gates and use"
+    pages:
+      level_gates:
+        title: "&eCrop Progression"
+        summary: "&7Your Glacia level controls what farming actions you can reliably use."
+        lines:
+          - "&7Some crops and farming actions are locked behind your Glacia level."
+          - "&7If something won't place or work, check the live requirement first before assuming it is bugged."
+          - "&7Treat farming as another progression lane, not a completely separate game."
+        commands:
+          - "/level"
+
+  fishing:
+    title: "&3Fishing"
+    summary: "Rod XP and slower profit"
+    pages:
+      basics:
+        title: "&3Fishing Basics"
+        summary: "&7Fishing is about patience, timing, and long-term value, not fast early money."
+        lines:
+          - "&7Catch fish to level your rod progression and improve later fishing rewards."
+          - "&7Zone fishing boosters only help in the matching zone."
+          - "&7Fishing shines more once you can afford to do slower, lower-risk progression."
+        commands:
+          - "/booster list"
+
+  loot_crates:
+    title: "&dLoot and Crates"
+    summary: "Burst rewards, not main loop"
+    pages:
+      role_of_crates:
+        title: "&dWhat Crates Are For"
+        summary: "&7They speed up progress or inject rares, but they are not the core gameplay loop."
+        lines:
+          - "&7Use crate rewards to skip weak phases, add utility, or gamble for spikes."
+          - "&7Do not build your whole plan around waiting for crate luck."
+          - "&7Most strong accounts still come from knowing the base loops well."
+        commands:
+          - "/collect"
+          - "/vote"
+
+  commands:
+    title: "&fCommands"
+    summary: "The commands that matter"
+    pages:
+      core:
+        title: "&fUseful Everyday Commands"
+        summary: "&7If you only remember a handful, remember these."
+        lines:
+          - "&7Progression: &f/zones &7| &f/level &7| &f/sellall"
+          - "&7Navigation: &f/spawn &7| &f/home &7| &f/warp"
+          - "&7Economy: &f/balance &7| &f/pay &7| &f/ah"
+          - "&7Faction: &f/f &7| &f/f map"
+          - "&7Settings and help: &f/settings &7| &f/guide"
+        commands:
+          - "/guide"
+          - "/settings"

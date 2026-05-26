@@ -4,9 +4,17 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\entity\boss;
 
+use ecstsy\Glacia\entity\boss\minions\BossMinion;
+use ecstsy\Glacia\entity\boss\minions\BossMinionEnderman;
+use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\boss\BossConfigManager;
 use ecstsy\Glacia\server\items\pets\PetManager;
+use ecstsy\Glacia\server\staff\HiddenStaffTargeting;
+use ecstsy\Glacia\utils\RewardResolver;
 use ecstsy\MartianUtilities\entity\BaseHostileEntity;
 use ecstsy\MartianUtilities\utils\PlayerUtils;
+use pocketmine\block\Block;
+use pocketmine\entity\Location;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\math\Vector3;
@@ -19,6 +27,15 @@ use pocketmine\utils\TextFormat as C;
 use ReflectionMethod;
 use Throwable;
 use xenialdan\apibossbar\BossBar;
+use function array_filter;
+use function implode;
+use function is_array;
+use function is_numeric;
+use function number_format;
+use function preg_replace;
+use function strtolower;
+use function strrpos;
+use function substr;
 
 abstract class BossEntity extends BaseHostileEntity {
 
@@ -46,9 +63,18 @@ abstract class BossEntity extends BaseHostileEntity {
     protected float $meleeDeadzone = 1.9;
     protected int $closeStrafeDirection = 1;
     protected int $nextCloseStrafeSwapTick = 0;
+    /** @var array<int, true> */
+    protected array $activeMinionIds = [];
+    /** @var array<int, true> */
+    protected array $triggeredIntermissionPhases = [];
+    protected bool $minionIntermissionActive = false;
+    protected int $minionIntermissionStartedAt = 0;
+    protected int $minionIntermissionTimeoutAt = 0;
+    protected int $spawnedIntermissionMinionCount = 0;
+    protected bool $clearingIntermissionMinions = false;
 
     public function canCastAnyAbility(): bool {
-        return $this->bossTick >= $this->globalAbilityCooldownUntil;
+        return !$this->minionIntermissionActive && $this->bossTick >= $this->globalAbilityCooldownUntil;
     }
 
     public function triggerGlobalAbilityCooldown(int $ticks): void {
@@ -73,7 +99,7 @@ abstract class BossEntity extends BaseHostileEntity {
     }
 
     protected function getBossBarTitle(): string {
-        return "&r&l" . $this->getBossName();
+        return $this->decorateBossBarTitle("&r&l" . $this->getBossName());
     }
 
     public function isOverloaded(): bool {
@@ -85,6 +111,13 @@ abstract class BossEntity extends BaseHostileEntity {
     }
 
     protected function updateAI(): void {
+        if ($this->minionIntermissionActive) {
+            $this->clearTarget();
+            $this->motion->x *= 0.35;
+            $this->motion->z *= 0.35;
+            return;
+        }
+
         $this->updatePhase();
 
         if ($this->target instanceof Player && !$this->isValidBossTarget($this->target)) {
@@ -167,11 +200,15 @@ abstract class BossEntity extends BaseHostileEntity {
         }
 
         $reach = $this->getMeleeReach();
-        return $this->getPosition()->distanceSquared($this->target->getPosition()) <= ($reach ** 2);
+        if ($this->getPosition()->distanceSquared($this->target->getPosition()) > ($reach ** 2)) {
+            return false;
+        }
+
+        return $this->isTargetInsideMeleeArc($this->target);
     }
 
     protected function getMeleeReach(): float {
-        return 2.2;
+        return $this->getConfiguredMeleeReach(2.2);
     }
 
     protected function getCloseRangeOrbitBuffer(): float {
@@ -179,7 +216,7 @@ abstract class BossEntity extends BaseHostileEntity {
     }
 
     protected function getBossTargetRange(): float {
-        return 30.0;
+        return $this->getConfiguredTargetRange(30.0);
     }
 
     protected function getTargetLockTicks(): int {
@@ -187,12 +224,16 @@ abstract class BossEntity extends BaseHostileEntity {
     }
 
     protected function getMeleeDamage(): float {
-        return match ($this->phase) {
-            1 => 6.0,
-            2 => 7.5,
-            3 => 9.0,
-            default => 6.0
-        };
+        return $this->getConfiguredMeleeDamage([
+            1 => 12.0,
+            2 => 17.0,
+            3 => 23.0,
+        ]);
+    }
+
+    protected function getMeleeFacingDotThreshold(): float
+    {
+        return 0.60;
     }
 
     protected function doMeleeAttack(): void {
@@ -210,18 +251,79 @@ abstract class BossEntity extends BaseHostileEntity {
             $damage *= 1.25;
         }
 
-        $event = new EntityDamageByEntityEvent(
-            $this,
-            $this->target,
-            EntityDamageByEntityEvent::CAUSE_ENTITY_ATTACK,
-            $damage
-        );
-
-        $this->target->attack($event);
+        $event = $this->dealBossTrueDamage($this->target, $damage, EntityDamageEvent::CAUSE_ENTITY_ATTACK);
 
         if (!$event->isCancelled()) {
             $this->attackCooldown = 14;
         }
+    }
+
+    public function dealBossTrueDamage(Player $player, float $damage, int $cause = EntityDamageEvent::CAUSE_MAGIC): EntityDamageByEntityEvent
+    {
+        $damage = max(0.0, $damage);
+        $event = new EntityDamageByEntityEvent(
+            $this,
+            $player,
+            $cause,
+            $damage,
+            [],
+            0.0,
+            0.0
+        );
+        if ($this->minionIntermissionActive) {
+            $event->cancel();
+            return $event;
+        }
+        $player->attack($event);
+
+        if (!$event->isCancelled()) {
+            $minimumDamage = $this->getMinimumUnmitigatedDamage($damage, $cause);
+            if ($minimumDamage > 0.0) {
+                $extraDamage = max(0.0, $minimumDamage - $event->getFinalDamage());
+                if ($extraDamage > 0.0) {
+                    $this->applyGuaranteedBossDamage($player, $extraDamage);
+                }
+            }
+        }
+
+        return $event;
+    }
+
+    protected function getMinimumUnmitigatedDamage(float $baseDamage, int $cause): float
+    {
+        return 0.0;
+    }
+
+    private function applyGuaranteedBossDamage(Player $player, float $extraDamage): void
+    {
+        if ($extraDamage <= 0.0 || !$player->isAlive() || $player->isClosed()) {
+            return;
+        }
+
+        $newHealth = max(0.0, $player->getHealth() - $extraDamage);
+        $player->setHealth($newHealth);
+    }
+
+    protected function isTargetInsideMeleeArc(Player $player): bool
+    {
+        $direction = $this->getDirectionVector();
+        $forwardLenSq = ($direction->x * $direction->x) + ($direction->z * $direction->z);
+        if ($forwardLenSq <= 0.0001) {
+            return true;
+        }
+
+        $deltaX = $player->getPosition()->x - $this->location->x;
+        $deltaZ = $player->getPosition()->z - $this->location->z;
+        $targetLenSq = ($deltaX * $deltaX) + ($deltaZ * $deltaZ);
+        if ($targetLenSq <= 0.0001) {
+            return true;
+        }
+
+        $forwardLen = sqrt($forwardLenSq);
+        $targetLen = sqrt($targetLenSq);
+        $dot = (($direction->x / $forwardLen) * ($deltaX / $targetLen)) + (($direction->z / $forwardLen) * ($deltaZ / $targetLen));
+
+        return $dot >= $this->getMeleeFacingDotThreshold();
     }
 
     protected function moveTowardTarget(): void {
@@ -393,6 +495,7 @@ abstract class BossEntity extends BaseHostileEntity {
         if ($newPhase !== $this->phase) {
             $this->phase = $newPhase;
             $this->onPhaseChange($newPhase);
+            $this->tryStartMinionIntermission($newPhase);
         }
     }
 
@@ -490,6 +593,15 @@ abstract class BossEntity extends BaseHostileEntity {
 
     protected function entityBaseTick(int $tickDiff = 1): bool {
         $this->bossTick += $tickDiff;
+        $this->tickMinionIntermission();
+
+        if ($this->minionIntermissionActive) {
+            $this->motion->x = 0.0;
+            $this->motion->z = 0.0;
+            if ($this->onGround) {
+                $this->motion->y = min($this->motion->y, 0.0);
+            }
+        }
 
         if (($this->bossTick % 10) === 0) {
             $this->updateNameTag();
@@ -505,7 +617,196 @@ abstract class BossEntity extends BaseHostileEntity {
         return $this->bossTick;
     }
 
+    protected function getBossConfigId(): string
+    {
+        $short = substr(static::class, (int) strrpos(static::class, "\\") + 1);
+        $normalized = preg_replace('/(?<!^)[A-Z]/', '_$0', $short);
+        return strtolower($normalized ?? $short);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function getBossDefaultConfig(): array
+    {
+        return [
+            "stats" => [
+                "max-health" => 1000.0,
+                "melee-reach" => 2.2,
+                "target-range" => 30.0,
+                "follow-range" => 30.0,
+                "knockback-resistance" => 0.8,
+                "movement-speed" => [
+                    "phase-1" => 0.30,
+                    "phase-2" => 0.36,
+                    "phase-3" => 0.42,
+                ],
+                "melee-damage" => [
+                    "phase-1" => 12.0,
+                    "phase-2" => 17.0,
+                    "phase-3" => 23.0,
+                ],
+            ],
+            "minions" => [
+                "phase-2" => [
+                    "name" => "&r&dAstral Riftspawn",
+                    "health" => 88,
+                    "damage" => 8.0,
+                    "speed" => 0.27,
+                    "target-range" => 26.0,
+                    "attack-reach" => 2.5,
+                    "attack-cooldown" => 11,
+                ],
+                "phase-3" => [
+                    "name" => "&r&5Astral Riftspawn",
+                    "health" => 115,
+                    "damage" => 10.0,
+                    "speed" => 0.30,
+                    "target-range" => 26.0,
+                    "attack-reach" => 2.5,
+                    "attack-cooldown" => 9,
+                ],
+            ],
+            "rewards" => [
+                "top-damagers" => 5,
+                "ranks" => [
+                    1 => ["money" => 0, "items" => []],
+                    2 => ["money" => 0, "items" => []],
+                    3 => ["money" => 0, "items" => []],
+                    4 => ["money" => 0, "items" => []],
+                    5 => ["money" => 0, "items" => []],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function getBossConfig(): array
+    {
+        return BossConfigManager::getBossConfig($this->getBossConfigId(), $this->getBossDefaultConfig());
+    }
+
+    protected function getConfiguredMaxHealth(float $default): float
+    {
+        return $this->bossConfigFloat(["stats", "max-health"], $default, 1.0, 500000.0);
+    }
+
+    protected function getConfiguredMovementSpeed(int $phase, float $default): float
+    {
+        return $this->bossConfigFloat(["stats", "movement-speed", "phase-" . $phase], $default, 0.01, 2.0);
+    }
+
+    protected function getConfiguredFollowRange(float $default): float
+    {
+        return $this->bossConfigFloat(["stats", "follow-range"], $default, 4.0, 256.0);
+    }
+
+    protected function getConfiguredKnockbackResistance(float $default): float
+    {
+        return $this->bossConfigFloat(["stats", "knockback-resistance"], $default, 0.0, 1.0);
+    }
+
+    protected function getConfiguredMeleeReach(float $default): float
+    {
+        return $this->bossConfigFloat(["stats", "melee-reach"], $default, 1.0, 12.0);
+    }
+
+    protected function getConfiguredTargetRange(float $default): float
+    {
+        return $this->bossConfigFloat(["stats", "target-range"], $default, 4.0, 128.0);
+    }
+
+    /**
+     * @param array<int, float> $defaults
+     */
+    protected function getConfiguredMeleeDamage(array $defaults): float
+    {
+        $default = $defaults[$this->phase] ?? ($defaults[1] ?? 1.0);
+        return $this->bossConfigFloat(["stats", "melee-damage", "phase-" . $this->phase], $default, 0.0, 100000.0);
+    }
+
+    /**
+     * @param array<string, mixed> $default
+     * @return array<string, mixed>
+     */
+    protected function getConfiguredMinionSpec(int $phase, array $default): array
+    {
+        $phaseKey = "phase-" . $phase;
+        $configured = $this->bossConfigArray(["minions", $phaseKey]);
+
+        return [
+            "class" => $default["class"] ?? BossMinionEnderman::class,
+            "name" => (string) ($configured["name"] ?? $default["name"] ?? "&r&cBoss Minion"),
+            "health" => (int) $this->normalizeFloat($configured["health"] ?? ($default["health"] ?? 40), (float) ($default["health"] ?? 40), 8.0, 50000.0),
+            "damage" => $this->normalizeFloat($configured["damage"] ?? ($default["damage"] ?? 6.0), (float) ($default["damage"] ?? 6.0), 0.0, 10000.0),
+            "speed" => $this->normalizeFloat($configured["speed"] ?? ($default["speed"] ?? 0.24), (float) ($default["speed"] ?? 0.24), 0.01, 2.0),
+            "target_range" => $this->normalizeFloat($configured["target-range"] ?? ($configured["target_range"] ?? ($default["target_range"] ?? 24.0)), (float) ($default["target_range"] ?? 24.0), 4.0, 128.0),
+            "attack_reach" => $this->normalizeFloat($configured["attack-reach"] ?? ($configured["attack_reach"] ?? ($default["attack_reach"] ?? 2.2)), (float) ($default["attack_reach"] ?? 2.2), 1.0, 12.0),
+            "attack_cooldown" => (int) $this->normalizeFloat($configured["attack-cooldown"] ?? ($configured["attack_cooldown"] ?? ($default["attack_cooldown"] ?? 10)), (float) ($default["attack_cooldown"] ?? 10), 1.0, 1200.0),
+        ];
+    }
+
+    protected function rewardConfiguredTopDamagers(string $victoryHeader, string $accentColor, ?string $bossLabel = null, array $questContext = []): void
+    {
+        $top = $this->getTopDamagers($this->getConfiguredTopDamagerLimit(5));
+        if ($top === []) {
+            return;
+        }
+
+        $lines = [];
+        $rank = 1;
+        $label = $bossLabel ?? C::clean($this->getName());
+
+        foreach ($top as $playerId => $damage) {
+            $player = $this->getWorld()->getServer()->getPlayerExact($playerId);
+            if (!$player instanceof Player) {
+                continue;
+            }
+
+            if ($rank === 1) {
+                Loader::getQuestBoardManager()->recordProgress($player, "boss_top_damage", 1, $questContext);
+            }
+
+            $money = $this->getConfiguredRankMoney($rank);
+            if ($money > 0) {
+                Loader::getPlayerManager()->getSession($player)?->addBalance($money);
+            }
+
+            $rewardNames = $this->grantConfiguredRankItems($player, $rank);
+            $message = $money > 0
+                ? "&r&l&a[Boss] &r&aYou placed #{$rank} on the &f{$label} &aand earned &f$" . number_format($money)
+                : "&r&l&a[Boss] &r&aYou placed #{$rank} on the &f{$label}&a.";
+            $player->sendMessage(C::colorize($message));
+
+            if ($rewardNames !== []) {
+                $player->sendMessage(C::colorize("&r&7Bonus rewards: &f" . implode("&7, &f", $rewardNames)));
+            }
+
+            PlayerUtils::playSound($player, "random.levelup");
+            $lines[] = C::colorize("&r&7#{$rank} &f{$player->getName()} &7- {$accentColor}" . number_format((int) $damage) . " dmg");
+            $rank++;
+        }
+
+        if ($lines === []) {
+            return;
+        }
+
+        foreach ($this->getWorld()->getPlayers() as $player) {
+            $player->sendMessage(C::colorize($victoryHeader));
+            foreach ($lines as $line) {
+                $player->sendMessage($line);
+            }
+        }
+    }
+
     public function attack(EntityDamageEvent $source): void {
+        if ($this->minionIntermissionActive) {
+            $source->cancel();
+            return;
+        }
+
         parent::attack($source);
 
         if (
@@ -550,6 +851,9 @@ abstract class BossEntity extends BaseHostileEntity {
     }
 
     public function applyBossMotion(Player $player, Vector3 $motion): void {
+        if ($this->minionIntermissionActive) {
+            return;
+        }
         $player->setMotion(PetManager::scaleBossMotion($player, $motion));
     }
 
@@ -598,10 +902,11 @@ abstract class BossEntity extends BaseHostileEntity {
         }
 
         $baseName = $this->getBossName();
+        $statusLine = $this->minionIntermissionActive
+            ? "\n&r&6Shielded &7| &f" . $this->getRemainingMinionCount() . "&7 minions left"
+            : "";
 
-        $this->setNameTag(C::colorize(
-            "&r&l{$baseName}\n&r{$color}❤ &r&f{$health}/{$maxHealth}"
-        ));
+        $this->setNameTag(C::colorize("&r&l{$baseName}\n&r{$color}❤ &r&f{$health}/{$maxHealth}{$statusLine}"));
     }
 
     protected function updateHealthNameTag(): void {
@@ -610,6 +915,19 @@ abstract class BossEntity extends BaseHostileEntity {
 
     public function getBossName(): string {
         return $this->getName();
+    }
+
+    public function isMinionIntermissionActive(): bool
+    {
+        return $this->minionIntermissionActive;
+    }
+
+    public function handleMinionRemoved(BossMinion $minion): void
+    {
+        unset($this->activeMinionIds[$minion->getId()]);
+        if ($this->minionIntermissionActive) {
+            $this->syncBossBar();
+        }
     }
 
     protected function getTopDamagers(int $limit = 5): array {
@@ -638,6 +956,11 @@ abstract class BossEntity extends BaseHostileEntity {
         return $multiplier;
     }
 
+    protected function getMinionSpawnRadiusBase(): float
+    {
+        return 3.5;
+    }
+
     protected function getSeparationStrength(): float {
         return 0.08;
     }
@@ -647,6 +970,7 @@ abstract class BossEntity extends BaseHostileEntity {
             && $player->isAlive()
             && !$player->isClosed()
             && !$player->isSpectator()
+            && !HiddenStaffTargeting::isUntargetable($player)
             && $player->getWorld() === $this->getWorld()
             && $player->getPosition()->distanceSquared($this->getPosition()) <= ($this->getBossTargetRange() ** 2);
     }
@@ -776,7 +1100,8 @@ abstract class BossEntity extends BaseHostileEntity {
             if (
                 !$player->isOnline() ||
                 !$player->isAlive() ||
-                $player->isSpectator()
+                $player->isSpectator() ||
+                HiddenStaffTargeting::isUntargetable($player)
             ) {
                 continue;
             }
@@ -787,6 +1112,292 @@ abstract class BossEntity extends BaseHostileEntity {
         }
 
         return $players;
+    }
+
+    /**
+     * @return array{class: class-string<BossMinion>, name: string, health: int, damage: float, speed: float, target_range: float, attack_reach: float, attack_cooldown: int}
+     */
+    protected function getMinionIntermissionSpec(int $phase): array
+    {
+        return $this->getConfiguredMinionSpec($phase, [
+            "class" => BossMinionEnderman::class,
+            "name" => $phase >= 3 ? "&r&5Astral Riftspawn" : "&r&dAstral Riftspawn",
+            "health" => $phase >= 3 ? 115 : 88,
+            "damage" => $phase >= 3 ? 10.0 : 8.0,
+            "speed" => $phase >= 3 ? 0.30 : 0.27,
+            "target_range" => 26.0,
+            "attack_reach" => 2.5,
+            "attack_cooldown" => $phase >= 3 ? 9 : 11,
+        ]);
+    }
+
+    protected function shouldStartMinionIntermissionForPhase(int $phase): bool
+    {
+        return $phase >= 2;
+    }
+
+    protected function getMinionIntermissionCount(int $phase): int
+    {
+        $engaged = max(1, $this->getEngagedPlayerCount(18.0));
+        return min(8, 4 + max(0, $phase - 2) + intdiv(max(0, $engaged - 1), 2));
+    }
+
+    protected function getMinionIntermissionTimeoutTicks(int $count): int
+    {
+        return 20 * (45 + ($count * 6));
+    }
+
+    protected function decorateBossBarTitle(string $baseTitle): string
+    {
+        if (!$this->minionIntermissionActive) {
+            return $baseTitle;
+        }
+
+        return $baseTitle . " &r&8| &6Minions Left: &f" . $this->getRemainingMinionCount();
+    }
+
+    private function tryStartMinionIntermission(int $phase): void
+    {
+        if (
+            $this->minionIntermissionActive ||
+            !$this->shouldStartMinionIntermissionForPhase($phase) ||
+            isset($this->triggeredIntermissionPhases[$phase])
+        ) {
+            return;
+        }
+
+        $count = $this->getMinionIntermissionCount($phase);
+        if ($count <= 0) {
+            return;
+        }
+
+        $this->triggeredIntermissionPhases[$phase] = true;
+        $this->startMinionIntermission($phase, $count);
+    }
+
+    private function startMinionIntermission(int $phase, int $count): void
+    {
+        $spec = $this->getMinionIntermissionSpec($phase);
+        $class = $spec["class"] ?? BossMinionEnderman::class;
+        if (!is_a($class, BossMinion::class, true)) {
+            return;
+        }
+
+        $spawned = 0;
+        for ($i = 0; $i < $count; $i++) {
+            $location = $this->findMinionSpawnLocation($i, $count);
+            if ($location === null) {
+                continue;
+            }
+
+            $nbt = CompoundTag::create()
+                ->setInt("boss_minion_owner_id", $this->getId())
+                ->setString("boss_minion_name", (string) ($spec["name"] ?? "&r&cBoss Minion"))
+                ->setInt("boss_minion_health", max(8, (int) ($spec["health"] ?? 40)))
+                ->setFloat("boss_minion_damage", max(1.0, (float) ($spec["damage"] ?? 6.0)))
+                ->setFloat("boss_minion_speed", max(0.08, (float) ($spec["speed"] ?? 0.24)))
+                ->setFloat("boss_minion_target_range", max(8.0, (float) ($spec["target_range"] ?? 24.0)))
+                ->setFloat("boss_minion_attack_reach", max(1.4, (float) ($spec["attack_reach"] ?? 2.2)))
+                ->setInt("boss_minion_attack_cooldown", max(6, (int) ($spec["attack_cooldown"] ?? 10)));
+
+            $minion = new $class($location, $nbt);
+            $minion->spawnToAll();
+            $this->activeMinionIds[$minion->getId()] = true;
+            $spawned++;
+        }
+
+        if ($spawned <= 0) {
+            return;
+        }
+
+        $this->spawnedIntermissionMinionCount = $spawned;
+        $this->minionIntermissionActive = true;
+        $this->minionIntermissionStartedAt = $this->bossTick;
+        $this->minionIntermissionTimeoutAt = $this->bossTick + $this->getMinionIntermissionTimeoutTicks($spawned);
+        $this->attackCooldown = max($this->attackCooldown, 30);
+        $this->triggerGlobalAbilityCooldown($this->getMinionIntermissionTimeoutTicks($spawned));
+        $this->clearTarget();
+        $this->broadcastAbility(C::colorize("&r&6" . C::clean($this->getName()) . " &7summons reinforcements and becomes shielded!"), 40);
+        $this->syncBossBar();
+        $this->updateNameTag();
+    }
+
+    private function tickMinionIntermission(): void
+    {
+        if (!$this->minionIntermissionActive) {
+            return;
+        }
+
+        foreach (array_keys($this->activeMinionIds) as $entityId) {
+            $entity = $this->getWorld()->getEntity($entityId);
+            if (!$entity instanceof BossMinion || $entity->isClosed() || !$entity->isAlive()) {
+                unset($this->activeMinionIds[$entityId]);
+            }
+        }
+
+        if ($this->activeMinionIds === []) {
+            $this->finishMinionIntermission(false);
+            return;
+        }
+
+        if ($this->bossTick >= $this->minionIntermissionTimeoutAt) {
+            $this->finishMinionIntermission(true);
+        }
+    }
+
+    private function finishMinionIntermission(bool $timedOut): void
+    {
+        if (!$this->minionIntermissionActive) {
+            return;
+        }
+
+        $this->minionIntermissionActive = false;
+
+        if ($timedOut) {
+            $this->clearingIntermissionMinions = true;
+            foreach (array_keys($this->activeMinionIds) as $entityId) {
+                $entity = $this->getWorld()->getEntity($entityId);
+                if ($entity instanceof BossMinion && !$entity->isClosed()) {
+                    $entity->flagForDespawn();
+                }
+            }
+            $this->clearingIntermissionMinions = false;
+            $this->broadcastAbility(C::colorize("&r&6The boss tears through its own stuck minions and the fight resumes!"), 40);
+        } else {
+            $this->broadcastAbility(C::colorize("&r&aThe minion wave has been cleared. The boss is vulnerable again!"), 40);
+        }
+
+        $this->activeMinionIds = [];
+        $this->spawnedIntermissionMinionCount = 0;
+        $this->minionIntermissionStartedAt = 0;
+        $this->minionIntermissionTimeoutAt = 0;
+        $this->globalAbilityCooldownUntil = min($this->globalAbilityCooldownUntil, $this->bossTick + 20);
+        $this->syncBossBar();
+        $this->updateNameTag();
+    }
+
+    private function findMinionSpawnLocation(int $index, int $count): ?Location
+    {
+        $world = $this->getWorld();
+        $center = $this->getPosition();
+        $baseY = $center->getFloorY();
+        $angle = ((2 * M_PI) / max(1, $count)) * $index;
+
+        for ($attempt = 0; $attempt < 6; $attempt++) {
+            $radius = $this->getMinionSpawnRadiusBase() + $attempt;
+            $x = (int) floor($center->x + cos($angle + ($attempt * 0.35)) * $radius);
+            $z = (int) floor($center->z + sin($angle + ($attempt * 0.35)) * $radius);
+
+            for ($y = $baseY - 2; $y <= $baseY + 3; $y++) {
+                if (!$this->isValidMinionSpawnColumn($world->getBlockAt($x, $y, $z), $world->getBlockAt($x, $y + 1, $z), $world->getBlockAt($x, $y + 2, $z))) {
+                    continue;
+                }
+
+                return new Location($x + 0.5, $y + 1, $z + 0.5, $world, $this->location->yaw, $this->location->pitch);
+            }
+        }
+
+        return new Location($center->x + 1.5, $center->y, $center->z + 1.5, $world, $this->location->yaw, $this->location->pitch);
+    }
+
+    private function isValidMinionSpawnColumn(Block $ground, Block $feet, Block $head): bool
+    {
+        return $ground->isSolid() && !$feet->isSolid() && !$head->isSolid();
+    }
+
+    private function getRemainingMinionCount(): int
+    {
+        return count($this->activeMinionIds);
+    }
+
+    /**
+     * @param list<string> $path
+     */
+    private function bossConfigFloat(array $path, float $default, float $minValue, float $maxValue): float
+    {
+        return $this->normalizeFloat($this->bossConfigValue($path, $default), $default, $minValue, $maxValue);
+    }
+
+    /**
+     * @param list<string> $path
+     * @return array<string, mixed>
+     */
+    private function bossConfigArray(array $path): array
+    {
+        $value = $this->bossConfigValue($path, []);
+        return is_array($value) ? $value : [];
+    }
+
+    /**
+     * @param list<string|int> $path
+     */
+    private function bossConfigValue(array $path, mixed $default): mixed
+    {
+        $value = $this->getBossConfig();
+        foreach ($path as $segment) {
+            if (!is_array($value) || !array_key_exists($segment, $value)) {
+                return $default;
+            }
+            $value = $value[$segment];
+        }
+
+        return $value;
+    }
+
+    private function normalizeFloat(mixed $value, float $default, float $minValue, float $maxValue): float
+    {
+        if (!is_numeric($value)) {
+            return $default;
+        }
+
+        return max($minValue, min($maxValue, (float) $value));
+    }
+
+    private function getConfiguredTopDamagerLimit(int $default): int
+    {
+        return (int) $this->normalizeFloat($this->bossConfigValue(["rewards", "top-damagers"], $default), $default, 1.0, 25.0);
+    }
+
+    private function getConfiguredRankMoney(int $rank): int
+    {
+        return (int) $this->normalizeFloat($this->bossConfigValue(["rewards", "ranks", $rank, "money"], 0), 0.0, 0.0, 2000000000.0);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function getConfiguredRankItems(int $rank): array
+    {
+        $items = $this->bossConfigValue(["rewards", "ranks", $rank, "items"], []);
+        if (!is_array($items)) {
+            return [];
+        }
+
+        return array_values(array_filter($items, static fn(mixed $entry): bool => is_array($entry)));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function grantConfiguredRankItems(Player $player, int $rank): array
+    {
+        $rewardNames = [];
+
+        foreach ($this->getConfiguredRankItems($rank) as $entry) {
+            $item = RewardResolver::resolveItem($entry, $player);
+            if ($item === null) {
+                continue;
+            }
+
+            $displayName = C::clean($item->getCustomName() !== "" ? $item->getCustomName() : $item->getName());
+            $rewardNames[] = ($item->getCount() > 1 ? $item->getCount() . "x " : "") . $displayName;
+
+            foreach ($player->getInventory()->addItem(clone $item) as $leftover) {
+                $player->getWorld()->dropItem($player->getPosition(), $leftover);
+            }
+        }
+
+        return $rewardNames;
     }
 
     abstract protected function initAbilities(): void;

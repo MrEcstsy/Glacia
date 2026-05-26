@@ -7,8 +7,9 @@ namespace ecstsy\Glacia\server\enchantments\enchants\sword;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantDebugManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantProcManager;
 use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
-use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\player\Player;
@@ -17,6 +18,7 @@ final class BrotherhoodEnchant implements EntityDamageByEntityEnchantmentHandler
 {
     /** @var array<string, array<string, int>> */
     private static array $forcedProcCharges = [];
+
     /** @var string[] */
     private const SUPPORTED_MASTERY_WEAPON_ENCHANTS = [
         "disarmor",
@@ -30,7 +32,7 @@ final class BrotherhoodEnchant implements EntityDamageByEntityEnchantmentHandler
 
     public static function handle(EntityDamageByEntityEvent $event, CustomEnchantment $enchant, int $level): void
     {
-        // Triggered by other mastery enchant procs.
+        // Triggered indirectly by other mastery enchant procs.
     }
 
     public static function grantForcedProc(Player $player, string $enchantId, int $charges = 1): void
@@ -42,6 +44,10 @@ final class BrotherhoodEnchant implements EntityDamageByEntityEnchantmentHandler
 
         $key = strtolower($player->getName());
         self::$forcedProcCharges[$key][$enchantId] = (self::$forcedProcCharges[$key][$enchantId] ?? 0) + $charges;
+        EnchantDebugManager::logPassiveValues($player, "brotherhood", 0, [
+            "granted_enchant" => $enchantId,
+            "charges" => self::$forcedProcCharges[$key][$enchantId],
+        ]);
     }
 
     public static function consumeForcedProc(Player $player, string $enchantId): bool
@@ -69,32 +75,31 @@ final class BrotherhoodEnchant implements EntityDamageByEntityEnchantmentHandler
     public static function tryDistributeFromMasteryProc(Player $source, int $level, string $sourceEnchantId): void
     {
         $sourceEnchantId = strtolower(trim($sourceEnchantId));
-        if ($level <= 0) {
-            return;
-        }
-        if (!in_array($sourceEnchantId, self::SUPPORTED_MASTERY_WEAPON_ENCHANTS, true)) {
+        if ($level <= 0 || !in_array($sourceEnchantId, self::SUPPORTED_MASTERY_WEAPON_ENCHANTS, true)) {
             return;
         }
 
-        $chance = EnchantTuningManager::getLevelInt("brotherhood", "chance-by-level", $level, 5 + ($level * 3));
-        if (!ProcLuckManager::roll($source, "brotherhood", $chance, 1, 10)) {
+        $result = EnchantProcManager::attempt(
+            $source,
+            "brotherhood",
+            $level,
+            EnchantTuningManager::chance("brotherhood", $level, 8.0),
+            EnchantTuningManager::cooldownSeconds("brotherhood", $level, 0)
+        );
+        if (!$result->success) {
             return;
         }
 
-        $radius = max(1.0, EnchantTuningManager::getFloat("brotherhood", "ally-radius", 3.0));
+        $radius = max(1.0, EnchantTuningManager::value("brotherhood", "ally-radius", $level, 3.0));
         $radiusSquared = $radius * $radius;
         $origin = $source->getPosition();
+        $granted = 0;
 
         foreach ($source->getWorld()->getPlayers() as $nearby) {
             if ($nearby->getId() === $source->getId()) {
                 continue;
             }
-
-            if ($nearby->getPosition()->distanceSquared($origin) > $radiusSquared) {
-                continue;
-            }
-
-            if (!GlaciaUtils::isAlly($source, $nearby)) {
+            if ($nearby->getPosition()->distanceSquared($origin) > $radiusSquared || !GlaciaUtils::isAlly($source, $nearby)) {
                 continue;
             }
 
@@ -107,6 +112,13 @@ final class BrotherhoodEnchant implements EntityDamageByEntityEnchantmentHandler
             }
 
             self::grantForcedProc($nearby, $sourceEnchantId, 1);
+            $granted++;
         }
+
+        EnchantProcManager::debugAppliedValues($source, $result, [
+            "source_enchant" => $sourceEnchantId,
+            "ally_radius" => $radius,
+            "granted_allies" => $granted,
+        ]);
     }
 }

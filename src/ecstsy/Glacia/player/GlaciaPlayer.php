@@ -12,6 +12,7 @@ use ecstsy\Glacia\server\scoreboard\ScoreboardHelper;
 use ecstsy\Glacia\utils\ChatTypes;
 use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\Glacia\utils\QueryStmts;
+use ecstsy\Glacia\utils\StorageUtils;
 use ecstsy\MartianUtilities\utils\ItemUtils;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\item\Item;
@@ -48,11 +49,14 @@ final class GlaciaPlayer {
         private int $deaths,
         private int $slotCredits,
         private int $itemFlipCredits,
+        private int $playtimeSeconds,
         private ?string $title,
     )
     {
-        
     }
+
+    /** Wall-clock session start for accumulating stored playtime. */
+    private ?float $playtimeSessionWall = null;
 
     public function isConnected(): bool {
         return $this->isConnected;
@@ -60,6 +64,100 @@ final class GlaciaPlayer {
 
     public function setConnected(bool $connected): void {
         $this->isConnected = $connected;
+    }
+
+    public function getPlaytimeSeconds(): int
+    {
+        return $this->playtimeSeconds;
+    }
+
+    /**
+     * Stored playtime plus the current online slice (for display before quit flush).
+     */
+    public function getDisplayPlaytimeSeconds(): int
+    {
+        $base = $this->playtimeSeconds;
+        if ($this->playtimeSessionWall === null) {
+            return $base;
+        }
+
+        return min(2_147_483_647, $base + max(0, (int) floor(microtime(true) - $this->playtimeSessionWall)));
+    }
+
+    public function isHiddenFromPlaytimeTop(): bool
+    {
+        return (bool) ($this->getSetting("hide_playtime_top") ?? false);
+    }
+
+    public function setHiddenFromPlaytimeTop(bool $hidden): void
+    {
+        $this->setSetting("hide_playtime_top", $hidden);
+    }
+
+    public static function formatPlaytime(int $totalSeconds): string
+    {
+        if ($totalSeconds <= 0) {
+            return "0s";
+        }
+
+        $h = intdiv($totalSeconds, 3600);
+        $m = intdiv($totalSeconds % 3600, 60);
+        $s = $totalSeconds % 60;
+        $parts = [];
+        if ($h > 0) {
+            $parts[] = "{$h}h";
+        }
+        if ($m > 0) {
+            $parts[] = "{$m}m";
+        }
+        if ($s > 0 || $parts === []) {
+            $parts[] = "{$s}s";
+        }
+
+        return implode(" ", $parts);
+    }
+
+    public function beginPlaytimeSession(): void
+    {
+        $this->playtimeSessionWall = microtime(true);
+    }
+
+    /**
+     * Persists online time since the last slice start and rolls the window (crash-safe periodic flush).
+     */
+    public function flushPlaytimeSlice(): void
+    {
+        if ($this->playtimeSessionWall === null) {
+            return;
+        }
+
+        $now = microtime(true);
+        $delta = max(0, (int) floor($now - $this->playtimeSessionWall));
+        if ($delta <= 0) {
+            return;
+        }
+
+        $this->playtimeSeconds = min(2_147_483_647, $this->playtimeSeconds + $delta);
+        $this->playtimeSessionWall = $now;
+        $this->updateDb();
+    }
+
+    /**
+     * Finalizes the current online session (e.g. quit).
+     */
+    public function endPlaytimeSession(): void
+    {
+        if ($this->playtimeSessionWall === null) {
+            return;
+        }
+
+        $delta = max(0, (int) floor(microtime(true) - $this->playtimeSessionWall));
+        $this->playtimeSessionWall = null;
+        if ($delta > 0) {
+            $this->playtimeSeconds = min(2_147_483_647, $this->playtimeSeconds + $delta);
+        }
+
+        $this->updateDb();
     }
 
     public function getUuid(): UuidInterface {
@@ -274,6 +372,18 @@ final class GlaciaPlayer {
 
         if ($key === "show_coordinates" && !array_key_exists("show_coordinates", $decodedSettings)) {
             return true;
+        }
+
+        if ($key === "guard_inspect_use_form" && !array_key_exists("guard_inspect_use_form", $decodedSettings)) {
+            return false;
+        }
+
+        if ($key === "hide_faction_guardians" && !array_key_exists("hide_faction_guardians", $decodedSettings)) {
+            return false;
+        }
+
+        if ($key === "night_vision" && !array_key_exists("night_vision", $decodedSettings)) {
+            return false;
         }
 
         return $decodedSettings[$key] ?? null;
@@ -514,7 +624,7 @@ final class GlaciaPlayer {
         $this->getPlayer()?->sendMessage(C::colorize("&r&aItem added to your collection."));
     }
 
-    public function removeItemFromCollection(Item $item): void
+    public function removeItemFromCollection(Item $item): bool
     {
         $collection = $this->getItemsFromCollection();
         $itemData = ItemUtils::encodeItem($item);
@@ -525,8 +635,10 @@ final class GlaciaPlayer {
             $this->updateDb();
 
             $this->getPlayer()?->sendMessage(C::colorize("&r&aItem removed from your collection."));
+            return true;
         } else {
             $this->getPlayer()?->sendMessage(C::colorize("&r&cThat item was not found in your collection."));
+            return false;
         }
     }
 
@@ -534,6 +646,20 @@ final class GlaciaPlayer {
     {
         $collection = $this->decodeJsonMap($this->collection, "collection");
         return is_array($collection) ? $collection : [];
+    }
+
+    public function removeEncodedItemFromCollection(string $encodedItem): bool
+    {
+        $collection = $this->getItemsFromCollection();
+        $key = array_search($encodedItem, $collection, true);
+        if ($key === false) {
+            return false;
+        }
+
+        unset($collection[$key]);
+        $this->collection = $this->encodeJsonMap(array_values($collection), "collection", $this->collection);
+        $this->updateDb();
+        return true;
     }
 
     public function getGoldenApplesEaten(): int
@@ -717,6 +843,36 @@ final class GlaciaPlayer {
         $this->updateDb();
     }
 
+    public function resetPersistentData(bool $preserveRank = true, bool $persist = true): void
+    {
+        $this->balance = 950.0;
+        $this->cooldowns = "{}";
+        $this->faction_id = null;
+        $this->faction_role = null;
+        $this->power = 100;
+        if (!$preserveRank) {
+            $this->rank = "frostborn";
+        }
+        $this->settings = self::defaultSettingsJson();
+        $this->buffs = "[]";
+        $this->sellMultiplier = 1.0;
+        $this->collection = "[]";
+        $this->kills = 0;
+        $this->deaths = 0;
+        $this->slotCredits = 0;
+        $this->itemFlipCredits = 0;
+        $this->playtimeSeconds = 0;
+        $this->title = null;
+        $this->chat = ChatTypes::ALL;
+        $this->gapplesEaten = 0;
+        $this->lastGappleAte = 0;
+        $this->playtimeSessionWall = $this->isConnected ? microtime(true) : null;
+
+        if ($persist) {
+            $this->updateDb();
+        }
+    }
+
     public function updateDb(): void {
         Loader::getDatabase()->executeChange(QueryStmts::PLAYERS_UPDATE, [
             'uuid' => $this->uuid->toString(),
@@ -735,7 +891,8 @@ final class GlaciaPlayer {
             'deaths' => $this->deaths,
             'slot_credits' => $this->slotCredits,
             'item_flip_credits' => $this->itemFlipCredits,
-            'title' => $this->title
+            'title' => $this->title,
+            'playtime_seconds' => $this->playtimeSeconds
         ]);
     }
 
@@ -791,5 +948,20 @@ final class GlaciaPlayer {
             Loader::getInstance()->getLogger()->warning("[PlayerData] Failed to encode {$context} for {$this->username}: " . $e->getMessage());
             return $fallback;
         }
+    }
+
+    private static function defaultSettingsJson(): string
+    {
+        return StorageUtils::encodeJsonString([
+            'chest_inventories' => true,
+            'broadcasts' => true,
+            'notifications' => true,
+            'loot_announcer' => true,
+            'quick_claim' => true,
+            'max_homes' => 5,
+            'show_coordinates' => true,
+            'guard_inspect_use_form' => false,
+            'night_vision' => false,
+        ], "default player settings") ?? "{}";
     }
 }

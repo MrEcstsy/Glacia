@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\warps;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\factions\FactionNameBlocklist;
 use ecstsy\Glacia\utils\QueryStmts;
 use pocketmine\player\Player;
 use pocketmine\world\Position;
@@ -63,6 +64,16 @@ final class WarpManager
 
     public function createWarpAt(Position $position, string $warp_name) : void
     {
+        $warp_name = trim($warp_name);
+        if ($warp_name === "") {
+            throw new \RuntimeException("Warp name cannot be empty.");
+        }
+
+        $violation = FactionNameBlocklist::firstGenericNameViolation($warp_name, $warp_name, "warp name");
+        if ($violation !== null) {
+            throw new \RuntimeException($violation);
+        }
+
         $pos  = $position;
         $args = [
             "warp_name"  => $warp_name,

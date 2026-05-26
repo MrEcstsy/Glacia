@@ -142,4 +142,9 @@ final class FactionAuditFeed {
         }
         self::$byFaction = $clean;
     }
+
+    public static function resetSeasonState(): void {
+        self::$byFaction = [];
+        self::save();
+    }
 }

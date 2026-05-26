@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\tebex;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\utils\SplitConfigHelper;
 use ecstsy\Glacia\tasks\tebex\TebexAcknowledgeTask;
 use ecstsy\Glacia\tasks\tebex\TebexPollTask;
-use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\console\ConsoleCommandSender;
 use pocketmine\scheduler\TaskHandler;
 use pocketmine\Server;
@@ -23,8 +23,7 @@ final class TebexManager{
 	private bool $pollingInFlight = false;
 
 	public function loadFromConfig() : void{
-		$config = GeneralUtils::getConfiguration(Loader::getInstance(), "config.yml");
-		$section = (array) ($config?->get("tebex", []) ?? []);
+		$section = SplitConfigHelper::loadRootSection(Loader::getInstance(), "tebex.yml", "tebex");
 
 		$this->enabled = (bool) ($section["enabled"] ?? false);
 		$this->secret = trim((string) ($section["secret"] ?? ""));

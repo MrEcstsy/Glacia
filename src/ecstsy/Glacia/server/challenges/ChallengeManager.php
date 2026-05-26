@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\challenges;
 
 use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\server\factions\Faction;
+use ecstsy\Glacia\server\factions\member\FactionMember;
 use ecstsy\Glacia\utils\RewardResolver;
 use ecstsy\Glacia\utils\StorageUtils;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
@@ -116,7 +118,7 @@ final class ChallengeManager {
     }
 
     /**
-     * @return array<int, array{id:string,display:string,metric:string,timeRemaining:int,myProgress:int,myRank:int,myParticipants:int,myParticipantCap:int,firstPlaceProgress:int,myGapToFirst:int,leaders:array<int,array{name:string,value:int}>}>
+     * @return array<int, array{id:string,display:string,metric:string,timeRemaining:int,myProgress:int,myRank:int,myParticipants:int,myParticipantCap:int,firstPlaceProgress:int,myGapToFirst:int,leaders:array<int,array{name:string,value:int,members:array<int,string>,contributors:array<int,string>}>}>
      */
     public function getChallengeView(Player $player): array
     {
@@ -139,7 +141,12 @@ final class ChallengeManager {
             $i = 0;
             foreach ($totals as $leaderFactionId => $value) {
                 $name = $this->resolveFactionName((string) $leaderFactionId);
-                $leaders[] = ["name" => $name, "value" => (int) $value];
+                $leaders[] = [
+                    "name" => $name,
+                    "value" => (int) $value,
+                    "members" => $this->resolveFactionMemberNames((string) $leaderFactionId),
+                    "contributors" => $this->resolvePlayerNames($this->getParticipantUuids($challengeId, (string) $leaderFactionId)),
+                ];
                 $i++;
                 if ($i >= 3) {
                     break;
@@ -321,6 +328,29 @@ final class ChallengeManager {
         return "Unknown";
     }
 
+    /**
+     * @return string[]
+     */
+    private function resolveFactionMemberNames(string $factionId): array
+    {
+        $faction = Loader::getFactionManager()->getFaction($factionId);
+        if (!$faction instanceof Faction) {
+            return [];
+        }
+
+        $names = [];
+        foreach ($faction->getMembers() as $member) {
+            if (!$member instanceof FactionMember) {
+                continue;
+            }
+
+            $names[] = $this->resolvePlayerName($member->getUuid()->toString());
+        }
+
+        natcasesort($names);
+        return array_values(array_unique(array_filter($names, static fn(string $name): bool => trim($name) !== "")));
+    }
+
     private function formatPlacement(int $rank): string
     {
         return $rank . ($rank === 1 ? "st" : ($rank === 2 ? "nd" : "rd"));
@@ -345,7 +375,7 @@ final class ChallengeManager {
      */
     private function payoutWinner(string $uuid, array $challenge, string $placement): void
     {
-        $rewards = (array) (($challenge["rewards"] ?? [])[$placement] ?? []);
+        $rewards = $this->resolvePlacementRewards($challenge, $placement);
         if ($rewards === []) {
             return;
         }
@@ -385,6 +415,57 @@ final class ChallengeManager {
     }
 
     /**
+     * @param array<string, mixed> $challenge
+     * @return array<int, array<string, mixed>>
+     */
+    private function resolvePlacementRewards(array $challenge, string $placement): array
+    {
+        $raw = ($challenge["rewards"] ?? [])[$placement] ?? [];
+        if (!is_array($raw) || $raw === []) {
+            return [];
+        }
+
+        if ($this->isListArray($raw)) {
+            return array_values(array_filter($raw, static fn(mixed $entry): bool => is_array($entry)));
+        }
+
+        $pool = $raw["pool"] ?? $raw["items"] ?? $raw["rewards"] ?? [];
+        if (!is_array($pool) || $pool === []) {
+            return [];
+        }
+
+        $rewardPool = array_values(array_filter($pool, static fn(mixed $entry): bool => is_array($entry)));
+        if ($rewardPool === []) {
+            return [];
+        }
+
+        $rollCountInput = $raw["reward-count"] ?? $raw["rolls"] ?? $raw["count"] ?? count($rewardPool);
+        $rollCount = max(1, GeneralUtils::parseRandomNumber($rollCountInput));
+        $unique = !array_key_exists("unique", $raw) || $this->coerceBool($raw["unique"]);
+
+        $resolved = [];
+        if ($unique) {
+            $workingPool = $rewardPool;
+            for ($i = 0; $i < $rollCount && $workingPool !== []; $i++) {
+                $entry = RewardResolver::rollEntryRemove($workingPool);
+                if ($entry !== null) {
+                    $resolved[] = $entry;
+                }
+            }
+            return $resolved;
+        }
+
+        for ($i = 0; $i < $rollCount; $i++) {
+            $entry = RewardResolver::rollEntry($rewardPool);
+            if ($entry !== null) {
+                $resolved[] = $entry;
+            }
+        }
+
+        return $resolved;
+    }
+
+    /**
      * @return string[]
      */
     private function getActiveChallengeIds(): array
@@ -399,7 +480,46 @@ final class ChallengeManager {
         if ($player instanceof Player) {
             return $player->getName();
         }
+        try {
+            $session = Loader::getPlayerManager()->getSessionByUuid(Uuid::fromString($uuid));
+            if ($session !== null) {
+                return $session->getUsername();
+            }
+        } catch (\Throwable) {
+        }
         return (string) ((array) ($this->state["known_names"] ?? []))[$uuid] ?? substr($uuid, 0, 8);
+    }
+
+    /**
+     * @param string[] $uuids
+     * @return string[]
+     */
+    private function resolvePlayerNames(array $uuids): array
+    {
+        $names = [];
+        foreach ($uuids as $uuid) {
+            $names[] = $this->resolvePlayerName((string) $uuid);
+        }
+
+        natcasesort($names);
+        return array_values(array_unique(array_filter($names, static fn(string $name): bool => trim($name) !== "")));
+    }
+
+    /**
+     * @param array<mixed> $value
+     */
+    private function isListArray(array $value): bool
+    {
+        return array_keys($value) === range(0, count($value) - 1);
+    }
+
+    private function coerceBool(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        return in_array(strtolower(trim((string) $value)), ["1", "true", "yes", "on"], true);
     }
 
     private function loadState(): void

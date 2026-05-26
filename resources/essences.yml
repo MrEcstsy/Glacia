@@ -12,3 +12,101 @@ essences:
     success-rate: 100
     effects:
       damage-reduction-per-level: 0.01
+
+  tank:
+    enabled: true
+    material: "prismarine_shard"
+    name: "&r&l&3Tank Essence"
+    lore:
+      - "&r&7Apply to armor with max level &3Tank"
+      - "&r&7Stronger melee damage reduction"
+      - "&r&7(swords and axes)."
+    enchant: "tank"
+    require-max-level: true
+    success-rate: 100
+    effects:
+      damage-reduction-per-level: 0.0095
+
+  bounce:
+    enabled: true
+    material: "prismarine_shard"
+    name: "&r&l&aBounce Essence"
+    lore:
+      - "&r&7Apply to boots with max &aBounce"
+      - "&r&7to reach Jump Boost IV (amp 3)."
+    enchant: "bounce"
+    require-max-level: true
+    success-rate: 100
+    effects:
+      jump-boost-amplifier-with-essence: 3
+
+  angelic:
+    enabled: true
+    material: "prismarine_shard"
+    name: "&r&l&dAngelic Essence"
+    lore:
+      - "&r&7Apply to a piece with max &dAngelic"
+      - "&r&7for stronger healing pulses."
+    enchant: "angelic"
+    require-max-level: true
+    success-rate: 100
+    effects:
+      heal-bonus-fraction: 0.12
+
+  flourish:
+    enabled: true
+    material: "prismarine_shard"
+    name: "&r&l&5Flourish Essence"
+    lore:
+      - "&r&7Apply to chestplate with max &5Flourish"
+      - "&r&7Extra damage reduction when"
+      - "&r&7multiple players hit you."
+    enchant: "flourish"
+    require-max-level: true
+    success-rate: 100
+    effects:
+      extra-reduction-percent-per-additional-attacker: 5
+
+  rage:
+    enabled: true
+    material: "prismarine_shard"
+    name: "&r&l&6Rage Essence"
+    lore:
+      - "&r&7Apply to sword with max &6Rage"
+      - "&r&7Each rage stack deals extra bonus"
+      - "&r&7damage (fraction of stack damage)."
+    enchant: "rage"
+    require-max-level: true
+    success-rate: 100
+    effects:
+      stack-damage-bonus-fraction: 0.5
+
+  insanity:
+    enabled: true
+    material: "prismarine_shard"
+    name: "&r&l&5Insanity Essence"
+    lore:
+      - "&r&7Apply to axe with max &5Insanity"
+      - "&r&7Bonus damage multiplier; victims"
+      - "&r&7count with any weapon in hand."
+    enchant: "insanity"
+    require-max-level: true
+    success-rate: 100
+    effects:
+      damage-multiplier-bonus: 0.02
+
+  doublestrike:
+    enabled: true
+    material: "prismarine_shard"
+    name: "&r&l&eDouble Strike Essence"
+    lore:
+      - "&r&7Apply to sword with max &eDouble Strike"
+      - "&r&7On proc, extra follow-up hits"
+      - "&r&7(1 = triple total damage ticks)."
+    enchant: "doublestrike"
+    require-max-level: true
+    success-rate: 100
+    effects:
+      extra-followup-strikes: 1
+
+schema-version: 2

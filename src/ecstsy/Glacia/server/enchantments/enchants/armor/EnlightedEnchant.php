@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace ecstsy\Glacia\server\enchantments\enchants\armor;
 
-use ecstsy\Glacia\Loader;
+use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\AdvancedEnchantState;
+use ecstsy\Glacia\server\enchantments\manager\EnchantProcManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\player\Player;
-use pocketmine\scheduler\ClosureTask;
 
 final class EnlightedEnchant implements EntityDamageByEntityEnchantmentHandler {
 
@@ -23,27 +25,35 @@ final class EnlightedEnchant implements EntityDamageByEntityEnchantmentHandler {
             return;
         }
 
-        $chance = match ($level) {
-            1 => 4,
-            2 => 7,
-            3 => 10,
-            default => 0
-        };
-
-        if (mt_rand(1, 100) > $chance) {
+        if (!$victim->isAlive() || AdvancedEnchantState::isAnatomyBlocked($victim)) {
             return;
         }
 
-        $heal = 1 + ($level * 0.5);
+        $session = PlayerManager::getInstance()->getSession($victim);
+        if ($session === null) {
+            return;
+        }
 
-        Loader::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(
-            function() use ($victim, $heal): void {
-                if (!$victim->isAlive()) {
-                    return;
-                }
+        $chance = EnchantTuningManager::chance("enlighted", $level, 4.0);
+        $cooldownSeconds = EnchantTuningManager::cooldownSeconds("enlighted", $level, 10);
+        $result = EnchantProcManager::attempt(
+            $victim,
+            "enlighted",
+            $level,
+            $chance,
+            $cooldownSeconds,
+            static fn() => max(0, (int) ($session?->getCooldown("enlighted") ?? 0))
+        );
+        if (!$result->success) {
+            return;
+        }
 
-                $victim->setHealth(min($victim->getMaxHealth(), $victim->getHealth() + $heal));
-            }
-        ), 1);
+        $heal = max(0.0, EnchantTuningManager::value("enlighted", "heal", $level, 1.5));
+        EnchantProcManager::applyCooldownIfNeeded($result, static function (int $seconds) use ($session): void {
+            $session?->addCooldown("enlighted", $seconds);
+        });
+        EnchantProcManager::debugAppliedValues($victim, $result, ["heal" => $heal]);
+
+        $victim->setHealth(min($victim->getMaxHealth(), $victim->getHealth() + $heal));
     }
 }

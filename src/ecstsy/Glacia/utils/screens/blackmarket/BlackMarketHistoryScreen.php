@@ -7,6 +7,7 @@ namespace ecstsy\Glacia\utils\screens\blackmarket;
 use ecstsy\Glacia\Loader;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use ecstsy\MartianUtilities\utils\ItemUtils;
+use ecstsy\MartianUtilities\utils\PlayerUtils;
 use ecstsy\MartianUtilities\utils\screens\BaseScreen;
 use muqsit\invmenu\InvMenu;
 use muqsit\invmenu\transaction\DeterministicInvMenuTransaction;
@@ -34,12 +35,14 @@ final class BlackMarketHistoryScreen extends BaseScreen {
             $total = count($this->getHistory());
 
             if ($slot === 45 && $this->page > 1) {
+                PlayerUtils::playSound($transaction->getPlayer(), "random.click");
                 $this->page--;
                 $this->build();
                 return;
             }
 
             if ($slot === 49) {
+                PlayerUtils::playSound($transaction->getPlayer(), "random.click");
                 $transaction->getPlayer()->removeCurrentWindow();
                 $transaction->then(function() use ($transaction): void {
                     BlackMarketScreen::display($transaction->getPlayer());
@@ -48,6 +51,7 @@ final class BlackMarketHistoryScreen extends BaseScreen {
             }
 
             if ($slot === 53 && $this->page * self::ITEMS_PER_PAGE < $total) {
+                PlayerUtils::playSound($transaction->getPlayer(), "random.click");
                 $this->page++;
                 $this->build();
             }
@@ -64,6 +68,7 @@ final class BlackMarketHistoryScreen extends BaseScreen {
     public static function display(Player $player): void
     {
         (new self($player))->getMenu()->send($player);
+        PlayerUtils::playSound($player, "random.click", 1.0, 1.05);
     }
 
     private function build(): void

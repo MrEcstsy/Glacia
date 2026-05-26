@@ -1,33 +1,10 @@
-# ============================================================
-# Glacia Custom Mob Items
-# ============================================================
-# These are sellable custom drops used by zone mobs.
-#
-# IMPORTANT FOR ADMINS:
-# - The YAML key is the item identifier and is stored in NBT:
-#     Glacia.custom_mob_item = "<identifier>"
-#     Glacia.glaciaItem = "<identifier>"
-# - Keep identifiers lowercase, stable, and simple:
-#     allowed: a-z, 0-9, underscores
-#     length: 3-48 characters
-#   Good: azure_sinew, rift_ember, voidglass_shard
-#   Bad: "My Item!!", "this name changes every week", spaces, color codes
-# - If you rename an identifier later, old items already in player inventories
-#   will keep the old NBT id and may no longer sell unless you keep that old id.
-#
-# Fields:
-#   material: vanilla item id used as the visual base item
-#   name: display name (supports color codes)
-#   lore: item lore (supports color codes)
-#   sell-price: money paid per item before sell multipliers
-
 items:
   dewthread_sinew:
     material: string
     name: "&r&bDewthread Sinew"
     lore:
       - "&r&8Zone Trophy"
-      - "&r&7Pulled from creatures roaming"
+      - "&r&7Pulled from creatures wandering"
       - "&r&7the misted Azure Plains."
     sell-price: 7.5
 
@@ -36,8 +13,8 @@ items:
     name: "&r&bStraybone Charm"
     lore:
       - "&r&8Zone Trophy"
-      - "&r&7A frost-pale charm strung together"
-      - "&r&7from wandering plains bones."
+      - "&r&7A frost-pale charm woven from"
+      - "&r&7the bones of drifting strays."
     sell-price: 9
 
   coalblack_ichor:
@@ -45,8 +22,8 @@ items:
     name: "&r&8Coalblack Ichor"
     lore:
       - "&r&8Zone Trophy"
-      - "&r&7Thick residue from cave stalkers"
-      - "&r&7that nested too close to ore veins."
+      - "&r&7Tar-like residue gathered from"
+      - "&r&7cave stalkers near old ore veins."
     sell-price: 16
 
   ironslag_plate:
@@ -54,8 +31,8 @@ items:
     name: "&r&7Ironslag Plate"
     lore:
       - "&r&8Zone Trophy"
-      - "&r&7A warped plate torn from"
-      - "&r&7an Ironbound Guard."
+      - "&r&7A warped metal fragment ripped"
+      - "&r&7from an Ironbound Guard."
     sell-price: 24
 
   rimebound_fang:
@@ -63,9 +40,18 @@ items:
     name: "&r&fRimebound Fang"
     lore:
       - "&r&8Zone Trophy"
-      - "&r&7Still cold enough to burn"
-      - "&r&7through a leather pouch."
+      - "&r&7Still cold enough to frost"
+      - "&r&7whatever dares hold it."
     sell-price: 34
+
+  frostbitten_hide:
+    material: rabbit_hide
+    name: "&r&fFrostbitten Hide"
+    lore:
+      - "&r&8Zone Trophy"
+      - "&r&7A brittle hide layered with"
+      - "&r&7ancient frozen residue."
+    sell-price: 42
 
   glacial_heartchip:
     material: packed_ice
@@ -76,38 +62,83 @@ items:
       - "&r&7a brute's frozen core."
     sell-price: 48
 
+  brutebone_fragment:
+    material: bone
+    name: "&r&bBrutebone Fragment"
+    lore:
+      - "&r&8Zone Trophy"
+      - "&r&7Dense remains from creatures"
+      - "&r&7forged deep within Frostreach."
+    sell-price: 56
+
   rift_ash:
     material: blaze_powder
     name: "&r&cRift Ash"
     lore:
       - "&r&8Zone Trophy"
       - "&r&7Ash that refuses to cool,"
-      - "&r&7even after leaving the Rift."
+      - "&r&7even beyond the Rift."
     sell-price: 64
+
+  smoldering_powder:
+    material: gunpowder
+    name: "&r&6Smoldering Powder"
+    lore:
+      - "&r&8Zone Trophy"
+      - "&r&7Warm embers pulse faintly"
+      - "&r&7beneath the darkened dust."
+    sell-price: 73
 
   emberbrand_scale:
     material: magma_cream
     name: "&r&6Emberbrand Scale"
     lore:
       - "&r&8Zone Trophy"
-      - "&r&7A blistered scale stamped with"
-      - "&r&7the mark of a molten revenant."
+      - "&r&7A blistered scale marked by"
+      - "&r&7a molten revenant's fury."
     sell-price: 82
+
+  charred_relic:
+    material: nether_brick
+    name: "&r&cCharred Relic"
+    lore:
+      - "&r&8Zone Trophy"
+      - "&r&7A scorched fragment still"
+      - "&r&7radiating infernal heat."
+    sell-price: 94
 
   voidglass_shard:
     material: amethyst_shard
     name: "&r&dVoidglass Shard"
     lore:
       - "&r&8Zone Trophy"
-      - "&r&7A reflective sliver that shows"
-      - "&r&7stars where your hand should be."
+      - "&r&7A fractured shard reflecting"
+      - "&r&7a sky that no longer exists."
     sell-price: 105
+
+  fractured_echo:
+    material: prismarine_crystals
+    name: "&r&5Fractured Echo"
+    lore:
+      - "&r&8Zone Trophy"
+      - "&r&7The shard emits faint whispers"
+      - "&r&7from somewhere beyond Endfall."
+    sell-price: 118
 
   endfallen_relic:
     material: chorus_fruit
     name: "&r&5Endfallen Relic"
     lore:
       - "&r&8Zone Trophy"
-      - "&r&7A broken token from something"
-      - "&r&7that should have stayed beyond."
+      - "&r&7It pulses faintly, as if"
+      - "&r&7something inside still remembers."
     sell-price: 135
+
+  voidsteel_fragment:
+    material: iron_ingot
+    name: "&r&5Voidsteel Fragment"
+    lore:
+      - "&r&8Zone Trophy"
+      - "&r&7Metal warped by prolonged"
+      - "&r&7exposure to the void."
+    sell-price: 150

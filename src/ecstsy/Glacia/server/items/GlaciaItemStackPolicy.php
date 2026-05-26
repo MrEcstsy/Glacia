@@ -16,27 +16,50 @@ final class GlaciaItemStackPolicy
 {
     /** @var list<string> */
     private const PET_GI = [
-        "purity_wisp",
-        "gale_fox",
+        "puritywisp",
+        "galefox",
         "shatterfang",
         "hearthbloom",
-        "ironclad_wyrm",
-        "aegis_ram",
-        "rift_viper",
-        "sunscorch_jackal",
-        "runesage_owl",
-        "stormcore_behemoth",
+        "ironcladwyrm",
+        "aegisram",
+        "riftviper",
+        "sunscorchjackal",
+        "runesageowl",
+        "stormcorebehemoth",
         "veilmoth",
-        "blastforge_hound",
+        "blastforgehound",
+        "gildedmoth",
+        "rafflefinch",
+        "oathbondbeetle",
+        "murmurloft",
+        "patchworksprite",
+        "renderscalewyrm",
+        "skycourierdrake",
+        "inkwellfinch",
+        "terracrestjackal",
+        "soulsurge",
+        "ruinspiremoth",
+        "bellforgecustodian",
+        "arcbindercodex",
+        "crownspirekestrel",
+        "shadebrokercrow",
     ];
 
     /** @var list<string> Trinket category + soul compass: stacking causes bad NBT / usage state. */
     private const NON_STACKABLE_GI = [
+        "soul_conduit",
+        "efficiency_conduit",
+        "overlord_conduit",
+        "soul_gem",
+        "efficiency_gem",
+        "overlord_gem",
         "soul_compass",
         "frostwake_trident",
         "stormflare_torch",
         "glacial_blessing",
         "tempest_gateway",
+        "faction_guardian_egg",
+        "random_magicdust",
     ];
 
     public static function isPetItem(Item $item): bool
@@ -46,7 +69,7 @@ final class GlaciaItemStackPolicy
             return false;
         }
 
-        return in_array($g->getString("glaciaItem", ""), self::PET_GI, true);
+        return in_array(GlaciaItemFactory::resolvePetAliasKey($g->getString("glaciaItem", "")), self::PET_GI, true);
     }
 
     /**
@@ -78,7 +101,6 @@ final class GlaciaItemStackPolicy
         self::unstackInventory($player->getArmorInventory(), $player);
         self::unstackInventory($player->getOffHandInventory(), $player);
         self::unstackInventory($player->getEnderInventory(), $player);
-        self::unstackInventory($player->getCursorInventory(), $player);
     }
 
     private static function unstackInventory(Inventory $inv, Player $player): void

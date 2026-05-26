@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\disguises;
 
 use ecstsy\Glacia\Loader;
+use pocketmine\entity\Attribute;
+use pocketmine\entity\AttributeFactory;
 use pocketmine\entity\Entity;
 use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\AddActorPacket;
 use pocketmine\network\mcpe\protocol\MoveActorAbsolutePacket;
 use pocketmine\network\mcpe\protocol\RemoveActorPacket;
 use pocketmine\network\mcpe\protocol\SetActorDataPacket;
+use pocketmine\network\mcpe\protocol\types\entity\Attribute as NetworkAttribute;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataFlags;
 use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataProperties;
@@ -45,6 +48,11 @@ final class DisguiseManager
             "entity_id" => EntityIds::PIG,
             "description" => "Appear as a pink farm animal.",
         ],
+        "wolf" => [
+            "display" => "Wolf",
+            "entity_id" => EntityIds::WOLF,
+            "description" => "Roam around disguised as a loyal wolf.",
+        ],
         "sheep" => [
             "display" => "Sheep",
             "entity_id" => EntityIds::SHEEP,
@@ -55,6 +63,13 @@ final class DisguiseManager
             "entity_id" => EntityIds::CHICKEN,
             "description" => "Waddle around as a tiny farm bird.",
             "scale" => 0.88,
+        ],
+        "baby_chicken" => [
+            "display" => "Baby Chicken",
+            "entity_id" => EntityIds::CHICKEN,
+            "description" => "A tiny baby chicken disguise with extra chaos.",
+            "scale" => 0.52,
+            "baby" => true,
         ],
         "zombie" => [
             "display" => "Zombie",
@@ -75,6 +90,55 @@ final class DisguiseManager
             "display" => "Spider",
             "entity_id" => EntityIds::SPIDER,
             "description" => "Skitter around disguised as a giant spider.",
+        ],
+        "blaze" => [
+            "display" => "Blaze",
+            "entity_id" => EntityIds::BLAZE,
+            "description" => "Burn bright as a floating blaze disguise.",
+        ],
+        "wither" => [
+            "display" => "Wither",
+            "entity_id" => EntityIds::WITHER,
+            "description" => "Drift through the world as a scaled-down Wither.",
+            "scale" => 0.42,
+        ],
+        "ghast" => [
+            "display" => "Ghast",
+            "entity_id" => EntityIds::GHAST,
+            "description" => "Float ominously as a shrieking ghast.",
+            "scale" => 0.65,
+        ],
+        "snowman" => [
+            "display" => "Snowman",
+            "entity_id" => EntityIds::SNOW_GOLEM,
+            "description" => "Become a frosty snowman with a pumpkin stare.",
+        ],
+        "zombie_pigman" => [
+            "display" => "Zombie Pigman",
+            "entity_id" => EntityIds::ZOMBIE_PIGMAN,
+            "description" => "Take on the look of a classic nether pigman.",
+        ],
+        "bat" => [
+            "display" => "Bat",
+            "entity_id" => EntityIds::BAT,
+            "description" => "Flutter around disguised as a cave bat.",
+        ],
+        "ender_dragon" => [
+            "display" => "Ender Dragon",
+            "entity_id" => EntityIds::ENDER_DRAGON,
+            "description" => "Channel a scaled-down Ender Dragon disguise.",
+            "scale" => 0.24,
+        ],
+        "polar_bear" => [
+            "display" => "Polar Bear",
+            "entity_id" => EntityIds::POLAR_BEAR,
+            "description" => "Lumber around as an icy polar bear.",
+        ],
+        "mega_knight" => [
+            "display" => "Mega Knight",
+            "entity_id" => EntityIds::IRON_GOLEM,
+            "description" => "Suit up as a heavy Mega Knight-style bruiser.",
+            "scale" => 0.9,
         ],
         "rainbow_sheep" => [
             "display" => "Rainbow Sheep",
@@ -338,7 +402,7 @@ final class DisguiseManager
             $player->getLocation()->yaw,
             $player->getLocation()->yaw,
             $player->getLocation()->yaw,
-            [],
+            $this->buildSpawnAttributes(),
             $this->buildMetadata($profile),
             new PropertySyncData([], []),
             []
@@ -355,6 +419,10 @@ final class DisguiseManager
             (1 << EntityMetadataFlags::SILENT) |
             (1 << EntityMetadataFlags::NO_AI);
 
+        if ((bool) ($profile["baby"] ?? false)) {
+            $flags |= (1 << EntityMetadataFlags::BABY);
+        }
+
         $metadata = [
             EntityMetadataProperties::FLAGS => new LongMetadataProperty($flags),
             EntityMetadataProperties::SCALE => new FloatMetadataProperty((float) ($profile["scale"] ?? 1.0)),
@@ -369,6 +437,39 @@ final class DisguiseManager
         }
 
         return $metadata;
+    }
+
+    /**
+     * The client behaves badly when living disguises are spawned without
+     * baseline attributes. The dragon disguise in particular can fall into a
+     * broken death-phase presentation and flood particles. Sending a normal
+     * living attribute set keeps the fake actor stable.
+     *
+     * @return list<NetworkAttribute>
+     */
+    private function buildSpawnAttributes(): array
+    {
+        $factory = AttributeFactory::getInstance();
+        $attributes = [
+            $factory->mustGet(Attribute::HEALTH)->setValue(20.0),
+            $factory->mustGet(Attribute::MOVEMENT_SPEED)->setValue(0.10),
+            $factory->mustGet(Attribute::KNOCKBACK_RESISTANCE)->setValue(0.0),
+            $factory->mustGet(Attribute::FOLLOW_RANGE)->setValue(16.0),
+            $factory->mustGet(Attribute::ATTACK_DAMAGE)->setValue(1.0),
+            $factory->mustGet(Attribute::ABSORPTION)->setValue(0.0),
+        ];
+
+        return array_map(
+            static fn(Attribute $attribute): NetworkAttribute => new NetworkAttribute(
+                $attribute->getId(),
+                $attribute->getMinValue(),
+                $attribute->getMaxValue(),
+                $attribute->getValue(),
+                $attribute->getDefaultValue(),
+                []
+            ),
+            $attributes
+        );
     }
 
     private function getPlayerByUuidString(string $uuid): ?Player

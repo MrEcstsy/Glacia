@@ -24,16 +24,16 @@ final class BulwarkEnchant implements EntityDamageByEntityEnchantmentHandler
 
         $key = $victim->getUniqueId()->toString();
         if ((self::$immuneUntil[$key] ?? 0) > time()) {
-            $event->cancel();
+            self::nullifyHitDamage($event);
             return;
         }
 
-        $chance = EnchantTuningManager::getLevelInt("bulwark", "chance-by-level", $level, $level * 5);
+        $chance = EnchantTuningManager::getLevelFloat("bulwark", "chance-by-level", $level, $level * 5.0);
         if (!ProcLuckManager::roll($victim, "bulwark", $chance, 1, 8)) return;
 
-        $seconds = max(1, EnchantTuningManager::getInt("bulwark", "immunity-seconds", 3));
+        $seconds = max(1, EnchantTuningManager::getLevelInt("bulwark", "immunity-seconds-by-level", $level, EnchantTuningManager::getInt("bulwark", "immunity-seconds", 3)));
         self::$immuneUntil[$key] = time() + $seconds;
-        $event->cancel();
+        self::nullifyHitDamage($event);
 
         $armorInv = $victim->getArmorInventory();
         foreach ($armorInv->getContents() as $slot => $item) {
@@ -42,5 +42,10 @@ final class BulwarkEnchant implements EntityDamageByEntityEnchantmentHandler
                 $armorInv->setItem($slot, $item);
             }
         }
+    }
+
+    private static function nullifyHitDamage(EntityDamageByEntityEvent $event): void
+    {
+        $event->setBaseDamage(0.0);
     }
 }

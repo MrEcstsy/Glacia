@@ -8,6 +8,7 @@ use CortexPE\Commando\args\RawStringArgument;
 use CortexPE\Commando\BaseCommand;
 use ecstsy\Glacia\server\items\GlaciaSpawnerItem;
 use ecstsy\Glacia\server\zones\ZoneManager;
+use ecstsy\Glacia\utils\CustomParticleEffectManager;
 use ecstsy\Glacia\utils\screens\zones\ZonesScreen;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -61,6 +62,10 @@ final class ZonesCommand extends BaseCommand {
         }
         if ($action === "spawner") {
             $this->handleSpawner($sender, $args);
+            return;
+        }
+        if ($action === "trail" || $action === "guide") {
+            $this->handleTrail($sender, $args);
             return;
         }
 
@@ -309,6 +314,47 @@ final class ZonesCommand extends BaseCommand {
         }
 
         $sender->sendMessage(C::colorize("&r&aGiven a zone spawner for &f" . (string) ($zone["display"] ?? $zoneId) . "&a."));
+    }
+
+    private function handleTrail(Player $sender, array $args): void
+    {
+        $zoneId = strtolower((string) ($args["zone"] ?? ""));
+        if ($zoneId === "") {
+            $sender->sendMessage(C::colorize("&r&cUsage: &f/zones trail <zone>"));
+            return;
+        }
+
+        $zone = ZoneManager::getZone($zoneId);
+        if ($zone === null) {
+            $sender->sendMessage(C::colorize("&r&cUnknown zone &f{$zoneId}&c. Available: &f" . implode(", ", array_keys(ZoneManager::getZones()))));
+            return;
+        }
+
+        if (!ZoneManager::canPlayerAccess($sender, $zone)) {
+            $sender->sendMessage(C::colorize("&r&cThat zone is still locked for you."));
+            return;
+        }
+
+        $spawn = ZoneManager::getSpawnPosition($zone);
+        if ($spawn === null) {
+            $sender->sendMessage(C::colorize("&r&cThat zone does not have a saved spawn point yet."));
+            return;
+        }
+
+        if ($spawn->getWorld() !== $sender->getWorld()) {
+            $sender->sendMessage(C::colorize(
+                "&r&eTrail guidance works once you're inside &f" . (string) ($zone["display"] ?? $zoneId) .
+                "&e. Teleport there first, then run &f/zones trail {$zoneId}&e."
+            ));
+            return;
+        }
+
+        if (!CustomParticleEffectManager::startTrailTo($sender, $spawn, 14)) {
+            $sender->sendMessage(C::colorize("&r&cCouldn't start the trail right now."));
+            return;
+        }
+
+        $sender->sendMessage(C::colorize("&r&bA guiding trail now points toward &f" . (string) ($zone["display"] ?? $zoneId) . "&b."));
     }
 
     public function getPermission(): string

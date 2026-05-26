@@ -6,6 +6,7 @@ namespace ecstsy\Glacia\server\collectionchests;
 
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\economy\SellHandler;
+use ecstsy\Glacia\server\watchdogs\ChunkWatchdogManager;
 use ecstsy\Glacia\server\quests\QuestInstance;
 use ecstsy\Glacia\utils\StorageUtils;
 use ecstsy\Glacia\utils\screens\collectionchests\CollectionChestScreen;
@@ -19,10 +20,15 @@ use pocketmine\world\Position;
 
 final class CollectionChestManager {
 
+    public const CHEST_TYPE_COLLECTION = "collection";
+    public const CHEST_TYPE_HARVESTER = "harvester";
+
     /** @var array<string, array<string, mixed>> */
     private array $entries = [];
-    /** @var array<string, string> */
-    private array $chunkIndex = [];
+    /** @var array<string, string> world:cx:cz → positionKey (mob loot) */
+    private array $chunkIndexCollection = [];
+    /** @var array<string, string> world:cx:cz → positionKey (farm drops) */
+    private array $chunkIndexHarvester = [];
     private string $file;
     private bool $dirty = false;
 
@@ -37,10 +43,15 @@ final class CollectionChestManager {
         $this->persist();
     }
 
-    public function registerChest(Position $position, string $factionId): bool
+    public function registerChest(Position $position, string $factionId, string $chestType = self::CHEST_TYPE_COLLECTION): bool
     {
+        $chestType = $chestType === self::CHEST_TYPE_HARVESTER ? self::CHEST_TYPE_HARVESTER : self::CHEST_TYPE_COLLECTION;
         $chunkKey = $this->chunkKeyFromPosition($position);
-        if (isset($this->chunkIndex[$chunkKey])) {
+        if ($chestType === self::CHEST_TYPE_HARVESTER) {
+            if (isset($this->chunkIndexHarvester[$chunkKey])) {
+                return false;
+            }
+        } elseif (isset($this->chunkIndexCollection[$chunkKey])) {
             return false;
         }
 
@@ -51,10 +62,15 @@ final class CollectionChestManager {
             "y" => $position->getFloorY(),
             "z" => $position->getFloorZ(),
             "faction_id" => $factionId,
+            "chest_type" => $chestType,
             "items" => [],
             "xp" => 0
         ];
-        $this->chunkIndex[$chunkKey] = $positionKey;
+        if ($chestType === self::CHEST_TYPE_HARVESTER) {
+            $this->chunkIndexHarvester[$chunkKey] = $positionKey;
+        } else {
+            $this->chunkIndexCollection[$chunkKey] = $positionKey;
+        }
         $this->persist();
         CollectionChestScreen::refreshFor($position);
 
@@ -69,7 +85,8 @@ final class CollectionChestManager {
             return null;
         }
 
-        unset($this->entries[$positionKey], $this->chunkIndex[$this->chunkKeyFromPosition($position)]);
+        unset($this->entries[$positionKey]);
+        $this->unsetChunkIndexForEntry($entry);
         $this->persist();
         CollectionChestScreen::refreshFor($position);
 
@@ -89,7 +106,8 @@ final class CollectionChestManager {
                 continue;
             }
 
-            unset($this->chunkIndex[$this->chunkKeyFromEntry($entry)], $this->entries[$positionKey]);
+            unset($this->entries[$positionKey]);
+            $this->unsetChunkIndexForEntry($entry);
             $changed = true;
         }
 
@@ -113,17 +131,24 @@ final class CollectionChestManager {
         return $entry;
     }
 
-    public function getChunkChestAt(Position $position): ?array
+    public function getChunkChestAt(Position $position, string $chestType = self::CHEST_TYPE_COLLECTION): ?array
     {
+        $chestType = $chestType === self::CHEST_TYPE_HARVESTER ? self::CHEST_TYPE_HARVESTER : self::CHEST_TYPE_COLLECTION;
         $chunkKey = $this->chunkKeyFromPosition($position);
-        $positionKey = $this->chunkIndex[$chunkKey] ?? null;
+        $positionKey = $chestType === self::CHEST_TYPE_HARVESTER
+            ? ($this->chunkIndexHarvester[$chunkKey] ?? null)
+            : ($this->chunkIndexCollection[$chunkKey] ?? null);
         if ($positionKey === null) {
             return null;
         }
 
         $entry = $this->entries[$positionKey] ?? null;
         if ($entry === null) {
-            unset($this->chunkIndex[$chunkKey]);
+            if ($chestType === self::CHEST_TYPE_HARVESTER) {
+                unset($this->chunkIndexHarvester[$chunkKey]);
+            } else {
+                unset($this->chunkIndexCollection[$chunkKey]);
+            }
             $this->persist();
             return null;
         }
@@ -136,9 +161,9 @@ final class CollectionChestManager {
         return $entry;
     }
 
-    public function addDropsToChunk(Position $deathPosition, array $drops, int $xp): bool
+    public function addDropsToChunk(Position $deathPosition, array $drops, int $xp, string $chestType = self::CHEST_TYPE_COLLECTION): bool
     {
-        $entry = $this->getChunkChestAt($deathPosition);
+        $entry = $this->getChunkChestAt($deathPosition, $chestType);
         if ($entry === null) {
             return false;
         }
@@ -179,15 +204,15 @@ final class CollectionChestManager {
             }
 
             $count = (int) ($stored["count"] ?? 0);
-            $sellPrice = SellHandler::getSellPrice($item->getTypeId());
+            $sellPrice = SellHandler::getSellPriceForItem($item);
 
             $item->setCount(min($item->getMaxStackSize(), max(1, $count)));
             if ($item->hasCustomName()) {
-                $item->setCustomName(C::RESET . $item->getCustomName());
+                $item->setCustomName(C::colorize("&r" . $item->getCustomName()));
             }
 
             $lore = $item->getLore();
-            $lore[] = C::RESET;
+            $lore[] = C::colorize("&r");
             $lore[] = C::colorize("&r&8------------------------");
             $lore[] = C::colorize("&r&7Stored: &f" . number_format($count));
             if ($sellPrice !== null) {
@@ -293,6 +318,7 @@ final class CollectionChestManager {
         }
 
         $multiplier *= $factionMultiplier;
+        $multiplier *= ChunkWatchdogManager::getPositionSellMultiplier($position);
         $totalEarned = 0.0;
         $soldItems = 0;
 
@@ -303,13 +329,13 @@ final class CollectionChestManager {
             }
 
             $count = (int) ($stored["count"] ?? 0);
-            $sellPrice = SellHandler::getSellPrice($item->getTypeId());
+            $sellPrice = SellHandler::getSellPriceForItem($item);
             if ($sellPrice === null || $count <= 0) {
                 continue;
             }
 
             $soldItems += $count;
-            $totalEarned += round(($sellPrice * $count) * $multiplier, 2);
+            $totalEarned += round(($sellPrice * ChunkWatchdogManager::getDropSellBonus($item) * $count) * $multiplier, 2);
             QuestInstance::onSell($player, $item, $count);
             unset($this->entries[$positionKey]["items"][$fingerprint]);
         }
@@ -391,8 +417,20 @@ final class CollectionChestManager {
     private function cleanupEntry(array $entry): void
     {
         $positionKey = $this->positionKeyFromEntry($entry);
-        unset($this->entries[$positionKey], $this->chunkIndex[$this->chunkKeyFromEntry($entry)]);
+        unset($this->entries[$positionKey]);
+        $this->unsetChunkIndexForEntry($entry);
         $this->persist();
+    }
+
+    private function unsetChunkIndexForEntry(array $entry): void
+    {
+        $chunkKey = $this->chunkKeyFromEntry($entry);
+        $type = (string) ($entry["chest_type"] ?? self::CHEST_TYPE_COLLECTION);
+        if ($type === self::CHEST_TYPE_HARVESTER) {
+            unset($this->chunkIndexHarvester[$chunkKey]);
+        } else {
+            unset($this->chunkIndexCollection[$chunkKey]);
+        }
     }
 
     private function load(): void
@@ -412,16 +450,26 @@ final class CollectionChestManager {
             }
 
             $positionKey = $this->positionKeyFromEntry($entry);
+            $chestType = (string) ($entry["chest_type"] ?? self::CHEST_TYPE_COLLECTION);
+            if ($chestType !== self::CHEST_TYPE_HARVESTER) {
+                $chestType = self::CHEST_TYPE_COLLECTION;
+            }
             $this->entries[$positionKey] = [
                 "world" => (string) $entry["world"],
                 "x" => (int) $entry["x"],
                 "y" => (int) $entry["y"],
                 "z" => (int) $entry["z"],
                 "faction_id" => (string) $entry["faction_id"],
+                "chest_type" => $chestType,
                 "items" => is_array($entry["items"] ?? null) ? $entry["items"] : [],
                 "xp" => (int) ($entry["xp"] ?? 0)
             ];
-            $this->chunkIndex[$this->chunkKeyFromEntry($this->entries[$positionKey])] = $positionKey;
+            $chunkKey = $this->chunkKeyFromEntry($this->entries[$positionKey]);
+            if ($chestType === self::CHEST_TYPE_HARVESTER) {
+                $this->chunkIndexHarvester[$chunkKey] = $positionKey;
+            } else {
+                $this->chunkIndexCollection[$chunkKey] = $positionKey;
+            }
         }
     }
 
@@ -470,5 +518,13 @@ final class CollectionChestManager {
     private function chunkKeyFromEntry(array $entry): string
     {
         return $entry["world"] . ":" . ((int) $entry["x"] >> 4) . ":" . ((int) $entry["z"] >> 4);
+    }
+
+    public function resetSeasonState(): void
+    {
+        $this->entries = [];
+        $this->chunkIndexCollection = [];
+        $this->chunkIndexHarvester = [];
+        $this->persist();
     }
 }

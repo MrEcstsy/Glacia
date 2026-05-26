@@ -28,6 +28,8 @@ shop:
       buy: 75000
     - id: "cow_spawner"
       buy: 100000
+    - id: "bee_spawner"
+      buy: 125000
     - id: "spider_spawner"
       buy: 150000
     - id: "zombie_spawner"
@@ -46,6 +48,8 @@ shop:
       buy: 1500000
     - id: "iron_golem_spawner"
       buy: 2000000
+    - id: "warden_spawner"
+      buy: 5000000
     - id: "mysterymobspawner"
       buy: 3000000
 
@@ -210,7 +214,6 @@ shop:
        buy: 300 
            
   special: []
-  brewing: []
 
   wool: 
     - id: "wool"

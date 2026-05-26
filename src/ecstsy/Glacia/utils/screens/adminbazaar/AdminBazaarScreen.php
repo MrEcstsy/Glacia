@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\utils\screens\adminbazaar;
 
 use ecstsy\Glacia\server\adminbazaar\AdminBazaarManager;
+use ecstsy\Glacia\utils\GlaciaUtils;
 use ecstsy\Glacia\utils\inventory\CustomSizedInvMenu;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use muqsit\invmenu\InvMenu;
@@ -25,7 +26,7 @@ final class AdminBazaarScreen
     public static function display(Player $player) : void
     {
         $menu = CustomSizedInvMenu::create(9);
-        $menu->setName(C::colorize("&r&8Admin Bazaar"));
+        $menu->setName(GlaciaUtils::format("adminbazaar.menu.title"));
 
         $inventory = $menu->getInventory();
         $pane = VanillaBlocks::STAINED_GLASS_PANE()->setColor(DyeColor::PURPLE())->asItem()->setCustomName("");
@@ -34,26 +35,30 @@ final class AdminBazaarScreen
         }
 
         $info = VanillaItems::BOOK();
-        $info->setCustomName(C::colorize("&r&l&dAdmin Bazaar"));
+        $info->setCustomName(GlaciaUtils::format("adminbazaar.menu.info.name"));
         $info->setLore([
-            C::colorize("&r&7A rotating admin-curated deal."),
-            C::colorize("&r&7Each listing stays up for a limited time"),
-            C::colorize("&r&7and can only be purchased once."),
+            GlaciaUtils::format("adminbazaar.menu.info.line1"),
+            GlaciaUtils::format("adminbazaar.menu.info.line2"),
+            GlaciaUtils::format("adminbazaar.menu.info.line3"),
             "",
-            C::colorize("&r&7Next rotation: &f" . GeneralUtils::translateTime(AdminBazaarManager::getTimeUntilRefresh())),
+            GlaciaUtils::format("adminbazaar.menu.info.next_rotation", [
+                "time" => GeneralUtils::translateTime(AdminBazaarManager::getTimeUntilRefresh()),
+            ]),
         ]);
         $inventory->setItem(self::INFO_SLOT, $info);
 
         $listing = AdminBazaarManager::getActiveListing();
         if ($listing === null || AdminBazaarManager::getTimeUntilExpiry() <= 0) {
             $waiting = VanillaBlocks::BARRIER()->asItem();
-            $waiting->setCustomName(C::colorize("&r&l&cNo Active Listing"));
+            $waiting->setCustomName(GlaciaUtils::format("adminbazaar.menu.empty.name"));
             $waiting->setLore([
-                C::colorize("&r&7The next Admin Bazaar listing"),
-                C::colorize("&r&7arrives in &f" . GeneralUtils::translateTime(AdminBazaarManager::getTimeUntilRefresh())),
+                GlaciaUtils::format("adminbazaar.menu.empty.line1"),
+                GlaciaUtils::format("adminbazaar.menu.empty.line2", [
+                    "time" => GeneralUtils::translateTime(AdminBazaarManager::getTimeUntilRefresh()),
+                ]),
             ]);
             $inventory->setItem(self::CENTER_SLOT, $waiting);
-            $inventory->setItem(self::BUY_SLOT, VanillaItems::REDSTONE_DUST()->setCustomName(C::colorize("&r&cUnavailable")));
+            $inventory->setItem(self::BUY_SLOT, VanillaItems::REDSTONE_DUST()->setCustomName(GlaciaUtils::format("adminbazaar.menu.empty.buy")));
         } else {
             $item = $listing["item"] ?? null;
             if (!$item instanceof \pocketmine\item\Item) {
@@ -63,33 +68,48 @@ final class AdminBazaarScreen
             $item = clone $item;
             $lore = $item->getLore();
             $lore[] = "";
-            $lore[] = C::colorize("&r&dPrice: &f" . AdminBazaarManager::formatPrice(
-                (int) ($listing["price"]["amount"] ?? 0),
-                (string) ($listing["price"]["currency"] ?? "money")
-            ));
-            $lore[] = C::colorize("&r&dExpires In: &f" . GeneralUtils::translateTime(AdminBazaarManager::getTimeUntilExpiry()));
-            $lore[] = C::colorize("&r&7Click the buy button to claim it.");
+            $lore[] = GlaciaUtils::format("adminbazaar.menu.listing.price", [
+                "price" => AdminBazaarManager::formatPrice(
+                    (int) ($listing["price"]["amount"] ?? 0),
+                    (string) ($listing["price"]["currency"] ?? "money")
+                ),
+            ]);
+            $lore[] = GlaciaUtils::format("adminbazaar.menu.listing.expires", [
+                "time" => GeneralUtils::translateTime(AdminBazaarManager::getTimeUntilExpiry()),
+            ]);
+            $lore[] = GlaciaUtils::format("adminbazaar.menu.listing.click");
             $item->setLore($lore);
             $inventory->setItem(self::CENTER_SLOT, $item);
 
             $buy = StringToItemParser::getInstance()->parse("emerald") ?? VanillaItems::EMERALD();
-            $buy->setCustomName(C::colorize("&r&l&aPurchase Listing"));
+            $buy->setCustomName(GlaciaUtils::format("adminbazaar.menu.buy.name"));
             $buy->setLore([
-                C::colorize("&r&7Buy this listing for"),
-                C::colorize("&r&f" . AdminBazaarManager::formatPrice(
-                    (int) ($listing["price"]["amount"] ?? 0),
-                    (string) ($listing["price"]["currency"] ?? "money")
-                )),
+                GlaciaUtils::format("adminbazaar.menu.buy.line1"),
+                GlaciaUtils::format("adminbazaar.menu.buy.line2", [
+                    "price" => AdminBazaarManager::formatPrice(
+                        (int) ($listing["price"]["amount"] ?? 0),
+                        (string) ($listing["price"]["currency"] ?? "money")
+                    ),
+                ]),
             ]);
             $inventory->setItem(self::BUY_SLOT, $buy);
         }
 
-        $menu->setListener(InvMenu::readonly(function(DeterministicInvMenuTransaction $transaction) : void {
-            if ($transaction->getAction()->getSlot() !== self::BUY_SLOT) {
+        $menu->setListener(InvMenu::readonly(static function (DeterministicInvMenuTransaction $transaction): void {
+            $slot = $transaction->getAction()->getSlot();
+            if ($slot !== self::BUY_SLOT && $slot !== self::CENTER_SLOT) {
                 return;
             }
 
-            AdminBazaarManager::purchase($transaction->getPlayer());
+            if (AdminBazaarManager::getActiveListing() === null || AdminBazaarManager::getTimeUntilExpiry() <= 0) {
+                return;
+            }
+
+            $player = $transaction->getPlayer();
+            $player->removeCurrentWindow();
+            $transaction->then(static function (Player $player): void {
+                AdminBazaarPurchaseConfirmScreen::queueDisplay($player);
+            });
         }));
 
         $menu->send($player);

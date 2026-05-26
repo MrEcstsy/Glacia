@@ -18,8 +18,11 @@ use ecstsy\Glacia\entity\zones\ZoneMobSnowGolem;
 use ecstsy\Glacia\entity\zones\ZoneMobSpider;
 use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\items\runes\RuneManager;
+use ecstsy\Glacia\server\world\events\WorldEventManager;
 use ecstsy\Glacia\utils\RewardResolver;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
+use pocketmine\block\Block;
+use pocketmine\block\Liquid;
 use pocketmine\entity\Location;
 use pocketmine\item\Item;
 use pocketmine\nbt\tag\CompoundTag;
@@ -50,6 +53,9 @@ final class ZoneMobManager {
     private static int $defaultMobsPerPlayer = 2;
     private static int $defaultMaxAlive = 12;
     private static int $defaultAnchorRadius = 22;
+    private static int $anchorMaxSpawnAbove = 3;
+    private static int $anchorMaxSpawnBelow = 8;
+    private static int $spawnPositionAttempts = 10;
     private static int $eliteMinKills = 20;
     private static int $eliteMaxKills = 40;
     private static float $eliteHealthMultiplier = 1.65;
@@ -58,6 +64,8 @@ final class ZoneMobManager {
     private static float $eliteXpMultiplier = 1.75;
     private static float $eliteLootMultiplier = 1.45;
     private static string $eliteNamePrefix = "&6&lElite &r";
+    /** @var list<int> */
+    private static array $streakBroadcastMilestones = [10, 25, 50, 100];
     /** @var list<string> */
     private static array $eliteTypes = ["exploding", "imploding", "frost", "charged", "gravitic", "reinforced", "leeching", "corrupted", "splitter", "molten"];
     /** @var array<string, array<string, mixed>> */
@@ -79,6 +87,9 @@ final class ZoneMobManager {
         self::$defaultMobsPerPlayer = max(0, (int) ($settings["default-mobs-per-player"] ?? 2));
         self::$defaultMaxAlive = max(1, (int) ($settings["default-max-alive"] ?? 12));
         self::$defaultAnchorRadius = max(6, (int) ($settings["default-anchor-radius"] ?? 22));
+        self::$anchorMaxSpawnAbove = max(0, (int) ($settings["anchor-max-spawn-above"] ?? 3));
+        self::$anchorMaxSpawnBelow = max(0, (int) ($settings["anchor-max-spawn-below"] ?? 8));
+        self::$spawnPositionAttempts = max(1, min(30, (int) ($settings["spawn-position-attempts"] ?? 10)));
         self::$eliteMinKills = max(1, (int) ($settings["elite-min-kills"] ?? 20));
         self::$eliteMaxKills = max(self::$eliteMinKills, (int) ($settings["elite-max-kills"] ?? 40));
         self::$eliteHealthMultiplier = max(1.0, (float) ($settings["elite-health-multiplier"] ?? 1.65));
@@ -87,6 +98,11 @@ final class ZoneMobManager {
         self::$eliteXpMultiplier = max(1.0, (float) ($settings["elite-xp-multiplier"] ?? 1.75));
         self::$eliteLootMultiplier = max(1.0, (float) ($settings["elite-loot-multiplier"] ?? 1.45));
         self::$eliteNamePrefix = (string) ($settings["elite-name-prefix"] ?? "&6&lElite &r");
+        self::$streakBroadcastMilestones = array_values(array_unique(array_map(
+            static fn(mixed $value): int => max(1, (int) $value),
+            (array) ($settings["streak-broadcast-milestones"] ?? self::$streakBroadcastMilestones)
+        )));
+        sort(self::$streakBroadcastMilestones);
         self::$eliteTypes = self::sanitizeEliteTypes((array) ($settings["elite-types"] ?? self::$eliteTypes));
         self::$zones = (array) ($config?->get("zones", []) ?? []);
     }
@@ -148,7 +164,7 @@ final class ZoneMobManager {
         $playersInZone = self::getPlayersInZone($zone);
         return [
             "alive" => self::countAlive($zoneId),
-            "desired" => self::getDesiredAliveCount($config, $playersInZone),
+            "desired" => self::getDesiredAliveCount($zoneId, $config, $playersInZone),
             "players" => $playersInZone,
             "interval" => self::$tickIntervalSeconds
         ];
@@ -180,6 +196,16 @@ final class ZoneMobManager {
         unset(self::$playerStreaks[$player->getUniqueId()->toString()]);
     }
 
+    public static function getPlayerZoneStreak(Player $player): int
+    {
+        $state = self::$playerStreaks[$player->getUniqueId()->toString()] ?? null;
+        if (!is_array($state)) {
+            return 0;
+        }
+
+        return max(0, (int) ($state["count"] ?? 0));
+    }
+
     public static function handleMobKill(Player $player, ZoneMob $mob): void
     {
         $zoneId = strtolower($mob->getZoneId());
@@ -189,20 +215,27 @@ final class ZoneMobManager {
             $state = ["zone" => $zoneId, "count" => 0, "next_elite" => self::rollNextEliteThreshold()];
         }
 
-        $state["count"] = (int) ($state["count"] ?? 0) + 1;
-        self::$playerStreaks[$key] = $state;
-
         $config = self::getZoneConfig($zoneId);
         if ($config === null) {
             return;
         }
 
-        foreach ((array) ($config["streak-rewards"] ?? []) as $threshold => $rewardConfig) {
-            if ((int) $threshold !== $state["count"] || !is_array($rewardConfig)) {
-                continue;
+        $step = WorldEventManager::getKillProgressPerKill($zoneId);
+        $previousCount = max(0, (int) ($state["count"] ?? 0));
+        $state["count"] = $previousCount + $step;
+        self::$playerStreaks[$key] = $state;
+        for ($count = $previousCount + 1; $count <= (int) $state["count"]; $count++) {
+            foreach ((array) ($config["streak-rewards"] ?? []) as $threshold => $rewardConfig) {
+                if ((int) $threshold !== $count || !is_array($rewardConfig)) {
+                    continue;
+                }
+
+                self::grantStreakReward($player, $zoneId, $count, $rewardConfig);
             }
 
-            self::grantStreakReward($player, $zoneId, $state["count"], $rewardConfig);
+            if (in_array($count, self::resolveStreakBroadcastMilestones($config), true)) {
+                self::broadcastStreakMilestone($player, $zoneId, $count, (array) ($config["streak-broadcast"] ?? []));
+            }
         }
 
         $nextElite = max(1, (int) ($state["next_elite"] ?? self::rollNextEliteThreshold()));
@@ -230,7 +263,7 @@ final class ZoneMobManager {
 
         $playersInZone = self::getPlayersInZone($zone);
         $alive = self::countAlive($zoneId);
-        $desiredAlive = self::getDesiredAliveCount($config, $playersInZone);
+        $desiredAlive = self::getDesiredAliveCount($zoneId, $config, $playersInZone);
 
         if ($alive > $desiredAlive) {
             self::trimExcess($zoneId, $zone, $alive - $desiredAlive);
@@ -242,7 +275,7 @@ final class ZoneMobManager {
         }
 
         $batch = max(1, min(4, (int) ($config["spawn-batch"] ?? 1)));
-        $batch = (int) ceil($batch * self::getAnchorSpawnMultiplier($anchor));
+        $batch = (int) ceil($batch * self::getAnchorSpawnMultiplier($anchor) * WorldEventManager::getSpawnMultiplier($zoneId));
         for ($i = 0; $i < min($batch, $desiredAlive - $alive); $i++) {
             if (!self::spawnOneNearAnchor($zoneId, $zone, $config, $anchor)) {
                 break;
@@ -275,35 +308,51 @@ final class ZoneMobManager {
      */
     public static function rollDrops(string $zoneId, string $mobId, bool $elite = false, float $lootMultiplier = 1.0): array
     {
+        return array_map(
+            static fn(array $result): Item => $result["item"],
+            self::rollDropResults($zoneId, $mobId, $elite, $lootMultiplier)
+        );
+    }
+
+    /**
+     * @return array<int, array{item: Item, entry: array<string, mixed>}>
+     */
+    public static function rollDropResults(string $zoneId, string $mobId, bool $elite = false, float $lootMultiplier = 1.0): array
+    {
         $mob = self::getMobConfig($zoneId, $mobId);
         if ($mob === null) {
             return [];
         }
 
-        $drops = [];
-        foreach ((array) ($mob["rewards"] ?? []) as $entry) {
-            if (!is_array($entry)) {
-                continue;
-            }
+        $results = [];
+        $entries = array_merge(
+            array_values(array_filter((array) ($mob["rewards"] ?? []), static fn(mixed $entry): bool => is_array($entry))),
+            WorldEventManager::getExtraRewardEntries($zoneId)
+        );
+        $effectiveMultiplier = max(1.0, $lootMultiplier * WorldEventManager::getLootMultiplier($zoneId));
 
+        foreach ($entries as $entry) {
             $chance = max(0, min(100, (int) ($entry["chance"] ?? 100)));
             if ($elite) {
-                $chance = min(100, (int) floor($chance * max(1.0, $lootMultiplier)));
+                $chance = min(100, (int) floor($chance * $effectiveMultiplier));
             }
             if ($chance < 100 && mt_rand(1, 100) > $chance) {
                 continue;
             }
 
             $item = RewardResolver::resolveItem($entry);
-            if ($item !== null) {
-                if ($elite) {
-                    $item->setCount(max(1, (int) ceil($item->getCount() * max(1.0, $lootMultiplier))));
-                }
-                $drops[] = $item;
+            if ($item === null) {
+                continue;
             }
+
+            if ($elite || $effectiveMultiplier > 1.0) {
+                $item->setCount(max(1, (int) ceil($item->getCount() * $effectiveMultiplier)));
+            }
+
+            $results[] = ["item" => $item, "entry" => $entry];
         }
 
-        return $drops;
+        return $results;
     }
 
     public static function isInsideSpawnArea(ZoneMob $mob): bool
@@ -330,19 +379,35 @@ final class ZoneMobManager {
 
     private static function spawnOneNearAnchor(string $zoneId, array $zone, array $config, Position $anchor): bool
     {
-        $mobId = self::pickMobId((array) ($config["mobs"] ?? []));
+        $mobPool = WorldEventManager::getSpawnMobPool($zoneId, (array) ($config["mobs"] ?? []));
+        $mobId = self::pickMobId($mobPool);
         if ($mobId === null) {
             return false;
         }
 
-        $mob = self::getMobConfig($zoneId, $mobId);
+        $mob = $mobPool[$mobId] ?? self::getMobConfig($zoneId, $mobId);
         if ($mob === null) {
             return false;
         }
+        $mob = WorldEventManager::applyMobConfigModifiers($zoneId, $mob);
 
         $anchorRadius = max(6, (int) ($config["anchor-radius"] ?? self::$defaultAnchorRadius));
-        $position = ZoneManager::getRandomSafePositionNear($anchor, $zone, $anchorRadius, self::$edgePadding)
-            ?? ZoneManager::getRandomSafePosition($zone, self::$edgePadding);
+        $position = null;
+        for ($attempt = 0; $attempt < self::$spawnPositionAttempts; $attempt++) {
+            $candidate = ZoneManager::getRandomSafePositionNear($anchor, $zone, $anchorRadius, self::$edgePadding)
+                ?? ZoneManager::getRandomSafePosition($zone, self::$edgePadding);
+            if (!$candidate instanceof Position) {
+                continue;
+            }
+
+            if (!self::isAllowedSpawnCandidate($candidate, $anchor, $zone)) {
+                continue;
+            }
+
+            $position = $candidate;
+            break;
+        }
+
         if (!$position instanceof Position) {
             return false;
         }
@@ -354,12 +419,64 @@ final class ZoneMobManager {
         return true;
     }
 
+    private static function isAllowedSpawnCandidate(Position $candidate, Position $anchor, array $zone): bool
+    {
+        $dy = $candidate->getY() - $anchor->getY();
+        if ($dy > self::$anchorMaxSpawnAbove || $dy < -self::$anchorMaxSpawnBelow) {
+            return false;
+        }
+
+        if (ZoneManager::isInsideSafeArea($candidate, $zone)) {
+            return false;
+        }
+
+        if (!ZoneManager::isInsideZone($candidate, $zone) || !ZoneManager::isInsideSpawnInset($candidate, $zone, self::$edgePadding)) {
+            return false;
+        }
+
+        $world = $candidate->getWorld();
+        $x = $candidate->getFloorX();
+        $y = $candidate->getFloorY();
+        $z = $candidate->getFloorZ();
+
+        $ground = $world->getBlockAt($x, $y - 1, $z);
+        $feet = $world->getBlockAt($x, $y, $z);
+        $head = $world->getBlockAt($x, $y + 1, $z);
+
+        if ($ground instanceof Liquid || $feet instanceof Liquid || $head instanceof Liquid) {
+            return false;
+        }
+
+        if (self::isTreeLikeBlock($ground) || self::isTreeLikeBlock($feet) || self::isTreeLikeBlock($head)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static function isTreeLikeBlock(Block $block): bool
+    {
+        $name = strtolower($block->getName());
+        return str_contains($name, "leaves")
+            || str_contains($name, "log")
+            || str_contains($name, " wood")
+            || str_contains($name, "wood ")
+            || str_contains($name, "mangrove roots")
+            || str_contains($name, "bamboo");
+    }
+
     private static function buildMobNbt(string $zoneId, string $mobId, array $mob, string $displayName): CompoundTag
     {
+        $tier = self::resolveMobTier($mob, $displayName);
+        $configuredAimQuality = array_key_exists("aim-quality", $mob)
+            ? max(0.0, min(1.0, (float) $mob["aim-quality"]))
+            : -1.0;
+
         return CompoundTag::create()
             ->setString("zone_id", $zoneId)
             ->setString("zone_mob_id", $mobId)
             ->setString("zone_mob_name", $displayName)
+            ->setInt("zone_mob_tier", $tier)
             ->setInt("zone_mob_health", max(10, (int) ($mob["health"] ?? 30)))
             ->setFloat("zone_mob_damage", max(1.0, (float) ($mob["damage"] ?? 4.0)))
             ->setFloat("zone_mob_speed", max(0.08, min(0.34, (float) ($mob["speed"] ?? 0.19))))
@@ -373,13 +490,67 @@ final class ZoneMobManager {
             ->setFloat("zone_mob_attack_reach", max(1.4, min(3.6, (float) ($mob["attack-reach"] ?? 2.0))))
             ->setFloat("zone_mob_ideal_range_min", max(4.0, min(18.0, (float) ($mob["ideal-range-min"] ?? 6.0))))
             ->setFloat("zone_mob_ideal_range_max", max(5.0, min(28.0, (float) ($mob["ideal-range-max"] ?? 13.0))))
+            ->setString("zone_mob_projectile_type", strtolower((string) ($mob["projectile-type"] ?? $mob["weapon"] ?? "arrow")))
+            ->setFloat("zone_mob_projectile_speed", max(0.2, min(3.0, (float) ($mob["projectile-speed"] ?? 0.0))))
+            ->setFloat("zone_mob_aim_quality", $configuredAimQuality)
+            ->setInt("zone_mob_fire_seconds", max(0, min(20, (int) ($mob["fire-seconds"] ?? 4))))
             ->setInt("zone_mob_strafe_chance", max(0, min(100, (int) ($mob["strafe-chance"] ?? 35))))
             ->setByte("zone_mob_retreat_when_too_close", ((bool) ($mob["retreat-when-too-close"] ?? true)) ? 1 : 0)
             ->setByte("zone_mob_allow_melee_when_ranged", ((bool) ($mob["allow-melee-when-ranged"] ?? false)) ? 1 : 0)
             ->setFloat("zone_mob_horde_separation", max(0.05, min(0.75, (float) ($mob["horde-separation"] ?? 0.26))))
             ->setByte("zone_mob_elite", ((bool) ($mob["elite"] ?? false)) ? 1 : 0)
             ->setString("zone_mob_elite_type", strtolower((string) ($mob["elite-type"] ?? "")))
-            ->setFloat("zone_mob_loot_multiplier", max(1.0, (float) ($mob["loot-multiplier"] ?? 1.0)));
+            ->setFloat("zone_mob_loot_multiplier", max(1.0, (float) ($mob["loot-multiplier"] ?? 1.0)))
+            ->setInt("zone_mob_event_teleport_chance", max(0, min(100, (int) ($mob["event-teleport-chance"] ?? 0))))
+            ->setString("zone_mob_world_event_id", (string) ($mob["world-event-id"] ?? ""))
+            ->setString("zone_mob_world_event_name", (string) ($mob["world-event-name"] ?? ""));
+    }
+
+    private static function resolveMobTier(array $mob, string $displayName): int
+    {
+        $explicit = (int) ($mob["tier"] ?? 0);
+        if ($explicit > 0) {
+            return $explicit;
+        }
+
+        $clean = C::clean($displayName);
+        if (preg_match('/tier\s+([ivxlcdm]+|\d+)/i', $clean, $matches) !== 1) {
+            return 1;
+        }
+
+        $token = strtoupper((string) $matches[1]);
+        if (is_numeric($token)) {
+            return max(1, (int) $token);
+        }
+
+        return max(1, self::romanToInt($token));
+    }
+
+    private static function romanToInt(string $roman): int
+    {
+        $map = [
+            'I' => 1,
+            'V' => 5,
+            'X' => 10,
+            'L' => 50,
+            'C' => 100,
+            'D' => 500,
+            'M' => 1000,
+        ];
+
+        $total = 0;
+        $previous = 0;
+        for ($i = strlen($roman) - 1; $i >= 0; $i--) {
+            $value = $map[$roman[$i]] ?? 0;
+            if ($value < $previous) {
+                $total -= $value;
+            } else {
+                $total += $value;
+                $previous = $value;
+            }
+        }
+
+        return $total;
     }
 
     private static function countAlive(string $zoneId): int
@@ -413,7 +584,7 @@ final class ZoneMobManager {
         return $count;
     }
 
-    private static function getDesiredAliveCount(array $config, int $playersInZone): int
+    private static function getDesiredAliveCount(string $zoneId, array $config, int $playersInZone): int
     {
         if ($playersInZone <= 0) {
             return 0;
@@ -423,7 +594,8 @@ final class ZoneMobManager {
         $mobsPerPlayer = max(0, (int) ($config["mobs-per-player"] ?? self::$defaultMobsPerPlayer));
         $maxAlive = max(1, (int) ($config["max-alive"] ?? self::$defaultMaxAlive));
 
-        return min($maxAlive, $baseAlive + ($playersInZone * $mobsPerPlayer));
+        $desired = min($maxAlive, $baseAlive + ($playersInZone * $mobsPerPlayer));
+        return max(0, (int) ceil($desired * WorldEventManager::getSpawnMultiplier($zoneId)));
     }
 
     private static function hasPlayerNearZone(array $zone): bool
@@ -509,7 +681,8 @@ final class ZoneMobManager {
             return null;
         }
 
-        $mob = ((array) ($zone["mobs"] ?? []))[strtolower($mobId)] ?? null;
+        $pool = WorldEventManager::getSpawnMobPool(strtolower($zoneId), (array) ($zone["mobs"] ?? []));
+        $mob = $pool[strtolower($mobId)] ?? null;
         return is_array($mob) ? $mob : null;
     }
 
@@ -529,6 +702,26 @@ final class ZoneMobManager {
             "spider" => new ZoneMobSpider($location, $nbt),
             default => new ZoneMob($location, $nbt),
         };
+    }
+
+    /**
+     * @param array<string, mixed> $mobConfig
+     */
+    public static function spawnConfiguredMob(Position $position, string $zoneId, string $mobId, array $mobConfig): ?ZoneMob
+    {
+        $displayName = (string) ($mobConfig["name"] ?? $mobConfig["display"] ?? ucfirst($mobId));
+        $nbt = self::buildMobNbt($zoneId, strtolower($mobId), $mobConfig, $displayName);
+        $entity = self::createZoneMob((string) ($mobConfig["entity"] ?? "zombie"), Location::fromObject($position, $position->getWorld()), $nbt);
+        $entity->spawnToAll();
+        return $entity;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public static function getMobProfile(string $zoneId, string $mobId): ?array
+    {
+        return self::getMobConfig($zoneId, $mobId);
     }
 
     private static function spawnEliteFromKill(Player $player, ZoneMob $mob, array $zoneConfig): void
@@ -564,6 +757,7 @@ final class ZoneMobManager {
         $eliteConfig["elite-type"] = $eliteType;
         $eliteConfig["loot-multiplier"] = max(1.0, self::$eliteLootMultiplier);
         $eliteConfig = self::applyEliteTypeAdjustments($eliteConfig, $eliteType);
+        $eliteConfig = WorldEventManager::applyMobConfigModifiers($zoneId, $eliteConfig);
 
         $nbt = self::buildMobNbt($zoneId, $mobId, $eliteConfig, $eliteDisplay);
         $entity = self::createZoneMob((string) ($eliteConfig["entity"] ?? "zombie"), Location::fromObject($position, $position->getWorld()), $nbt);
@@ -594,8 +788,9 @@ final class ZoneMobManager {
 
         $origin = $mob->getPosition();
         for ($i = 0; $i < max(1, $count); $i++) {
-            $position = ZoneManager::getRandomSafePositionNear($origin, $zone, 5, self::$edgePadding)
-                ?? ZoneManager::getRandomSafePosition($zone, self::$edgePadding);
+            $offsetX = $i === 0 ? 0.0 : (mt_rand(-6, 6) / 10);
+            $offsetZ = $i === 0 ? 0.0 : (mt_rand(-6, 6) / 10);
+            $position = Position::fromObject($origin->add($offsetX, 0, $offsetZ), $origin->getWorld());
             if (!$position instanceof Position) {
                 continue;
             }
@@ -677,6 +872,60 @@ final class ZoneMobManager {
         }
 
         return $config;
+    }
+
+    /**
+     * @param array<string, mixed> $zoneConfig
+     * @return list<int>
+     */
+    private static function resolveStreakBroadcastMilestones(array $zoneConfig): array
+    {
+        $raw = (array) ($zoneConfig["streak-broadcast-milestones"] ?? self::$streakBroadcastMilestones);
+        $milestones = array_values(array_unique(array_map(static fn(mixed $value): int => max(1, (int) $value), $raw)));
+        sort($milestones);
+        return $milestones;
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    private static function broadcastStreakMilestone(Player $player, string $zoneId, int $count, array $config): void
+    {
+        $zone = ZoneManager::getZone($zoneId);
+        $message = (string) ($config["message"] ?? "&r&b{player} &7has reached a &f{count}&7 kill streak in &f{zone}&7.");
+        $message = str_replace(
+            ["{player}", "{count}", "{zone}"],
+            [$player->getName(), (string) $count, C::clean((string) (($zone["display"] ?? $zoneId) ?? $zoneId))],
+            $message
+        );
+
+        foreach (Server::getInstance()->getOnlinePlayers() as $online) {
+            $online->sendMessage(C::colorize($message));
+        }
+    }
+
+    public static function announceDropRolls(Player $player, ZoneMob $mob): void
+    {
+        $zoneId = strtolower($mob->getZoneId());
+        foreach ($mob->getLastDropResults() as $result) {
+            $item = $result["item"] ?? null;
+            $entry = $result["entry"] ?? null;
+            if (!$item instanceof Item || !is_array($entry)) {
+                continue;
+            }
+
+            WorldEventManager::announceConfiguredReward(
+                $player,
+                $entry,
+                $item,
+                $zoneId,
+                C::clean($mob->getName()),
+                [
+                    "mob" => C::clean($mob->getName()),
+                    "event" => WorldEventManager::getActiveEventName($zoneId),
+                ]
+            );
+        }
     }
 
     private static function grantStreakReward(Player $player, string $zoneId, int $count, array $rewardConfig): void

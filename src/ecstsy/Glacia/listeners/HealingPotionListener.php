@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\listeners;
 
 use ecstsy\Glacia\server\combat\potions\HealingPotionSettings;
+use ecstsy\Glacia\server\watchdogs\ChunkWatchdogManager;
 use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\entity\projectile\SplashPotion;
 use pocketmine\event\entity\ProjectileHitEntityEvent;
@@ -73,6 +74,8 @@ final class HealingPotionListener implements Listener {
         ){
             $bonus += $this->settings->getPitchAssistBonusHeal();
         }
+
+        $bonus *= ChunkWatchdogManager::getFactionPotionHealMultiplier($owner);
 
         if($bonus <= 0){
             return;

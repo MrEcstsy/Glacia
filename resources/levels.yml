@@ -46,3 +46,48 @@ level-rewards:
         amount: 150000
     commands:
       - "say {player} reached level {level}!"
+
+# ─── Farming skill gates (Glacia levels.yml player level — /level) ─────────────────
+#
+# Applies to placing crop/seeds/trunks, breaking those blocks for drops, berry/glow‑berry picking,
+# and autoplanter re‑plant (harvester chests still collect without checking a player).
+#
+# Bypass: permission glacia.farming.bypass | glacia.admin
+# Ignored in creative when ignore-creative is true (uses hasFiniteResources).
+#
+# Crop keys below are YAML names; uncomment or rename as needed.
+
+farming-requirements:
+  enabled: true
+  default-level: 1
+  ignore-creative: true
+  crops:
+    wheat: 1
+    carrots: 1
+    potatoes: 1
+    beetroots: 1
+    melon: 1
+    melon_stem: 1
+    pumpkin: 1
+    pumpkin_stem: 1
+    carved_pumpkin: 1
+    sugar_cane: 1
+    cactus: 1
+    nether_wart: 1
+    nether_wart_block: 1
+    cocoa: 1
+    bamboo: 1
+    bamboo_block: 1
+    sweet_berries: 1
+    cave_vines: 1
+    torchflower: 1
+    pitcher: 1
+    chorus: 1
+    mushroom: 1
+    mushroom_block: 1
+    crimson_fungus: 1
+    warped_fungus: 1
+    shroomlight: 1
+    dried_kelp: 1
+    egg: 1
+    apple: 1

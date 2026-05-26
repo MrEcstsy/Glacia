@@ -137,6 +137,12 @@ abstract class SpawnerEntity extends Living
         $this->updateNameTag();
     }
 
+    public function knockBack(float $x, float $z, float $force = self::DEFAULT_KNOCKBACK_FORCE, ?float $verticalLimit = self::DEFAULT_KNOCKBACK_VERTICAL_LIMIT) : void
+    {
+        // Ignore knockback from hits, projectiles, and explosions. Event listeners may run after we zero
+        // knockback in attack(), so overriding this is the reliable fix.
+    }
+
     public function saveNBT() : CompoundTag
     {
         return parent::saveNBT()->setInt("stack", $this->getStack());

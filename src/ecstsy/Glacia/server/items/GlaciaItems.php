@@ -9,6 +9,7 @@ use ecstsy\Glacia\server\items\runes\RuneManager;
 use ecstsy\Glacia\server\ranks\RankProgressionManager;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\block\VanillaBlocks;
+use pocketmine\item\PotionType;
 use pocketmine\item\StringToItemParser;
 use pocketmine\item\VanillaItems;
 
@@ -30,10 +31,13 @@ final class GlaciaItems {
         self::initExplosives();
         self::initHomesAndMisc();
         self::initRankItems();
+        self::initQuestItems();
         self::initCustomArmor(); 
         self::initDisguiseItems();
         self::initRuneItems();
+        self::initRingItems();
         self::initCategories();
+        AdminConfiguredItemManager::loadFromConfig();
         CustomMobItemManager::loadFromConfig();
     }
 
@@ -70,30 +74,71 @@ final class GlaciaItems {
         ];
     }
 
+    /**
+     * @param string[] $items
+     */
+    public static function appendCategoryItems(string $category, string $display, array $items): void
+    {
+        $key = strtolower(trim($category));
+        $existing = self::$categories[$key]["items"] ?? [];
+        self::$categories[$key] = [
+            "display" => $display !== "" ? $display : (self::$categories[$key]["display"] ?? ucfirst($key)),
+            "items" => array_values(array_unique(array_merge(
+                $existing,
+                array_values(array_filter($items, static fn(string $id): bool => $id !== ""))
+            ))),
+        ];
+    }
+
     private static function initCategories(): void {
         self::$categories = [
             "pets" => [
                 "display" => "Pets",
                 "items" => [
-                    "purity_wisp",
-                    "gale_fox",
+                    "puritywisp",
+                    "galefox",
                     "shatterfang",
                     "hearthbloom",
-                    "ironclad_wyrm",
-                    "aegis_ram",
-                    "rift_viper",
-                    "sunscorch_jackal",
-                    "runesage_owl",
-                    "stormcore_behemoth",
+                    "ironcladwyrm",
+                    "aegisram",
+                    "riftviper",
+                    "sunscorchjackal",
+                    "runesageowl",
+                    "stormcorebehemoth",
                     "veilmoth",
-                    "blastforge_hound",
+                    "blastforgehound",
+                    "gildedmoth",
+                    "rafflefinch",
+                    "oathbondbeetle",
+                    "murmurloft",
+                    "patchworksprite",
+                    "renderscalewyrm",
+                    "skycourierdrake",
+                    "inkwellfinch",
+                    "terracrestjackal",
+                    "soulsurge",
+                    "ruinspiremoth",
+                    "bellforgecustodian",
+                    "arcbindercodex",
+                    "crownspirekestrel",
+                    "shadebrokercrow",
                     "pet_tamer",
                 ],
             ],
             "trinkets" => [
                 "display" => "Trinkets",
                 "items" => [
+                    "soul_conduit",
+                    "efficiency_conduit",
+                    "overlord_conduit",
+                    "soul_gem",
+                    "efficiency_gem",
+                    "overlord_gem",
+                    "blackscroll_dust",
                     "soul_compass",
+                    "wraith_pearl",
+                    "angel_potion",
+                    "bath_bomb",
                     "frostwake_trident",
                     "stormflare_torch",
                     "glacial_blessing",
@@ -109,18 +154,32 @@ final class GlaciaItems {
                     "admin_coin_note",
                 ],
             ],
+            "quests" => [
+                "display" => "Quest Sigils",
+                "items" => [
+                    "dormant_sigil",
+                    "awakened_sigil",
+                    "ascendent_sigil",
+                    "eternal_sigil",
+                    "quest_reroll",
+                ],
+            ],
             "enchants" => [
                 "display" => "Enchant Items",
                 "items" => [
                     "enchantment_book",
                     "orb",
+                    "armor_orb_script",
+                    "weapon_orb_script",
                     "whitescroll",
                     "holy_whitescroll",
                     "holy_water",
                     "blackscroll",
+                    "holy_blackscroll",
                     "renametag",
                     "transmog_scroll",
                     "transmog",
+                    "soul_tracker",
                     "block_tracker",
                     "kill_tracker",
                     "mob_tracker",
@@ -128,6 +187,19 @@ final class GlaciaItems {
                     "random_book",
                     "charm_shard",
                     "charm_dust",
+                    "conjuration_oracle",
+                    "simple_randomization_scroll",
+                    "unique_randomization_scroll",
+                    "elite_randomization_scroll",
+                    "exotic_randomization_scroll",
+                    "legendary_randomization_scroll",
+                    "godly_randomization_scroll",
+                    "exclusive_amplifier",
+                    "magicdust",
+                    "primal_dust",
+                    "random_magicdust",
+                    "mysterydust",
+                    "passive_rune_pouch",
                 ],
             ],
             "crates" => [
@@ -140,8 +212,9 @@ final class GlaciaItems {
                     "ethereal_legendary_chest",
                     "ethereal_godly_chest",
                     "mysterymobspawner",
-                    "heroicmysterymobspawner",
+                    "heroic_mysterymobspawner",
                     "collection_chest",
+                    "harvester_chest",
                 ],
             ],
             "tools" => [
@@ -152,9 +225,13 @@ final class GlaciaItems {
                     "heroic_slot_ticket",
                     "item_flip_credit_voucher",
                     "faction_xp_booster",
+                    "zone_xp_booster",
+                    "zone_fishing_booster",
                     "envoy_beacon",
+                    "zone_barrier_bucket",
                     "chunk_buster",
                     "ocean_buster",
+                    "spawner_augment",
                 ],
             ],
             "bosses" => [
@@ -201,6 +278,64 @@ final class GlaciaItems {
                     "beastclock_rune",
                     "harvester_mark_rune",
                     "rune_remover",
+                ],
+            ],
+            "rings" => [
+                "display" => "Rings",
+                "items" => [
+                    "disarmor_ring",
+                    "lifesteal_ring",
+                    "guardian_ring",
+                ],
+            ],
+            "watchdogs" => [
+                "display" => "Watchdogs",
+                "items" => [
+                    "chunk_watchdog_ravenger",
+                    "chunk_watchdog_allay",
+                    "chunk_watchdog_nautilus",
+                    "chunk_watchdog_fox",
+                    "chunk_watchdog_goat",
+                    "chunk_watchdog_pillager",
+                    "chunk_watchdog_llama",
+                    "faction_watchdog_panda",
+                    "faction_watchdog_phantom",
+                    "faction_watchdog_witch",
+                    "faction_watchdog_endermite",
+                    "watchman_supplement",
+                ],
+            ],
+            "explosives" => [
+                "display" => "Explosives",
+                "items" => [
+                    "tnt_gigantic",
+                    "tnt_lethal",
+                    "tnt_lucky",
+                    "tnt_tactical",
+                    "cegg_gigantic",
+                    "cegg_lethal",
+                    "cegg_lucky",
+                    "cegg_tactical",
+                ],
+            ],
+            "armor_sets" => [
+                "display" => "Custom Armor",
+                "items" => [
+                    "phantom_helmet",
+                    "phantom_chestplate",
+                    "phantom_leggings",
+                    "phantom_boots",
+                    "phantom_sword",
+                    "yeti_helmet",
+                    "yeti_chestplate",
+                    "yeti_leggings",
+                    "yeti_boots",
+                    "yeti_sword",
+                    "yijki_helmet",
+                    "yijki_chestplate",
+                    "yijki_leggings",
+                    "yijki_boots",
+                    "yijki_sword",
                 ],
             ],
         ];
@@ -456,6 +591,75 @@ final class GlaciaItems {
         ];
     }
 
+    private static function initRingItems(): void
+    {
+        GlaciaItemFactory::$definitions += [
+            "disarmor_ring" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&4Disarmor Ring",
+                "lore" => [
+                    "&r&8Applied Ring",
+                    "",
+                    "&r&7Drag n' drop onto a piece that can",
+                    "&r&7hold &fDisarmor &r&7to permanently",
+                    "&r&7block it while that piece is equipped.",
+                    "",
+                    "&r&7A max of &f2 rings &r&7can be",
+                    "&r&7bound to one item.",
+                    "",
+                    "&r&8- &7Success Rate: &a{success}%",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "ring",
+                    "ring_id" => "disarmor",
+                    "success" => "{success}",
+                ],
+            ],
+            "lifesteal_ring" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&cLifesteal Ring",
+                "lore" => [
+                    "&r&8Applied Ring",
+                    "",
+                    "&r&7Drag n' drop onto a piece that can",
+                    "&r&7hold &fLifesteal &r&7to permanently",
+                    "&r&7block it while that piece is equipped.",
+                    "",
+                    "&r&7A max of &f2 rings &r&7can be",
+                    "&r&7bound to one item.",
+                    "",
+                    "&r&8- &7Success Rate: &a{success}%",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "ring",
+                    "ring_id" => "lifesteal",
+                    "success" => "{success}",
+                ],
+            ],
+            "guardian_ring" => [
+                "material" => VanillaItems::GOLD_NUGGET(),
+                "name" => "&r&l&eGuardian Ring",
+                "lore" => [
+                    "&r&8Applied Ring",
+                    "",
+                    "&r&7Drag n' drop onto a piece that can",
+                    "&r&7hold &fWatchmen &r&7to permanently",
+                    "&r&7block guardians from turning on you.",
+                    "",
+                    "&r&7A max of &f2 rings &r&7can be",
+                    "&r&7bound to one item.",
+                    "",
+                    "&r&8- &7Success Rate: &a{success}%",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "ring",
+                    "ring_id" => "guardian",
+                    "success" => "{success}",
+                ],
+            ],
+        ];
+    }
+
     private static function initDisguiseItems(): void
     {
         GlaciaItemFactory::$definitions["disguise_unlock"] = [
@@ -577,6 +781,30 @@ final class GlaciaItems {
                 ],
                 'nbt' => ['glaciaItem' => '{low_type}_orb', "max" => "{max}", "new" => "{new}", "success" => "{success}"],
             ],
+            'armor_orb_script' => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&b&lArmor Orb Script',
+                'lore' => [
+                    '&r&7Rerolls the &fsuccess rate &7on an',
+                    '&r&7existing &bArmor Orb&7.',
+                    '&r&7Keeps the orb slot value the same.',
+                    '',
+                    "&r&bDrag n' Drop onto an Armor Orb.",
+                ],
+                'nbt' => ['glaciaItem' => 'armor_orb_script'],
+            ],
+            'weapon_orb_script' => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&c&lWeapon Orb Script',
+                'lore' => [
+                    '&r&7Rerolls the &fsuccess rate &7on an',
+                    '&r&7existing &cWeapon Orb&7.',
+                    '&r&7Keeps the orb slot value the same.',
+                    '',
+                    "&r&cDrag n' Drop onto a Weapon Orb.",
+                ],
+                'nbt' => ['glaciaItem' => 'weapon_orb_script'],
+            ],
             'whitescroll' => [
                 'material' => StringToItemParser::getInstance()->parse("empty_map"),
                 'name' => '&r&fWhite Scroll',
@@ -622,6 +850,18 @@ final class GlaciaItems {
                     "&r&fPlace scroll onto item to extract."
                 ],
                 'nbt' => ["glaciaItem" => 'blackscroll', "success" => "{success}"],
+            ],
+            'holy_blackscroll' => [
+                'material' => VanillaItems::INK_SAC(),
+                'name' => '&r&5&lHoly Black Scroll',
+                'lore' => [
+                    "&r&7Strips every custom enchantment",
+                    "&r&7off an item and converts each",
+                    "&r&7one into a &f{success}% &r&7success book.",
+                    "&r&8Vanilla enchants are preserved.",
+                    "&r&5Place scroll onto item to extract."
+                ],
+                'nbt' => ["glaciaItem" => 'holy_blackscroll', "success" => "{success}"],
             ],
             'renametag' => [
                 'material' => VanillaItems::NAME_TAG(),
@@ -691,6 +931,108 @@ final class GlaciaItems {
                 ],
                 'nbt' => ['glaciaItem' => 'charm_dust', 'bonus' => '{bonus}'],
             ],
+            'conjuration_oracle' => [
+                'material' => StringToItemParser::getInstance()->parse("ender_eye"),
+                'name' => '&r&5&lConjuration Oracle',
+                'lore' => [
+                    '&r&7Drag onto a custom-enchanted item to',
+                    '&r&7open a ritual that can push select',
+                    '&r&7enchants &fone level past max&7.',
+                    '',
+                    '&r&8Only approved enchants can be elevated.',
+                ],
+                'nbt' => ['glaciaItem' => 'conjuration_oracle'],
+            ],
+            'blackscroll_dust' => [
+                'material' => VanillaItems::GLOWSTONE_DUST(),
+                'name' => '&r&8&lBlack Scroll Dust',
+                'lore' => [
+                    '&r&7Adds bonus success to a &fBlack Scroll',
+                    '&r&7or &5Holy Black Scroll&7.',
+                    '',
+                    '&r&8+{bonus}% Scroll Success',
+                    "&r&7Drag n' Drop onto a Black Scroll.",
+                ],
+                'nbt' => ['glaciaItem' => 'blackscroll_dust', 'bonus' => '{bonus}'],
+            ],
+            'simple_randomization_scroll' => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&l&7Simple Randomization Scroll',
+                'lore' => [
+                    '&r&7Keeps the book\'s enchant & level.',
+                    '&r&7Rerolls &fsuccess &7and &cdestroy &7rates &7(1–100 each).',
+                    '',
+                    '&r&7Drag onto a &fSimple &7custom enchant book.',
+                ],
+                'nbt' => ['glaciaItem' => 'simple_randomization_scroll'],
+            ],
+            'unique_randomization_scroll' => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&l&aUnique Randomization Scroll',
+                'lore' => [
+                    '&r&7Keeps the book\'s enchant & level.',
+                    '&r&7Rerolls &fsuccess &7and &cdestroy &7rates &7(1–100 each).',
+                    '',
+                    '&r&7Drag onto a &fUnique &7custom enchant book.',
+                ],
+                'nbt' => ['glaciaItem' => 'unique_randomization_scroll'],
+            ],
+            'elite_randomization_scroll' => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&l&bElite Randomization Scroll',
+                'lore' => [
+                    '&r&7Keeps the book\'s enchant & level.',
+                    '&r&7Rerolls &fsuccess &7and &cdestroy &7rates &7(1–100 each).',
+                    '',
+                    '&r&7Drag onto an &fElite &7custom enchant book.',
+                ],
+                'nbt' => ['glaciaItem' => 'elite_randomization_scroll'],
+            ],
+            'exotic_randomization_scroll' => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&l&eExotic Randomization Scroll',
+                'lore' => [
+                    '&r&7Keeps the book\'s enchant & level.',
+                    '&r&7Rerolls &fsuccess &7and &cdestroy &7rates &7(1–100 each).',
+                    '',
+                    '&r&7Drag onto an &fExotic &7custom enchant book.',
+                ],
+                'nbt' => ['glaciaItem' => 'exotic_randomization_scroll'],
+            ],
+            'legendary_randomization_scroll' => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&l&6Legendary Randomization Scroll',
+                'lore' => [
+                    '&r&7Keeps the book\'s enchant & level.',
+                    '&r&7Rerolls &fsuccess &7and &cdestroy &7rates &7(1–100 each).',
+                    '',
+                    '&r&7Drag onto a &fLegendary &7custom enchant book.',
+                ],
+                'nbt' => ['glaciaItem' => 'legendary_randomization_scroll'],
+            ],
+            'godly_randomization_scroll' => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&l&4Godly Randomization Scroll',
+                'lore' => [
+                    '&r&7Keeps the book\'s enchant & level.',
+                    '&r&7Rerolls &fsuccess &7and &cdestroy &7rates &7(1–100 each).',
+                    '',
+                    '&r&7Works on &fany rarity &7custom book; also &fvanilla &7books.',
+                ],
+                'nbt' => ['glaciaItem' => 'godly_randomization_scroll'],
+            ],
+            'exclusive_amplifier' => [
+                'material' => VanillaItems::PRISMARINE_CRYSTALS(),
+                'name' => '&r&l&dExclusive Amplifier',
+                'lore' => [
+                    '&r&7Adds extra uses to every &dExclusive &r&7enchant',
+                    '&r&7already applied on the target item.',
+                    '',
+                    '&r&d+{uses} Uses',
+                    "&r&7Drag n' Drop onto the enchanted item.",
+                ],
+                'nbt' => ['glaciaItem' => 'exclusive_amplifier', 'uses' => '{uses}'],
+            ],
             'block_tracker' => [
                 'material' => VanillaItems::PAPER(),
                 'name' => '&r&l&bBlocks Broken Tracker',
@@ -734,6 +1076,17 @@ final class GlaciaItems {
                     "&r&eDrag n' Drop onto a weapon to apply.",
                 ],
                 'nbt' => ['glaciaItem' => 'xp_tracker'],
+            ],
+            'soul_tracker' => [
+                'material' => VanillaItems::PAPER(),
+                'name' => '&r&l&4Soul Tracker',
+                'lore' => [
+                    '&r&7Apply this to a weapon to begin',
+                    '&r&7tracking souls earned from kills.',
+                    '',
+                    "&r&4Drag n' Drop onto a weapon to apply.",
+                ],
+                'nbt' => ['glaciaItem' => 'soul_tracker'],
             ],
             'random_book' => [
                 'material' => VanillaItems::BOOK(),
@@ -826,6 +1179,8 @@ final class GlaciaItems {
                 'lore' => [
                     "&r&7A cache of equipment prepared by",
                     "&r&7the Ethereal Intergalactic Station.",
+                    "",
+                    "&r&8&oSneak + Right-click to preview loot.",
                 ],
                 'nbt' => ["glaciaItem" => 'ethereal_simple_chest'],
             ],
@@ -835,6 +1190,8 @@ final class GlaciaItems {
                 'lore' => [
                     "&r&7A cache of equipment prepared by",
                     "&r&7the Ethereal Intergalactic Station.",
+                    "",
+                    "&r&8&oSneak + Right-click to preview loot.",
                 ],
                 'nbt' => ["glaciaItem" => 'ethereal_unique_chest'],
             ],
@@ -844,6 +1201,8 @@ final class GlaciaItems {
                 'lore' => [
                     "&r&7A cache of equipment prepared by",
                     "&r&7the Ethereal Intergalactic Station.",
+                    "",
+                    "&r&8&oSneak + Right-click to preview loot.",
                 ],
                 'nbt' => ["glaciaItem" => 'ethereal_elite_chest'],
             ],
@@ -853,6 +1212,8 @@ final class GlaciaItems {
                 'lore' => [
                     "&r&7A cache of equipment prepared by",
                     "&r&7the Ethereal Intergalactic Station.",
+                    "",
+                    "&r&8&oSneak + Right-click to preview loot.",
                 ],
                 'nbt' => ["glaciaItem" => 'ethereal_exotic_chest'],
             ],
@@ -862,6 +1223,8 @@ final class GlaciaItems {
                 'lore' => [
                     "&r&7A cache of equipment prepared by",
                     "&r&7the Ethereal Intergalactic Station.",
+                    "",
+                    "&r&8&oSneak + Right-click to preview loot.",
                 ],
                 'nbt' => ["glaciaItem" => 'ethereal_legendary_chest'],
             ],
@@ -871,6 +1234,8 @@ final class GlaciaItems {
                 'lore' => [
                     "&r&7A cache of equipment prepared by",
                     "&r&7the Ethereal Intergalactic Station.",
+                    "",
+                    "&r&8&oSneak + Right-click to preview loot.",
                 ],
                 'nbt' => ["glaciaItem" => 'ethereal_godly_chest'],
             ],
@@ -1091,12 +1456,24 @@ final class GlaciaItems {
                 ],
                 'nbt' => ['glaciaItem' => 'item_flip_credit_voucher', 'credits' => '{credits}'],
             ],
+            "passive_rune_pouch" => [
+                'material' => VanillaBlocks::ENDER_CHEST()->asItem(),
+                'name' => '&r&l&aPassive Rune Pouch',
+                'lore' => [
+                    '&r&7Stores passive runes inside this pouch item.',
+                    '&r&7Unlocks and stored runes belong to this pouch only.',
+                    '&r&7If you die with it, you risk losing everything in it.',
+                    '',
+                    '&r&eRight-click to open.',
+                ],
+                'nbt' => ['glaciaItem' => 'passive_rune_pouch'],
+            ],
             "faction_xp_booster" => [
                  "material" => VanillaItems::EMERALD(), 
                  'name' => "&r&l&bFaction XP Booster &r&7(Right Click)",
                  'lore' => [
-                    '&r&7Multiplies XP gained by all faction',
-                    '&r&7members from killing mobs while active.',
+                    '&r&7Multiplies &fXP &7gained by all',
+                    '&r&7faction members while active.',
                     "",
                     "&r&7Right-Click to activate.",
                     "",
@@ -1107,6 +1484,43 @@ final class GlaciaItems {
                     "&r&7{duration}",
                   ],
                  'nbt' => ['glaciaItem' => 'faction_xp_booster', 'multiplier' => "{multiplier}", 'duration' => "{duration}"],
+            ],
+            "zone_xp_booster" => [
+                "material" => VanillaItems::GOLD_INGOT(),
+                "name" => "&r&l&6Faction Zone XP Booster &r&7(Right Click)",
+                "lore" => [
+                    "&r&7Multiplies &fzone mob XP &7gained by all",
+                    "&r&7players in the zone while active.",
+                    "",
+                    "&r&7Right-Click to activate.",
+                    "",
+                    "&r&l&dMULTIPLIER",
+                    "&r&7x{multiplier}",
+                    "",
+                    "&r&l&dDURATION",
+                    "&r&7{duration}",
+                ],
+                "nbt" => ['glaciaItem' => 'zone_xp_booster', 'multiplier' => "{multiplier}", 'duration' => "{duration}"],
+            ],
+            "zone_fishing_booster" => [
+                "material" => VanillaItems::GOLD_INGOT(),
+                "name" => "&r&l&6Zone Fishing Booster &r&7(Right Click)",
+                "lore" => [
+                    "&r&7Multiplies &ffishing rod XP &7earned by all",
+                    "&r&7players in that zone while active.",
+                    "",
+                    "&r&7Right-Click to activate.",
+                    "",
+                    "&r&l&dZONE",
+                    "&r&7{zone}",
+                    "",
+                    "&r&l&dMULTIPLIER",
+                    "&r&7x{multiplier}",
+                    "",
+                    "&r&l&dDURATION",
+                    "&r&7{duration}",
+                ],
+                "nbt" => ['glaciaItem' => 'zone_fishing_booster', 'zone' => "{zone}", 'zone_id' => "{zone_id}", 'multiplier' => "{multiplier}", 'duration' => "{duration}"],
             ],
             "envoy_beacon" => [
                 "material" => VanillaItems::NETHER_STAR(),
@@ -1121,6 +1535,23 @@ final class GlaciaItems {
                     "&r&eRight-click to ignite the signal.",
                 ],
                 "nbt" => ['glaciaItem' => 'envoy_beacon'],
+            ],
+            "zone_barrier_bucket" => [
+                "material" => VanillaBlocks::BARRIER()->asItem(),
+                "name" => "&r&l&cAdmin Zone Barrier Bucket",
+                "lore" => [
+                    "&r&7Build invisible zone wall columns quickly.",
+                    "",
+                    "&r&cAdmin Utility",
+                    "&r&f * &r&7Right-click marker: columns above",
+                    "&r&7  connected same-Y marker blocks.",
+                    "&r&f * &r&7Side + diagonal markers chain.",
+                    "&r&f * &r&7Sneak right-click: undo last column.",
+                    "&r&f * &r&7Stops at solid blocks or zone border.",
+                    "",
+                    "&r&eRequires &fglacia.admin&e.",
+                ],
+                "nbt" => ['glaciaItem' => 'zone_barrier_bucket'],
             ],
             "chunk_buster" => [
                 "material" => VanillaBlocks::BEACON()->asItem(),
@@ -1153,6 +1584,19 @@ final class GlaciaItems {
                 ],
                 "nbt" => ['glaciaItem' => 'ocean_buster'],
             ],
+            "spawner_augment" => [
+                "material" => VanillaItems::AMETHYST_SHARD(),
+                "name" => "&r&l&bSpawner Augment",
+                "lore" => [
+                    "&r&7Right-click any placed spawner to open",
+                    "&r&7the augment UI and boost its &f/f top",
+                    "&r&7value by &f+25% &r&7per augment.",
+                    "",
+                    "&r&7Stacked spawners need one augment",
+                    "&r&7for each spawner you want boosted.",
+                ],
+                "nbt" => ['glaciaItem' => 'spawner_augment'],
+            ],
             "collection_chest" => [
                 "material" => VanillaBlocks::CHEST()->asItem(),
                 "name" => "&r&l&eCollection Chest",
@@ -1166,6 +1610,284 @@ final class GlaciaItems {
                 ],
                 "nbt" => ['glaciaItem' => 'collection_chest'],
             ],
+            "harvester_chest" => [
+                "material" => VanillaBlocks::TRAPPED_CHEST()->asItem(),
+                "name" => "&r&l&aHarvester Chest",
+                "lore" => [
+                    "&r&7Create a chest that collects &fcrops",
+                    "&r&7and farm drops &7in this chunk —",
+                    "&r&7wheat, melons, cactus, sugar cane,",
+                    "&r&7mushrooms, chorus, and similar.",
+                    "",
+                    "&r&7You may place &fone per chunk&7 alongside",
+                    "&r&7a normal Collection Chest.",
+                    "",
+                    "&r&ePlace inside your own claim."
+                ],
+                "nbt" => ['glaciaItem' => 'harvester_chest'],
+            ],
+            "chunk_watchdog_ravenger" => [
+                "material" => StringToItemParser::getInstance()->parse("ravager_spawn_egg") ?? VanillaItems::EGG(),
+                "name" => "&r&l&fWatchdog: &cChunk Ravenger",
+                "lore" => [
+                    "&r&7Keeps this chunk active for farm use",
+                    "&r&7even without players nearby.",
+                    "&r&cSell prices in this chunk are reduced by 30%.",
+                    "",
+                    "&r&7Default duration: &f7 days",
+                    "&r&7Break cost after 30m: &f$10,000,000",
+                    "&r&7Limit: &f1 per chunk",
+                    "",
+                    "&r&eRight-click a block in your own claim to place."
+                ],
+                "nbt" => ['glaciaItem' => 'chunk_watchdog_ravenger'],
+            ],
+            "chunk_watchdog_allay" => [
+                "material" => StringToItemParser::getInstance()->parse("allay_spawn_egg") ?? VanillaItems::EGG(),
+                "name" => "&r&l&fWatchdog: &bChunk Allay",
+                "lore" => [
+                    "&r&7Doubles mob spawn rates in this chunk.",
+                    "&r&7Raises spawner stack cap from &f10 &r&7to &f15&7.",
+                    "",
+                    "&r&7Default duration: &f3 days",
+                    "&r&7Break cost: &f$10,000,000",
+                    "&r&7Limit: &f1 per chunk",
+                    "",
+                    "&r&eRight-click a block in your own claim to place."
+                ],
+                "nbt" => ['glaciaItem' => 'chunk_watchdog_allay'],
+            ],
+            "chunk_watchdog_nautilus" => [
+                "material" => StringToItemParser::getInstance()->parse("nautilus_shell") ?? VanillaItems::HEART_OF_THE_SEA(),
+                "name" => "&r&l&fWatchdog: &3Chunk Nautilus",
+                "lore" => [
+                    "&r&7Grants permanent &fSpeed IV &r&7inside the chunk.",
+                    "&r&75% chance to preserve CC opens in this chunk.",
+                    "",
+                    "&r&7Default duration: &f3 days",
+                    "&r&7Break cost: &f$10,000,000",
+                    "&r&7Limit: &f1 per chunk",
+                    "",
+                    "&r&eRight-click a block in your own claim to place."
+                ],
+                "nbt" => ['glaciaItem' => 'chunk_watchdog_nautilus'],
+            ],
+            "chunk_watchdog_fox" => [
+                "material" => StringToItemParser::getInstance()->parse("fox_spawn_egg") ?? VanillaItems::EGG(),
+                "name" => "&r&l&fWatchdog: &6Chunk Fox",
+                "lore" => [
+                    "&r&7Snowman drops from this chunk sell for &f+5%&7.",
+                    "",
+                    "&r&7Default duration: &f2 days",
+                    "&r&7Break cost: &f$25,000,000",
+                    "&r&7Limit: &f1 per chunk",
+                    "",
+                    "&r&eRight-click a block in your own claim to place."
+                ],
+                "nbt" => ['glaciaItem' => 'chunk_watchdog_fox'],
+            ],
+            "chunk_watchdog_goat" => [
+                "material" => StringToItemParser::getInstance()->parse("goat_spawn_egg") ?? VanillaItems::EGG(),
+                "name" => "&r&l&fWatchdog: &7Chunk Goat",
+                "lore" => [
+                    "&r&7Ghast drops from this chunk sell for &f+5%&7.",
+                    "",
+                    "&r&7Default duration: &f2 days",
+                    "&r&7Break cost: &f$25,000,000",
+                    "&r&7Limit: &f1 per chunk",
+                    "",
+                    "&r&eRight-click a block in your own claim to place."
+                ],
+                "nbt" => ['glaciaItem' => 'chunk_watchdog_goat'],
+            ],
+            "chunk_watchdog_pillager" => [
+                "material" => StringToItemParser::getInstance()->parse("pillager_spawn_egg") ?? VanillaItems::EGG(),
+                "name" => "&r&l&fWatchman: &8Chunk Pillager",
+                "lore" => [
+                    "&r&7Non-faction and non-allied players gain",
+                    "&r&7permanent &fWeakness I &r&7inside this chunk.",
+                    "",
+                    "&r&7Default duration: &f7 days",
+                    "&r&7Break cost: &f$1,000,000",
+                    "&r&7Limit: &f1 per chunk",
+                    "",
+                    "&r&eRight-click a block in your own claim to place."
+                ],
+                "nbt" => ['glaciaItem' => 'chunk_watchdog_pillager'],
+            ],
+            "chunk_watchdog_llama" => [
+                "material" => StringToItemParser::getInstance()->parse("llama_spawn_egg") ?? VanillaItems::EGG(),
+                "name" => "&r&l&fWatchman: &dChunk Llama",
+                "lore" => [
+                    "&r&7Applied enchants have a &f2% &r&7chance per llama",
+                    "&r&7to gain &f+1 extra level &r&7up to max level.",
+                    "&r&7Two can be placed in one chunk for &f4% total&7.",
+                    "",
+                    "&r&7Default duration: &f2 days",
+                    "&r&7Break cost: &f$2,500,000",
+                    "&r&7Limit: &f2 per chunk",
+                    "",
+                    "&r&eRight-click a block in your own claim to place."
+                ],
+                "nbt" => ['glaciaItem' => 'chunk_watchdog_llama'],
+            ],
+            "faction_watchdog_panda" => [
+                "material" => StringToItemParser::getInstance()->parse("panda_spawn_egg") ?? VanillaItems::EGG(),
+                "name" => "&r&l&fWatchdog: &aFaction Panda",
+                "lore" => [
+                    "&r&7Faction members have a &f20% &r&7chance",
+                    "&r&7to receive an extra daily quest.",
+                    "",
+                    "&r&7Default duration: &f5 days",
+                    "&r&7Break cost: &f$20,000,000",
+                    "&r&7Limit: &f1 per faction",
+                    "",
+                    "&r&eRight-click a block in your own claim to place."
+                ],
+                "nbt" => ['glaciaItem' => 'faction_watchdog_panda'],
+            ],
+            "faction_watchdog_phantom" => [
+                "material" => StringToItemParser::getInstance()->parse("phantom_spawn_egg") ?? VanillaItems::EGG(),
+                "name" => "&r&l&fWatchdog: &5Faction Phantom",
+                "lore" => [
+                    "&r&750% chance to not consume an exclusive use",
+                    "&r&7when an exclusive enchant activates.",
+                    "",
+                    "&r&7Default duration: &f7 days",
+                    "&r&7Break cost: &f$20,000,000",
+                    "&r&7Limit: &f1 per faction",
+                    "",
+                    "&r&eRight-click a block in your own claim to place."
+                ],
+                "nbt" => ['glaciaItem' => 'faction_watchdog_phantom'],
+            ],
+            "faction_watchdog_witch" => [
+                "material" => StringToItemParser::getInstance()->parse("witch_spawn_egg") ?? VanillaItems::EGG(),
+                "name" => "&r&l&fWatchdog: &2Faction Witch",
+                "lore" => [
+                    "&r&715% chance for healing potions to heal &f50% more&7.",
+                    "&r&7Slotbot credit shop prices are &f5% cheaper&7.",
+                    "&r&7Faction members gain permanent &fHaste II&7.",
+                    "",
+                    "&r&7Default duration: &f2 days",
+                    "&r&7Break cost: &f$25,000,000",
+                    "&r&7Limit: &f2 per faction",
+                    "",
+                    "&r&eRight-click a block in your own claim to place."
+                ],
+                "nbt" => ['glaciaItem' => 'faction_watchdog_witch'],
+            ],
+            "faction_watchdog_endermite" => [
+                "material" => StringToItemParser::getInstance()->parse("endermite_spawn_egg") ?? VanillaItems::EGG(),
+                "name" => "&r&l&fWatchman: &5Faction Endermite",
+                "lore" => [
+                    "&r&7Removes the negative debuffs from &fDrunk",
+                    "&r&7for every faction member automatically.",
+                    "",
+                    "&r&7Default duration: &f3 days",
+                    "&r&7Break cost: &f$10,000,000",
+                    "&r&7Limit: &f1 per faction",
+                    "",
+                    "&r&eRight-click a block in your own claim to place."
+                ],
+                "nbt" => ['glaciaItem' => 'faction_watchdog_endermite'],
+            ],
+            "watchman_supplement" => [
+                "material" => VanillaItems::SUGAR(),
+                "name" => "&r&l&fWatchdog Supplement &7(+{days}d)",
+                "lore" => [
+                    "&r&7Use the watchdog manager to apply this",
+                    "&r&7to any placed watchdog entity.",
+                    "",
+                    "&r&7Each item adds &f{days} day(s) &r&7to its timer."
+                ],
+                "nbt" => ['glaciaItem' => 'watchman_supplement', 'days' => '{days}'],
+            ],
+            "soul_conduit" => [
+                "material" => VanillaItems::EMERALD(),
+                "name" => "&r&c&lSoul Conduit &r&7[&f1&7]",
+                "lore" => [
+                    "&r&8Soul Conduit",
+                    "",
+                    "&r&7Soul Mode: &aStable",
+                    "&r&7Proc soul cost scales by &f×1 &7of each enchant’s base cost.",
+                    "&r&7Stored Souls: &a1",
+                    "",
+                    "&r&8> &r&7Drag onto weapons, tools, bows, or armor to merge",
+                    "&r&8> &r&7Merged conduit powers soul-cost custom enchants",
+                ],
+                "nbt" => ['glaciaItem' => 'soul_conduit', 'souls' => 1, 'group' => "", 'soul_gem_id' => ""],
+            ],
+            "efficiency_conduit" => [
+                "material" => VanillaItems::DIAMOND(),
+                "name" => "&r&6&lEfficiency Conduit &r&7[&f1&7]",
+                "lore" => [
+                    "&r&8Efficiency Conduit",
+                    "",
+                    "&r&7Soul Mode: &6Efficiency",
+                    "&r&7Proc soul cost scales by &f×0.75 &7of each enchant’s base cost.",
+                    "&r&7Stored Souls: &a1",
+                    "",
+                    "&r&8> &r&7Drag onto weapons, tools, bows, or armor to merge",
+                    "&r&8> &r&7Merged conduit powers soul-cost custom enchants",
+                ],
+                "nbt" => ['glaciaItem' => 'efficiency_conduit', 'souls' => 1, 'group' => "", 'soul_gem_id' => ""],
+            ],
+            "overlord_conduit" => [
+                "material" => VanillaItems::NETHER_STAR(),
+                "name" => "&r&4&lOverlord Conduit &r&7[&f1&7]",
+                "lore" => [
+                    "&r&8Overlord Conduit",
+                    "",
+                    "&r&7Soul Mode: &4Overlord",
+                    "&r&7Proc soul cost scales by &f×0.5 &7of each enchant’s base cost.",
+                    "&r&7Siphon: &f20% &7chance to refund &f1 &7soul after paying.",
+                    "&r&7Stored Souls: &a1",
+                    "",
+                    "&r&8> &r&7Drag onto weapons, tools, bows, or armor to merge",
+                    "&r&8> &r&7Merged conduit powers soul-cost custom enchants",
+                ],
+                "nbt" => ['glaciaItem' => 'overlord_conduit', 'souls' => 1, 'group' => "", 'soul_gem_id' => ""],
+            ],
+            "soul_gem" => [
+                "material" => VanillaItems::EMERALD(),
+                "name" => "&r&c&lSoul Gem &r&7[&f1&7]",
+                "lore" => [
+                    "&r&8Soul Gem",
+                    "",
+                    "&r&7Stored Souls: &a1",
+                    "",
+                    "&r&8> &r&7Drag onto gear with a merged &cSoul Conduit",
+                    "&r&8> &r&7Cannot be applied to &6Efficiency &7or &4Overlord &7conduits",
+                ],
+                "nbt" => ['glaciaItem' => 'soul_gem', 'souls' => 1, 'group' => "", 'soul_gem_id' => ""],
+            ],
+            "efficiency_gem" => [
+                "material" => VanillaItems::DIAMOND(),
+                "name" => "&r&6&lEfficiency Gem &r&7[&f1&7]",
+                "lore" => [
+                    "&r&8Efficiency Gem",
+                    "",
+                    "&r&7Stored Souls: &a1",
+                    "",
+                    "&r&8> &r&7Drag onto gear with a merged &6Efficiency Conduit",
+                    "&r&8> &r&7Cannot be applied to &cSoul &7or &4Overlord &7conduits",
+                ],
+                "nbt" => ['glaciaItem' => 'efficiency_gem', 'souls' => 1, 'group' => "", 'soul_gem_id' => ""],
+            ],
+            "overlord_gem" => [
+                "material" => VanillaItems::NETHER_STAR(),
+                "name" => "&r&4&lOverlord Gem &r&7[&f1&7]",
+                "lore" => [
+                    "&r&8Overlord Gem",
+                    "",
+                    "&r&7Stored Souls: &a1",
+                    "",
+                    "&r&8> &r&7Drag onto gear with a merged &4Overlord Conduit",
+                    "&r&8> &r&7Cannot be applied to &cSoul &7or &6Efficiency &7conduits",
+                ],
+                "nbt" => ['glaciaItem' => 'overlord_gem', 'souls' => 1, 'group' => "", 'soul_gem_id' => ""],
+            ],
             "soul_compass" => [
                 "material" => VanillaItems::COMPASS(),
                 "name" => "&r&l&bSoul Compass",
@@ -1177,6 +1899,42 @@ final class GlaciaItems {
                     "&r&8The signal weakens with each pulse."
                 ],
                 "nbt" => ['glaciaItem' => 'soul_compass', 'uses' => 8],
+            ],
+            "wraith_pearl" => [
+                "material" => VanillaItems::ENDER_PEARL(),
+                "name" => "&r&l&5Wraith Pearl",
+                "lore" => [
+                    "&r&7Right-click to throw a stored",
+                    "&r&7ender pearl charge.",
+                    "",
+                    "&r&7Uses: &f40",
+                    "&r&8Drag ender pearls onto this item to charge it.",
+                ],
+                "nbt" => ['glaciaItem' => 'wraith_pearl', 'uses' => 40],
+            ],
+            "angel_potion" => [
+                "material" => VanillaItems::SPLASH_POTION()->setType(PotionType::STRONG_HEALING()),
+                "name" => "&r&l&dAngel Potion",
+                "lore" => [
+                    "&r&7Right-click to throw a stored",
+                    "&r&7strong healing splash potion.",
+                    "",
+                    "&r&7Uses: &f40",
+                    "&r&8Drag strong heals onto this item to charge it.",
+                ],
+                "nbt" => ['glaciaItem' => 'angel_potion', 'uses' => 40],
+            ],
+            "bath_bomb" => [
+                "material" => VanillaItems::SNOWBALL(),
+                "name" => "&r&l&bBath Bomb",
+                "lore" => [
+                    "&r&7Throw this at enemies to give them",
+                    "&r&7a light knockback pop.",
+                    "",
+                    "&r&7No cooldown.",
+                    "&r&8Stacks to 16 like a normal snowball.",
+                ],
+                "nbt" => ['glaciaItem' => 'bath_bomb'],
             ],
             "frostwake_trident" => [
                 "material" => VanillaItems::TRIDENT(),
@@ -1212,7 +1970,7 @@ final class GlaciaItems {
                 "nbt" => ['glaciaItem' => 'glacial_blessing'],
             ],
             "tempest_gateway" => [
-                "material" => VanillaItems::ENDER_PEARL(),
+                "material" => VanillaItems::HEART_OF_THE_SEA(),
                 "name" => "&r&l&3Tempest Gateway",
                 "lore" => [
                     "&r&7Right-click to awaken a random",
@@ -1222,7 +1980,7 @@ final class GlaciaItems {
                 ],
                 "nbt" => ['glaciaItem' => 'tempest_gateway'],
             ],
-            "purity_wisp" => [
+            "puritywisp" => [
                 "material" => VanillaBlocks::MOB_HEAD()->asItem(),
                 "name" => "&r&l&fPurity Wisp Pet",
                 "lore" => [
@@ -1234,9 +1992,9 @@ final class GlaciaItems {
                     "",
                     "&r&7Cooldown: &f10s",
                 ],
-                "nbt" => ['glaciaItem' => 'purity_wisp'],
+                "nbt" => ['glaciaItem' => 'puritywisp'],
             ],
-            "gale_fox" => [
+            "galefox" => [
                 "material" => VanillaBlocks::MOB_HEAD()->asItem(),
                 "name" => "&r&l&bGale Fox Pet",
                 "lore" => [
@@ -1248,7 +2006,7 @@ final class GlaciaItems {
                     "",
                     "&r&7Cooldown: &f5m",
                 ],
-                "nbt" => ['glaciaItem' => 'gale_fox'],
+                "nbt" => ['glaciaItem' => 'galefox'],
             ],
             "shatterfang" => [
                 "material" => VanillaBlocks::MOB_HEAD()->asItem(),
@@ -1278,7 +2036,7 @@ final class GlaciaItems {
                 ],
                 "nbt" => ['glaciaItem' => 'hearthbloom'],
             ],
-            "ironclad_wyrm" => [
+            "ironcladwyrm" => [
                 "material" => VanillaBlocks::MOB_HEAD()->asItem(),
                 "name" => "&r&l&7Ironclad Wyrm Pet",
                 "lore" => [
@@ -1291,9 +2049,9 @@ final class GlaciaItems {
                     "",
                     "&r&7Cooldown: &f1h",
                 ],
-                "nbt" => ['glaciaItem' => 'ironclad_wyrm'],
+                "nbt" => ['glaciaItem' => 'ironcladwyrm'],
             ],
-            "aegis_ram" => [
+            "aegisram" => [
                 "material" => VanillaBlocks::MOB_HEAD()->asItem(),
                 "name" => "&r&l&bAegis Ram Pet",
                 "lore" => [
@@ -1306,9 +2064,9 @@ final class GlaciaItems {
                     "",
                     "&r&7Cooldown: &f20m",
                 ],
-                "nbt" => ['glaciaItem' => 'aegis_ram'],
+                "nbt" => ['glaciaItem' => 'aegisram'],
             ],
-            "rift_viper" => [
+            "riftviper" => [
                 "material" => VanillaBlocks::MOB_HEAD()->asItem(),
                 "name" => "&r&l&5Rift Viper Pet",
                 "lore" => [
@@ -1321,9 +2079,9 @@ final class GlaciaItems {
                     "",
                     "&r&7Cooldown: &f20m",
                 ],
-                "nbt" => ['glaciaItem' => 'rift_viper'],
+                "nbt" => ['glaciaItem' => 'riftviper'],
             ],
-            "sunscorch_jackal" => [
+            "sunscorchjackal" => [
                 "material" => VanillaBlocks::MOB_HEAD()->asItem(),
                 "name" => "&r&l&6Sunscorch Jackal Pet",
                 "lore" => [
@@ -1336,9 +2094,9 @@ final class GlaciaItems {
                     "",
                     "&r&7Cooldown: &f45m",
                 ],
-                "nbt" => ['glaciaItem' => 'sunscorch_jackal'],
+                "nbt" => ['glaciaItem' => 'sunscorchjackal'],
             ],
-            "runesage_owl" => [
+            "runesageowl" => [
                 "material" => VanillaBlocks::MOB_HEAD()->asItem(),
                 "name" => "&r&l&dRunesage Owl Pet",
                 "lore" => [
@@ -1351,9 +2109,9 @@ final class GlaciaItems {
                     "",
                     "&r&7Cooldown: &f12h",
                 ],
-                "nbt" => ['glaciaItem' => 'runesage_owl'],
+                "nbt" => ['glaciaItem' => 'runesageowl'],
             ],
-            "stormcore_behemoth" => [
+            "stormcorebehemoth" => [
                 "material" => VanillaBlocks::MOB_HEAD()->asItem(),
                 "name" => "&r&l&cStormcore Behemoth Pet",
                 "lore" => [
@@ -1365,7 +2123,7 @@ final class GlaciaItems {
                     "",
                     "&r&7Cooldown: &f10m",
                 ],
-                "nbt" => ['glaciaItem' => 'stormcore_behemoth'],
+                "nbt" => ['glaciaItem' => 'stormcorebehemoth'],
             ],
             "veilmoth" => [
                 "material" => VanillaBlocks::MOB_HEAD()->asItem(),
@@ -1381,7 +2139,7 @@ final class GlaciaItems {
                 ],
                 "nbt" => ['glaciaItem' => 'veilmoth'],
             ],
-            "blastforge_hound" => [
+            "blastforgehound" => [
                 "material" => VanillaBlocks::MOB_HEAD()->asItem(),
                 "name" => "&r&l&4Blastforge Hound Pet",
                 "lore" => [
@@ -1394,7 +2152,228 @@ final class GlaciaItems {
                     "",
                     "&r&7Cooldown: &f15m",
                 ],
-                "nbt" => ['glaciaItem' => 'blastforge_hound'],
+                "nbt" => ['glaciaItem' => 'blastforgehound'],
+            ],
+            "gildedmoth" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&dGilded Moth Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &dLoaded Slot",
+                    "&r&7Right-click, then open a slot within",
+                    "&r&710 minutes to guarantee a jackpot",
+                    "&r&7slotbot reward on your next slot.",
+                    "",
+                    "&r&7Cooldown: &f5d",
+                ],
+                "nbt" => ['glaciaItem' => 'gildedmoth'],
+            ],
+            "rafflefinch" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&6Raffle Finch Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &6Overcap Buy",
+                    "&r&7Right-click to instantly buy",
+                    "&r&71,000 bonus jackpot tickets.",
+                    "&r&7This can push you above the normal cap.",
+                    "",
+                    "&r&7Cooldown: &f4h",
+                ],
+                "nbt" => ['glaciaItem' => 'rafflefinch'],
+            ],
+            "oathbondbeetle" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&aOathbond Beetle Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &aSurecast",
+                    "&r&7Right-click to guarantee your next",
+                    "&r&7success-rate item apply within 10 minutes.",
+                    "",
+                    "&r&7Cooldown: &f24h",
+                ],
+                "nbt" => ['glaciaItem' => 'oathbondbeetle'],
+            ],
+            "murmurloft" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&5Murmurloft Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &5Silence Burst",
+                    "&r&7Right-click to empower your Silence",
+                    "&r&7enchant for 7 seconds and give kills",
+                    "&r&7a chance to negate Holy Whites.",
+                    "",
+                    "&r&7Cooldown: &f30m",
+                ],
+                "nbt" => ['glaciaItem' => 'murmurloft'],
+            ],
+            "patchworksprite" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&bPatchwork Sprite Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &bFull Reset",
+                    "&r&7Right-click to /fixall, /heal,",
+                    "&r&7and /feed yourself instantly.",
+                    "",
+                    "&r&7Cooldown: &f10m",
+                ],
+                "nbt" => ['glaciaItem' => 'patchworksprite'],
+            ],
+            "renderscalewyrm" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&cRenderscale Wyrm Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &cRend Window",
+                    "&r&7Right-click to bypass enemy defensive",
+                    "&r&7armor abilities and gain +5% damage",
+                    "&r&7for 8 seconds.",
+                    "",
+                    "&r&7Cooldown: &f30m",
+                ],
+                "nbt" => ['glaciaItem' => 'renderscalewyrm'],
+            ],
+            "skycourierdrake" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&eSkycourier Drake Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &eCrate Mutation",
+                    "&r&7Right-click to gain a 10% chance",
+                    "&r&7for opened envoys to upgrade their",
+                    "&r&7reward tier for 30 minutes.",
+                    "",
+                    "&r&7Cooldown: &f4h",
+                ],
+                "nbt" => ['glaciaItem' => 'skycourierdrake'],
+            ],
+            "inkwellfinch" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&eInkwell Finch Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &eFlash Sale",
+                    "&r&7Right-click to roll a random",
+                    "&r&710%, 20%, or 25% /enchanter",
+                    "&r&7discount for 10 minutes.",
+                    "",
+                    "&r&7Cooldown: &f4h",
+                ],
+                "nbt" => ['glaciaItem' => 'inkwellfinch'],
+            ],
+            "terracrestjackal" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&3Terracrest Jackal Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &3Knowledge Rush",
+                    "&r&7Right-click to gain &fx2.5",
+                    "&r&7zone mob XP for 5 minutes.",
+                    "",
+                    "&r&7Cooldown: &f2h",
+                ],
+                "nbt" => ['glaciaItem' => 'terracrestjackal'],
+            ],
+            "soulsurge" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&4Soul Surge Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &4Soul Surge",
+                    "&r&7Right-click to make enchant",
+                    "&r&7soul costs &f0 &r&7for 20 minutes.",
+                    "",
+                    "&r&7Cooldown: &f6h",
+                ],
+                "nbt" => ['glaciaItem' => 'soulsurge'],
+            ],
+            "ruinspiremoth" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&cRuinspire Moth Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &cForced Calamity",
+                    "&r&7Requires &fArmageddon &r&7on armor. Procs",
+                    "&r&7a soul-free blessing on the nearest enemy,",
+                    "&r&7then shrouds the area in &fWeakness V",
+                    "&r&7and &fSlowness III &r&7until it subsides.",
+                    "",
+                    "&r&7Cooldown: &f4d",
+                ],
+                "nbt" => ['glaciaItem' => 'ruinspiremoth'],
+            ],
+            "bellforgecustodian" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&7Bellforge Custodian Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &fWatchman's Oath",
+                    "&r&7While your Guardians golem fights, ignite",
+                    "&r&7its fury (&fStrength III / 8s&7), soothe its",
+                    "&r&7wounds passively, and ignore knockback (&f6s&7).",
+                    "",
+                    "&r&7Cooldown: &f30m",
+                ],
+                "nbt" => ['glaciaItem' => 'bellforgecustodian'],
+            ],
+            "arcbindercodex" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&5Arcbinder Codex Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &5Sure Inscription",
+                    "&r&7Grants &f+5% &r&7success on enchant book",
+                    "&r&7applies (&fstacks &r&7with Runesage surge&7)",
+                    "&r&7for 30 minutes.",
+                    "",
+                    "&r&7Cooldown: &f3h",
+                ],
+                "nbt" => ['glaciaItem' => 'arcbindercodex'],
+            ],
+            "crownspirekestrel" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&eCrownspire Kestrel Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &eRegal Ascension",
+                    "&r&7Your &f/next &r&7Gkits claim rolls &f+20%",
+                    "&r&7higher chance to spike armor enchant tiers.",
+                    "&r&7Expires if unused after &f1 hour&7.",
+                    "",
+                    "&r&7Cooldown: &f6h",
+                ],
+                "nbt" => ['glaciaItem' => 'crownspirekestrel'],
+            ],
+            "shadebrokercrow" => [
+                "material" => VanillaBlocks::MOB_HEAD()->asItem(),
+                "name" => "&r&l&8Shadebroker Crow Pet",
+                "lore" => [
+                    "&r&8Pet Item",
+                    "",
+                    "&r&7Ability: &8Phantom Lot",
+                    "&r&7Draws one random &fBlack Auction &r&7listing",
+                    "&r&7reward into your stash.",
+                    "",
+                    "&r&7Cooldown: &f1d",
+                ],
+                "nbt" => ['glaciaItem' => 'shadebrokercrow'],
             ],
             "pet_tamer" => [
                 "material" => StringToItemParser::getInstance()->parse("lead"),
@@ -1414,6 +2393,7 @@ final class GlaciaItems {
             "sand" => ["display" => "&eSand", "material" => VanillaItems::BUCKET()],
             "cobble" => ["display" => "&7Cobble", "material" => VanillaItems::BUCKET()],
             "obsidian" => ["display" => "&5Obsidian", "material" => VanillaItems::BUCKET()],
+            "lava" => ["display" => "&cLava wall", "material" => VanillaItems::BUCKET()],
         ];
         $directions = [
             "north" => "North",
@@ -1423,10 +2403,13 @@ final class GlaciaItems {
             "up" => "Up",
             "down" => "Down",
         ];
+        $genBucketIds = [];
 
         foreach ($materials as $materialKey => $materialData) {
             foreach ($directions as $directionKey => $directionName) {
-                GlaciaItemFactory::$definitions["{$materialKey}_gen_bucket_{$directionKey}"] = [
+                $bucketId = "{$materialKey}_gen_bucket_{$directionKey}";
+                $genBucketIds[] = $bucketId;
+                GlaciaItemFactory::$definitions[$bucketId] = [
                     "material" => clone $materialData["material"],
                     "name" => "&r&l" . $materialData["display"] . " &fGen Bucket &r&7(" . $directionName . ")",
                     "lore" => [
@@ -1445,6 +2428,8 @@ final class GlaciaItems {
                 ];
             }
         }
+
+        self::appendCategoryItems("gen_buckets", "Gen Buckets", $genBucketIds);
     }
 
     private static function initCustomArmor(): void {
@@ -1457,6 +2442,7 @@ final class GlaciaItems {
                     '',
                     '&r&l&5DREADVEIL SET BONUS',
                     '&r&l&5* &r&5Deal +15% damage to all enemies.',
+                    '&r&l&5* &r&5Dreadveil Rend: chance to deal true damage.',
                     '&r&7&o(Requires all 4 Dreadveil items.)'
                 ],
                 'nbt' => [
@@ -1474,6 +2460,7 @@ final class GlaciaItems {
                     '',
                     '&r&l&5DREADVEIL SET BONUS',
                     '&r&l&5* &r&5Deal +15% damage to all enemies.',
+                    '&r&l&5* &r&5Dreadveil Rend: chance to deal true damage.',
                     '&r&7&o(Requires all 4 Dreadveil items.)'
                 ],
                 'nbt' => [
@@ -1491,6 +2478,7 @@ final class GlaciaItems {
                     '',
                     '&r&l&5DREADVEIL SET BONUS',
                     '&r&l&5* &r&5Deal +15% damage to all enemies.',
+                    '&r&l&5* &r&5Dreadveil Rend: chance to deal true damage.',
                     '&r&7&o(Requires all 4 Dreadveil items.)'
                 ],
                 'nbt' => [
@@ -1508,6 +2496,7 @@ final class GlaciaItems {
                     '',
                     '&r&l&5DREADVEIL SET BONUS',
                     '&r&l&5* &r&5Deal +15% damage to all enemies.',
+                    '&r&l&5* &r&5Dreadveil Rend: chance to deal true damage.',
                     '&r&7&o(Requires all 4 Dreadveil items.)'
                 ],
                 'nbt' => [
@@ -1544,6 +2533,7 @@ final class GlaciaItems {
                     '&r&l&bFROSTBOUND SET BONUS',
                     '&r&l&b* &r&bDeal +10% damage to all enemies.',
                     '&r&l&b* &r&bEnemies Deal 5% less damage to you.',
+                    '&r&l&b* &r&bPermafrost Pulse: retaliate with true damage and slowness.',
                     '&r&7&o(Requires all 4 Frostbound items.)'
                 ],
                 'nbt' => [
@@ -1562,6 +2552,7 @@ final class GlaciaItems {
                     '&r&l&bFROSTBOUND SET BONUS',
                     '&r&l&b* &r&bDeal +10% damage to all enemies.',
                     '&r&l&b* &r&bEnemies Deal 5% less damage to you.',
+                    '&r&l&b* &r&bPermafrost Pulse: retaliate with true damage and slowness.',
                     '&r&7&o(Requires all 4 Frostbound items.)'
                 ],
                 'nbt' => [
@@ -1580,6 +2571,7 @@ final class GlaciaItems {
                     '&r&l&bFROSTBOUND SET BONUS',
                     '&r&l&b* &r&bDeal +10% damage to all enemies.',
                     '&r&l&b* &r&bEnemies Deal 5% less damage to you.',
+                    '&r&l&b* &r&bPermafrost Pulse: retaliate with true damage and slowness.',
                     '&r&7&o(Requires all 4 Frostbound items.)'
                 ],
                 'nbt' => [
@@ -1598,6 +2590,7 @@ final class GlaciaItems {
                     '&r&l&bFROSTBOUND SET BONUS',
                     '&r&l&b* &r&bDeal +10% damage to all enemies.',
                     '&r&l&b* &r&bEnemies Deal 5% less damage to you.',
+                    '&r&l&b* &r&bPermafrost Pulse: retaliate with true damage and slowness.',
                     '&r&7&o(Requires all 4 Frostbound items.)'
                 ],
                 'nbt' => [
@@ -1632,7 +2625,6 @@ final class GlaciaItems {
                     '&r&3&oimbued with the force of the heavens.',
                     '',
                     '&r&l&3STORMCALLER SET BONUS',
-                    '&r&l&3* &r&3Enemies deal 20% less damage to you',
                     '&r&l&3* &r&3Tempest Surge Passive Ability',
                     '&r&7&o(Requires all 4 Stormcaller items.)'
                 ],
@@ -1651,7 +2643,6 @@ final class GlaciaItems {
                     '&r&3&owoven from stormglass and fallen stars.',
                     '',
                     '&r&l&3STORMCALLER SET BONUS',
-                    '&r&l&3* &r&3Enemies deal 20% less damage to you',
                     '&r&l&3* &r&3Tempest Surge Passive Ability',
                     '&r&7&o(Requires all 4 Stormcaller items.)'
                 ],
@@ -1670,7 +2661,6 @@ final class GlaciaItems {
                     '&r&3&odraped in living static.',
                     '',
                     '&r&l&3STORMCALLER SET BONUS',
-                    '&r&l&3* &r&3Enemies deal 20% less damage to you',
                     '&r&l&3* &r&3Tempest Surge Passive Ability',
                     '&r&7&o(Requires all 4 Stormcaller items.)'
                 ],
@@ -1689,7 +2679,6 @@ final class GlaciaItems {
                     '&r&3&oThe striders of the Stormcaller endure all.',
                     '',
                     '&r&l&3STORMCALLER SET BONUS',
-                    '&r&l&3* &r&3Enemies deal 20% less damage to you',
                     '&r&l&3* &r&3Tempest Surge Passive Ability',
                     '&r&7&o(Requires all 4 Stormcaller items.)'
                 ],
@@ -1724,8 +2713,14 @@ final class GlaciaItems {
     }
 
     private static function initRankItems(): void {
+        $progressionItems = [];
         foreach (RankProgressionManager::getTiers() as $rank => $data) {
-            GlaciaItemFactory::$definitions[$rank . "_quest"] = [
+            $questId = $rank . "_quest";
+            $voucherId = $rank . "_voucher";
+            $progressionItems[] = $questId;
+            $progressionItems[] = $voucherId;
+
+            GlaciaItemFactory::$definitions[$questId] = [
                 'material' => VanillaItems::MAGMA_CREAM(),
                 'name' => '&r&l' . $data["color"] . $data["display"] . ' Rank Quest&r&f: &f&l<&r&f' . GeneralUtils::translateTime($data["duration"]) . '&l&f>',
                 'lore' => RankProgressionManager::getQuestLore($rank, $data["duration"], false),
@@ -1737,7 +2732,7 @@ final class GlaciaItems {
                 ],
             ];
 
-            GlaciaItemFactory::$definitions[$rank . "_voucher"] = [
+            GlaciaItemFactory::$definitions[$voucherId] = [
                 'material' => VanillaItems::PAPER(),
                 'name' => '&r&l&eRANK "&r&f' . $data["display"] . '&r&l&e"',
                 'lore' => [
@@ -1753,5 +2748,75 @@ final class GlaciaItems {
                 ],
             ];
         }
+
+        self::appendCategoryItems("progression", "Rank Progression", $progressionItems);
+    }
+
+    private static function initQuestItems(): void
+    {
+        GlaciaItemFactory::$definitions += [
+            "dormant_sigil" => [
+                "material" => VanillaItems::AMETHYST_SHARD(),
+                "name" => "&r&7* &bDormant Sigil &7*",
+                "lore" => [
+                    "&r&7Use this to add one extra &bTier 1&r&7 quest",
+                    "&r&7to your active &f/quests&r&7 board.",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "quest_sigil",
+                    "questTier" => "dormant",
+                ],
+            ],
+            "awakened_sigil" => [
+                "material" => StringToItemParser::getInstance()->parse("echo_shard") ?? VanillaItems::AMETHYST_SHARD(),
+                "name" => "&r&7+ &5Awakened Sigil &7+",
+                "lore" => [
+                    "&r&7Use this to add one extra &5Tier 2&r&7 quest",
+                    "&r&7to your active &f/quests&r&7 board.",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "quest_sigil",
+                    "questTier" => "awakened",
+                ],
+            ],
+            "ascendent_sigil" => [
+                "material" => VanillaItems::NETHER_STAR(),
+                "name" => "&r&7# &eAscendent Sigil &7#",
+                "lore" => [
+                    "&r&7Use this to add one extra &eTier 3&r&7 quest",
+                    "&r&7to your active &f/quests&r&7 board.",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "quest_sigil",
+                    "questTier" => "ascendent",
+                ],
+            ],
+            "eternal_sigil" => [
+                "material" => VanillaBlocks::DRAGON_EGG()->asItem(),
+                "name" => "&r&7@ &cEternal Sigil &7@",
+                "lore" => [
+                    "&r&7Use this to add one extra &cEternal&r&7 bonus quest",
+                    "&r&7from the highest quest pool in &f/quests&r&7.",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "quest_sigil",
+                    "questTier" => "eternal",
+                ],
+            ],
+            "quest_reroll" => [
+                "material" => StringToItemParser::getInstance()->parse("echo_shard") ?? VanillaItems::PAPER(),
+                "name" => "&r&l&dQuest Reroll",
+                "lore" => [
+                    "&r&7Right-click to open your &f/quests &r&7board",
+                    "&r&7and replace one active quest with a new one",
+                    "&r&7from the same tier.",
+                    "",
+                    "&r&8Consumed when a reroll succeeds.",
+                ],
+                "nbt" => [
+                    "glaciaItem" => "quest_reroll",
+                ],
+            ],
+        ];
     }
 }

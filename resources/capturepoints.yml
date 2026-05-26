@@ -7,18 +7,8 @@ outposts:
     y: 80
     z: 0
     radius: 5
-    capture-time: 90
+    capture-time: 45
     owner-faction: ""
-
-  conduit:
-    display: "&bConduit Outpost"
-    type: "experience"
-    world: ""
-    x: 0
-    y: 80
-    z: 0
-    radius: 5
-    capture-time: 90
-    owner-faction: ""
-
+    benefit-multiplier: 1.25
+    hologram-offset-y: 3.0
 koths: {}

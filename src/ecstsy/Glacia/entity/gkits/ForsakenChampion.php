@@ -204,7 +204,7 @@ final class ForsakenChampion extends AdvancedHostileEntity
         $max = max(1, (int) ceil($this->getMaxHealth()));
         $segments = 10;
         $filled = (int) floor(($health / $max) * $segments);
-        $bar = str_repeat("❤", $filled) . C::GRAY . str_repeat("❤", max(0, $segments - $filled));
+        $bar = str_repeat("❤", $filled) . "&7" . str_repeat("❤", max(0, $segments - $filled));
 
         $this->setNameTag(
             C::colorize($this->displayName . "\n&r&c{$bar}")

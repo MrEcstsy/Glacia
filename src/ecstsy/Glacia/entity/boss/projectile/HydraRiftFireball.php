@@ -6,6 +6,7 @@ namespace ecstsy\Glacia\entity\boss\projectile;
 
 use ecstsy\Glacia\entity\boss\BossParticles;
 use ecstsy\Glacia\entity\boss\bosses\GlacialHydra;
+use ecstsy\Glacia\utils\CustomParticleEffectManager;
 use pocketmine\color\Color;
 use pocketmine\entity\Entity;
 use pocketmine\entity\EntitySizeInfo;
@@ -116,14 +117,49 @@ final class HydraRiftFireball extends Projectile implements NeverSavedWithChunkE
         $pos = $this->getPosition();
 
         $world->addSound($pos, new ExplodeSound());
-        BossParticles::burst($world, $pos, new PortalParticle(), 14, 1.1, 0.8);
+        BossParticles::burst($world, $pos, new PortalParticle(), 8, 0.7, 0.45);
         BossParticles::burst(
             $world,
             $pos,
             new DustParticle($this->deflected ? new Color(255, 120, 170) : new Color(156, 92, 255)),
-            22,
-            1.0,
-            0.8
+            10,
+            0.6,
+            0.45
+        );
+        CustomParticleEffectManager::stackedRing(
+            $world,
+            $pos,
+            1.35,
+            CustomParticleEffectManager::HYDRA_WARNING,
+            2,
+            14,
+            0.20,
+            48.0
+        );
+        CustomParticleEffectManager::ringVariants(
+            $world,
+            $pos,
+            1.05,
+            [
+                CustomParticleEffectManager::HYDRA_WARNING,
+                CustomParticleEffectManager::HYDRA_WARNING_ARC,
+            ],
+            12,
+            0.18,
+            48.0
+        );
+        CustomParticleEffectManager::burstVariants(
+            $world,
+            $pos->add(0, 0.16, 0),
+            [
+                CustomParticleEffectManager::HYDRA_VOID,
+                CustomParticleEffectManager::HYDRA_VOID_CORE,
+                CustomParticleEffectManager::HYDRA_VOID_SHARD,
+            ],
+            18,
+            0.52,
+            0.55,
+            48.0
         );
     }
 
@@ -160,6 +196,19 @@ final class HydraRiftFireball extends Projectile implements NeverSavedWithChunkE
         $player->sendActionBarMessage(C::colorize("&r&dYou deflected the rift ember!"));
         $this->getWorld()->addSound($origin, new BlazeShootSound());
         BossParticles::burst($this->getWorld(), $origin, new DustParticle(new Color(255, 125, 170)), 14, 0.7, 0.45);
+        CustomParticleEffectManager::burstVariants(
+            $this->getWorld(),
+            $origin,
+            [
+                CustomParticleEffectManager::HYDRA_FROST,
+                CustomParticleEffectManager::HYDRA_FROST_SHARD,
+                CustomParticleEffectManager::HYDRA_FROST_MIST,
+            ],
+            14,
+            0.42,
+            0.42,
+            48.0
+        );
     }
 
     private function spawnTrail(): void
@@ -172,6 +221,25 @@ final class HydraRiftFireball extends Projectile implements NeverSavedWithChunkE
             new DustParticle($this->deflected ? new Color(255, 120, 170) : new Color(140, 92, 255))
         );
         $world->addParticle($pos->add(0, 0.12, 0), new PortalParticle());
+        CustomParticleEffectManager::burstVariants(
+            $world,
+            $pos->add(0, 0.06, 0),
+            $this->deflected
+                ? [
+                    CustomParticleEffectManager::HYDRA_FROST,
+                    CustomParticleEffectManager::HYDRA_FROST_SHARD,
+                    CustomParticleEffectManager::HYDRA_FROST_MIST,
+                ]
+                : [
+                    CustomParticleEffectManager::HYDRA_VOID,
+                    CustomParticleEffectManager::HYDRA_VOID_CORE,
+                    CustomParticleEffectManager::HYDRA_VOID_SHARD,
+                ],
+            4,
+            0.16,
+            0.18,
+            40.0
+        );
         if (($this->ticksLived % 4) === 0) {
             $world->addParticle($pos, new FlameParticle());
         }

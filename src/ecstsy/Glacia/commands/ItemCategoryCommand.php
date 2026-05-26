@@ -34,7 +34,7 @@ final class ItemCategoryCommand extends BaseCommand {
 
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void {
         if (!$sender instanceof Player) {
-            $sender->sendMessage(C::RED . "This command can only be used in-game.");
+            $sender->sendMessage(C::colorize("&cThis command can only be used in-game."));
             return;
         }
 
@@ -42,7 +42,7 @@ final class ItemCategoryCommand extends BaseCommand {
         $itemIds = GlaciaItems::getCategoryItems($this->category);
 
         if ($itemIds === []) {
-            $sender->sendMessage(C::RED . "No items are registered in that category.");
+            $sender->sendMessage(C::colorize("&cNo items are registered in that category."));
             return;
         }
 
@@ -50,7 +50,7 @@ final class ItemCategoryCommand extends BaseCommand {
         $totalPages = (int) max(1, (int) ceil(count($itemIds) / self::ITEMS_PER_PAGE));
 
         if ($page > $totalPages) {
-            $sender->sendMessage(C::RED . "That page does not exist. Max page: " . $totalPages);
+            $sender->sendMessage(C::colorize("&cThat page does not exist. Max page: " . $totalPages));
             return;
         }
 
@@ -60,7 +60,7 @@ final class ItemCategoryCommand extends BaseCommand {
         foreach ($pageItems as $id) {
             $definition = GlaciaItemFactory::$definitions[$id] ?? null;
             $displayName = $definition !== null ? C::colorize((string) ($definition["name"] ?? $id)) : $id;
-            $sender->sendMessage(C::AQUA . $id . C::GRAY . " - " . $displayName);
+            $sender->sendMessage(C::colorize("&b" . $id . "&7 - " . $displayName));
         }
 
         if ($sender->hasPermission("glacia.give-item")) {

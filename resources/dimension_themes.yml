@@ -1,4 +1,31 @@
 themes:
+  frostbite_valley:
+    display: "&bFrostbite Valley"
+    description: "&7A frozen valley wrapped in dense glacial fog."
+    world: "FrostbiteValley"
+    zone-id: "frostreach"
+    generator-preset: "frostbite_valley"
+    scoreboard-profile: "default"
+    ambience:
+      # Vanilla particle ids — client UP*/particle packs retexture these (crit, enchant, portal, end_rod, etc.).
+      particles:
+        enabled: true
+        particle: "snow_dust"
+        interval-ticks: 22
+        count: 3
+        radius: 6
+      sound:
+        enabled: false
+    resource-pack:
+      fog-color: "#BDEBFF"
+      sky-color: "#DDF8FF"
+      horizon-color: "#F4FDFF"
+      client-biome: "ice_plains"
+      fog-identifier: "glacia:frostbite_valley"
+      notes:
+        - "Ships with resource_packs/GlaciaExoPack/client_biomes/ice_plains.json."
+        - "Ships with resource_packs/GlaciaExoPack/fogs/frostbite_valley.json."
+
   astral_veil:
     display: "&dAstral Veil"
     description: "&7A fractured celestial reach beyond the old End, saturated with voidlight and unstable relic energy."
@@ -20,6 +47,7 @@ themes:
     ambience:
       particles:
         enabled: true
+        # portal + enchant tables look strong with end-themed resource stacks; alternative: "enchant", "crit", "packed_ice"
         particle: "portal"
         interval-ticks: 20
         count: 4

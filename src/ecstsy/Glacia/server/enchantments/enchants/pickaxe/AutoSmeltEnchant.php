@@ -8,6 +8,8 @@ use ecstsy\Glacia\Loader;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\BlockBreakEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantDebugManager;
+use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
 use ecstsy\MartianUtilities\utils\GeneralUtils;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\event\block\BlockBreakEvent;
@@ -20,6 +22,9 @@ final class AutoSmeltEnchant implements BlockBreakEnchantmentHandler {
         if ($event->isCancelled()) {
             return;
         }
+        if (!EnchantTuningManager::getBool("autosmelt", "enabled", true)) {
+            return;
+        }
 
         $player = $event->getPlayer();
         $item = $player->getInventory()->getItemInHand();
@@ -29,6 +34,7 @@ final class AutoSmeltEnchant implements BlockBreakEnchantmentHandler {
         }
 
         $newDrops = $event->getDrops();
+        $smeltedDrops = 0;
 
         foreach ($newDrops as $k => $drop) {
             $newItem = match (true) {
@@ -42,6 +48,7 @@ final class AutoSmeltEnchant implements BlockBreakEnchantmentHandler {
             if ($newItem !== null) {
                 $newItem->setCount($drop->getCount());
                 $newDrops[$k] = $newItem;
+                $smeltedDrops += $drop->getCount();
             }
         }
 
@@ -60,6 +67,13 @@ final class AutoSmeltEnchant implements BlockBreakEnchantmentHandler {
             $event->setDrops($remaining);
         } else {
             $event->setDrops($newDrops);
+        }
+
+        if ($smeltedDrops > 0) {
+            EnchantDebugManager::logPassiveValues($player, "autosmelt", $level, [
+                "smelted_drops" => $smeltedDrops,
+                "auto_inventory" => $autoInventory,
+            ]);
         }
     }
 }

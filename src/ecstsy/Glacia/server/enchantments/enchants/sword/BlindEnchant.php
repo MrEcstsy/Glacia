@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace ecstsy\Glacia\server\enchantments\enchants\sword;
 
 use ecstsy\Glacia\entity\gkits\ForsakenChampion;
+use ecstsy\Glacia\entity\MummifiedRemnant;
 use ecstsy\Glacia\player\PlayerManager;
 use ecstsy\Glacia\server\enchantments\CustomEnchantment;
 use ecstsy\Glacia\server\enchantments\CustomEnchantmentManager;
 use ecstsy\Glacia\server\enchantments\handler\EntityDamageByEntityEnchantmentHandler;
+use ecstsy\Glacia\server\enchantments\manager\EnchantProcManager;
 use ecstsy\Glacia\server\enchantments\manager\EnchantTuningManager;
-use ecstsy\Glacia\server\enchantments\manager\ProcLuckManager;
+use ecstsy\Glacia\server\enchantments\manager\MirrorbrandProcManager;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\entity\Living;
@@ -29,36 +31,49 @@ final class BlindEnchant implements EntityDamageByEntityEnchantmentHandler {
         $victim = $event->getEntity();
         if (!$victim instanceof Living) return;
 
-        $item = $damager instanceof Player ? $damager->getInventory()->getItemInHand() : ($damager instanceof ForsakenChampion ? $damager->getCombatItem() : null);
+        $item = $damager instanceof Player ? $damager->getInventory()->getItemInHand() : (($damager instanceof ForsakenChampion || $damager instanceof MummifiedRemnant) ? $damager->getCombatItem() : null);
         if ($item === null) return;
         if (!CustomEnchantmentManager::hasEnchantment($item, "blind")) return;
 
         $session = $damager instanceof Player ? PlayerManager::getInstance()->getSession($damager) : null;
 
-        $data = [
-            1 => ["chance" => 25, "cd" => 2, "duration" => 60,  "effectLevel" => 0],
-            2 => ["chance" => 35, "cd" => 2, "duration" => 80,  "effectLevel" => 1],
-            3 => ["chance" => 45, "cd" => 2, "duration" => 100, "effectLevel" => 2],
-        ];
-
-        $cfg = $data[$level] ?? $data[1];
-        $cfg["chance"] = EnchantTuningManager::getLevelInt("blind", "chance-by-level", $level, (int) $cfg["chance"]);
-        $cfg["duration"] = EnchantTuningManager::getLevelInt("blind", "effect-duration-seconds-by-level", $level, (int) $cfg["duration"]);
-        $cfg["effectLevel"] = EnchantTuningManager::getLevelInt("blind", "effect-amplifier-by-level", $level, (int) $cfg["effectLevel"]);
-
-        if (!ProcLuckManager::roll($damager, "blind", $cfg["chance"], 2, 12)) return;
-        if ($session !== null && $session->isOnCooldown("blind")) return;
-
-        if ($session !== null) {
-            $session->addCooldown("blind", max(0, EnchantTuningManager::getInt("blind", "cooldown", 1)));
+        $chance = EnchantTuningManager::chance("blind", $level, 25.0);
+        $cooldownSeconds = EnchantTuningManager::cooldownSeconds("blind", $level, 1);
+        $durationTicks = max(1, EnchantTuningManager::valueInt("blind", "duration-ticks", $level, 60));
+        $effectLevel = max(0, EnchantTuningManager::valueInt("blind", "amplifier", $level, 0));
+        $result = EnchantProcManager::attempt(
+            $damager,
+            "blind",
+            $level,
+            $chance,
+            $cooldownSeconds,
+            static fn() => $session?->getCooldown("blind") ?? 0
+        );
+        if (!$result->success) {
+            return;
         }
 
         $victim->getEffects()->add(
             new EffectInstance(
                 VanillaEffects::BLINDNESS(),
-                $cfg["duration"] * 20,
-                $cfg["effectLevel"]
+                $durationTicks,
+                $effectLevel
             )
         );
+        if ($damager instanceof Player && $victim instanceof Player) {
+            MirrorbrandProcManager::record($damager, "blind", static function (Player $reflector, Player $attacker) use ($durationTicks, $effectLevel): bool {
+                $attacker->getEffects()->add(new EffectInstance(
+                    VanillaEffects::BLINDNESS(),
+                    $durationTicks,
+                    $effectLevel
+                ));
+                return true;
+            });
+        }
+        EnchantProcManager::applyCooldownIfNeeded($result, static fn(int $seconds) => $session?->addCooldown("blind", $seconds));
+        EnchantProcManager::debugAppliedValues($damager, $result, [
+            "duration_ticks" => $durationTicks,
+            "amplifier" => $effectLevel,
+        ]);
     }
 }

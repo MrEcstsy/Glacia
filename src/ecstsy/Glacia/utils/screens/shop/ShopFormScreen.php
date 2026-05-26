@@ -22,7 +22,6 @@ final class ShopFormScreen {
         "food" => "Food and Farming",
         "drops" => "Mob Drops",
         "special" => "Specialty Items",
-        "brewing" => "Brewing",
         "wool" => "Wool",
         "glass" => "Glass",
         "base" => "Base Grind"
@@ -80,7 +79,7 @@ final class ShopFormScreen {
                 return;
             }
 
-            ShopConfirmScreen::displayForm($player, $items[(int) $data]);
+            ShopConfirmScreen::displayForm($player, $items[(int) $data], $category, $page + 1);
         });
 
         $title = self::CATEGORIES[$category] ?? ucwords(str_replace("_", " ", $category));

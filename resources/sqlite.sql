@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS glacia_players (
     deaths INT default 0,
     slot_credits INT default 0,
     item_flip_credits INT default 0,
-    title TEXT DEFAULT NULL
+    title TEXT DEFAULT NULL,
+    playtime_seconds INT NOT NULL DEFAULT 0
 );
 -- # }
 
@@ -61,8 +62,9 @@ WHERE username IS NOT NULL AND username != '';
 -- #    :slot_credits int
 -- #    :item_flip_credits int
 -- #    :title ?string
-INSERT OR IGNORE INTO glacia_players (uuid, username, balance, cooldowns, faction_id, faction_role, power, rank, settings, buffs, sell_multiplier, collection, kills, deaths, slot_credits, item_flip_credits, title)
-VALUES (:uuid, :username, :balance, :cooldowns, :faction_id, :faction_role, :power, :rank, :settings, :buffs, :sell_multiplier, :collection, :kills, :deaths, :slot_credits, :item_flip_credits, :title);
+-- #    :playtime_seconds int
+INSERT OR IGNORE INTO glacia_players (uuid, username, balance, cooldowns, faction_id, faction_role, power, rank, settings, buffs, sell_multiplier, collection, kills, deaths, slot_credits, item_flip_credits, title, playtime_seconds)
+VALUES (:uuid, :username, :balance, :cooldowns, :faction_id, :faction_role, :power, :rank, :settings, :buffs, :sell_multiplier, :collection, :kills, :deaths, :slot_credits, :item_flip_credits, :title, :playtime_seconds);
 -- # }
 
 -- # { update
@@ -83,6 +85,7 @@ VALUES (:uuid, :username, :balance, :cooldowns, :faction_id, :faction_role, :pow
 -- #   :slot_credits int
 -- #   :item_flip_credits int
 -- #   :title ?string
+-- #   :playtime_seconds int
 UPDATE glacia_players
 SET username = :username, 
     balance = :balance, 
@@ -99,7 +102,8 @@ SET username = :username,
     deaths = :deaths,
     slot_credits = :slot_credits,
     item_flip_credits = :item_flip_credits,
-    title = :title
+    title = :title,
+    playtime_seconds = :playtime_seconds
 WHERE uuid = :uuid;
 -- # }
 
@@ -112,6 +116,25 @@ WHERE uuid = :uuid;
 -- # { username_by_uuid
 -- #    :uuid string
 SELECT username FROM glacia_players WHERE uuid = :uuid LIMIT 1;
+-- # }
+
+-- # { reset_season
+UPDATE glacia_players
+SET balance = 950,
+    cooldowns = '{}',
+    faction_id = NULL,
+    faction_role = NULL,
+    power = 100,
+    settings = '{"chest_inventories":true,"broadcasts":true,"notifications":true,"loot_announcer":true,"quick_claim":true,"max_homes":5,"show_coordinates":true,"guard_inspect_use_form":false}',
+    buffs = '[]',
+    sell_multiplier = 1,
+    collection = '[]',
+    kills = 0,
+    deaths = 0,
+    slot_credits = 0,
+    item_flip_credits = 0,
+    title = NULL,
+    playtime_seconds = 0;
 -- # }
 -- # }
 
@@ -148,6 +171,10 @@ VALUES (:listing_id, :seller_uuid, :seller_name, :item_data, :price, :created_at
 -- #    :listing_id string
 DELETE FROM glacia_auction_house_listings WHERE listing_id = :listing_id;
 -- # }
+
+-- # { delete_all
+DELETE FROM glacia_auction_house_listings;
+-- # }
 -- # }
 
 -- # { glacia_auction_house_collection
@@ -178,6 +205,10 @@ VALUES (:entry_id, :owner_uuid, :item_data, :reason, :created_at);
 -- # { delete
 -- #    :entry_id string
 DELETE FROM glacia_auction_house_collection WHERE entry_id = :entry_id;
+-- # }
+
+-- # { delete_all
+DELETE FROM glacia_auction_house_collection;
 -- # }
 -- # }
 
@@ -210,6 +241,91 @@ VALUES (:owner_uuid, :vault_number, :contents, :updated_at);
 -- #    :vault_number int
 DELETE FROM glacia_player_vaults
 WHERE owner_uuid = :owner_uuid AND vault_number = :vault_number;
+-- # }
+
+-- # { delete_all
+DELETE FROM glacia_player_vaults;
+-- # }
+-- # }
+
+-- # { glacia_player_quests
+-- #    { init
+CREATE TABLE IF NOT EXISTS glacia_player_quests (
+    uuid VARCHAR(36) PRIMARY KEY,
+    username VARCHAR(16) NOT NULL,
+    quest_points INT NOT NULL DEFAULT 0,
+    assigned_at INT NOT NULL DEFAULT 0,
+    daily_quests TEXT NOT NULL DEFAULT '{}',
+    bonus_quests TEXT NOT NULL DEFAULT '[]',
+    meta TEXT NOT NULL DEFAULT '{}'
+);
+-- # }
+
+-- # { select
+SELECT * FROM glacia_player_quests;
+-- # }
+
+-- # { create
+-- #    :uuid string
+-- #    :username string
+-- #    :quest_points int
+-- #    :assigned_at int
+-- #    :daily_quests string
+-- #    :bonus_quests string
+-- #    :meta string
+INSERT OR IGNORE INTO glacia_player_quests (uuid, username, quest_points, assigned_at, daily_quests, bonus_quests, meta)
+VALUES (:uuid, :username, :quest_points, :assigned_at, :daily_quests, :bonus_quests, :meta);
+-- # }
+
+-- # { update
+-- #    :uuid string
+-- #    :username string
+-- #    :quest_points int
+-- #    :assigned_at int
+-- #    :daily_quests string
+-- #    :bonus_quests string
+-- #    :meta string
+UPDATE glacia_player_quests
+SET username = :username,
+    quest_points = :quest_points,
+    assigned_at = :assigned_at,
+    daily_quests = :daily_quests,
+    bonus_quests = :bonus_quests,
+    meta = :meta
+WHERE uuid = :uuid;
+-- # }
+
+-- # { delete
+-- #    :uuid string
+DELETE FROM glacia_player_quests WHERE uuid = :uuid;
+-- # }
+
+-- # { delete_all
+DELETE FROM glacia_player_quests;
+-- # }
+-- # }
+
+-- # { glacia_quest_shop_state
+-- #    { init
+CREATE TABLE IF NOT EXISTS glacia_quest_shop_state (
+    state_key VARCHAR(32) PRIMARY KEY,
+    value TEXT NOT NULL
+);
+-- # }
+
+-- # { select
+SELECT * FROM glacia_quest_shop_state;
+-- # }
+
+-- # { upsert
+-- #    :state_key string
+-- #    :value string
+INSERT OR REPLACE INTO glacia_quest_shop_state (state_key, value)
+VALUES (:state_key, :value);
+-- # }
+
+-- # { delete_all
+DELETE FROM glacia_quest_shop_state;
 -- # }
 -- # }
 
@@ -259,6 +375,10 @@ WHERE faction_id = :faction_id;
 -- #    :faction_id string
 DELETE FROM glacia_factions WHERE faction_id = :faction_id;
 -- #  }
+
+-- # { delete_all
+DELETE FROM glacia_factions;
+-- #  }
 -- # }
 
 -- # { glacia_faction_homes
@@ -300,6 +420,10 @@ WHERE faction_id = :faction_id;
 -- # { delete
 -- #    :faction_id string
 DELETE FROM glacia_faction_homes WHERE faction_id = :faction_id;
+-- #  }
+
+-- # { delete_all
+DELETE FROM glacia_faction_homes;
 -- #  }
 -- # }
 
@@ -415,6 +539,10 @@ WHERE faction_id = :faction_id AND role_key = :role_key;
 DELETE FROM glacia_faction_roles
 WHERE faction_id = :faction_id;
 -- #  }
+
+-- # { delete_all
+DELETE FROM glacia_faction_roles;
+-- #  }
 -- # }
 
 -- # { glacia_faction_members
@@ -463,6 +591,10 @@ WHERE faction_id = :faction_id AND member_uuid = :member_uuid;
 -- #    :member_uuid string
 DELETE FROM glacia_faction_members
 WHERE faction_id = :faction_id AND member_uuid = :member_uuid;
+-- #  }
+
+-- # { delete_all
+DELETE FROM glacia_faction_members;
 -- #  }
 -- # }
 
@@ -522,6 +654,10 @@ WHERE world_name = :world_name
 DELETE FROM glacia_faction_claims
 WHERE faction_id = :faction_id;
 -- #  }
+
+-- # { delete_all
+DELETE FROM glacia_faction_claims;
+-- #  }
 -- # }
 
 -- # { glacia_faction_relations
@@ -561,6 +697,10 @@ WHERE faction_id = :faction_id AND other_id = :other_id;
 DELETE FROM glacia_faction_relations
 WHERE faction_id = :faction_id AND other_id = :other_id;
 -- #  }
+
+-- # { delete_all
+DELETE FROM glacia_faction_relations;
+-- #  }
 -- # }
 
 -- # { glacia_faction_upgrade_bank
@@ -587,6 +727,10 @@ VALUES (:faction_id, :bank_balance, :upgrade_data);
 -- # { delete
 -- #    :faction_id string
 DELETE FROM glacia_faction_upgrade_bank WHERE faction_id = :faction_id;
+-- #  }
+
+-- # { delete_all
+DELETE FROM glacia_faction_upgrade_bank;
 -- #  }
 -- # }
 
@@ -741,6 +885,10 @@ DELETE FROM homes
 WHERE uuid = :uuid AND home_name = :home_name;
 -- #  }
 
+-- #  { delete_all
+DELETE FROM homes;
+-- #  }
+
 -- #  { update
 -- #      :uuid string
 -- #      :max_homes int
@@ -811,6 +959,10 @@ VALUES (:uuid, :username, :type, :money);
 DELETE FROM CoinFlips
 WHERE uuid=:uuid;
 -- #  }
+
+-- #  { delete_all
+DELETE FROM CoinFlips;
+-- #  }
 -- # }
 
 -- # { glacia_jackpot
@@ -818,7 +970,9 @@ WHERE uuid=:uuid;
 CREATE TABLE IF NOT EXISTS glacia_jackpot (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     pot INTEGER NOT NULL DEFAULT 0,
-    last_draw INTEGER NOT NULL DEFAULT 0
+    last_draw INTEGER NOT NULL DEFAULT 0,
+    draw_at INTEGER NOT NULL DEFAULT 0,
+    tickets_json TEXT NOT NULL DEFAULT '{}'
 );
 -- #   }
 
@@ -829,13 +983,32 @@ SELECT * FROM glacia_jackpot WHERE id = 1;
 -- #   { update
 -- #      :pot int
 -- #      :last_draw int
-UPDATE glacia_jackpot SET pot = :pot, last_draw = :last_draw WHERE id = 1;
+-- #      :draw_at int
+-- #      :tickets_json string
+UPDATE glacia_jackpot
+SET pot = :pot,
+    last_draw = :last_draw,
+    draw_at = :draw_at,
+    tickets_json = :tickets_json
+WHERE id = 1;
 -- #   }
 
 -- #   { insert
 -- #      :pot int
 -- #      :last_draw int
-INSERT OR IGNORE INTO glacia_jackpot (id, pot, last_draw) VALUES (1, :pot, :last_draw);
+-- #      :draw_at int
+-- #      :tickets_json string
+INSERT OR IGNORE INTO glacia_jackpot (id, pot, last_draw, draw_at, tickets_json)
+VALUES (1, :pot, :last_draw, :draw_at, :tickets_json);
+-- #   }
+
+-- #   { reset
+UPDATE glacia_jackpot
+SET pot = 0,
+    last_draw = 0,
+    draw_at = 0,
+    tickets_json = '{}'
+WHERE id = 1;
 -- #   }
 -- # }
 
@@ -868,6 +1041,10 @@ UPDATE glacia_jackpot_stats SET wins = :wins, winnings = :winnings WHERE uuid = 
 -- #      :winnings int
 INSERT OR IGNORE INTO glacia_jackpot_stats (uuid, username, wins, winnings) VALUES (:uuid, :username, :wins, :winnings);
 -- #   }
+
+-- #   { delete_all
+DELETE FROM glacia_jackpot_stats;
+-- #   }
 -- # }
 
 -- # { glacia_bounties
@@ -894,6 +1071,10 @@ VALUES (:target_uuid, :target_name, :amount, :updated_at);
 -- #      :target_uuid string
 DELETE FROM glacia_bounties WHERE target_uuid = :target_uuid;
 -- #   }
+
+-- #   { delete_all
+DELETE FROM glacia_bounties;
+-- #   }
 -- # }
 
 -- # { glacia_combat_loggers
@@ -909,6 +1090,7 @@ CREATE TABLE IF NOT EXISTS glacia_combat_loggers (
     pitch REAL,
     inventory TEXT,
     armor TEXT,
+    offhand TEXT DEFAULT '',
     xp INT,
     health REAL,
     expires INT,
@@ -936,15 +1118,16 @@ SELECT * FROM glacia_combat_loggers WHERE uuid = :uuid;
 -- #      :pitch float
 -- #      :inventory string
 -- #      :armor string
+-- #      :offhand string
 -- #      :xp int
 -- #      :health float
 -- #      :expires int
 INSERT OR REPLACE INTO glacia_combat_loggers (
-    uuid, username, world, x, y, z, yaw, pitch, inventory, armor, xp, health, expires) 
+    uuid, username, world, x, y, z, yaw, pitch, inventory, armor, offhand, xp, health, expires) 
 VALUES (
     :uuid, :username,
     :world, :x, :y, :z, :yaw, :pitch,
-    :inventory, :armor,
+    :inventory, :armor, :offhand,
     :xp, :health, :expires
 );
 -- #   }
@@ -959,5 +1142,9 @@ WHERE uuid = :uuid;
 -- #   { delete
 -- #      :uuid string
 DELETE FROM glacia_combat_loggers WHERE uuid = :uuid;
+-- #   }
+
+-- #   { delete_all
+DELETE FROM glacia_combat_loggers;
 -- #   }
 -- # }

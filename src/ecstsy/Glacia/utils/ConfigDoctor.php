@@ -23,6 +23,10 @@ final class ConfigDoctor {
                 $created[] = $file;
             }
 
+            if (ConfigSchemaUpdater::isTracked($file)) {
+                ConfigSchemaUpdater::ensureMerged($loader, $file);
+            }
+
             GeneralUtils::forgetConfiguration($loader, $file);
             $config = GeneralUtils::getConfiguration($loader, $file);
             if ($config === null) {

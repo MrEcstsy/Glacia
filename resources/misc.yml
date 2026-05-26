@@ -2,6 +2,87 @@
 # When true, Glacia installs a tolerant skin adapter: valid baked bitmaps are kept; otherwise a neutral fallback.
 persona-friendly-skins: true
 
+# Primed-TNT explosions & Glacia creeper explosions vs obsidian (durability chipped until break).
+obsidian-explosions:
+  # Explosions that are touching water (block or foot/head/submerged) skip obsidian wear entirely.
+  water-blocks-damage: true
+  # Potato action bar shows HP as ceil(display-layers × remaining fraction); align with hits-to-break.normal for x/max to match blast count.
+  display-layers: 4
+  # Total obsidian wear per placement = 1 / this value (sub-explosions are scaled so their sum matches).
+  # Gigantic/Lethal still run 5 PocketMine explosions per charge for block damage; that does not multiply obsidian wear.
+  # - normal: placements to break a full obsidian from fresh.
+  # - tnt_gigantic: set equal to normal so one gigantic chips like one normal TNT (large radius, same obsidian dent).
+  # - tnt_lethal: 1 = one lethal breaks a full obsidian (4× one normal hit when normal is 4).
+  hits-to-break:
+    # Plain TNT keys: normal — or normal-tnt / vanilla-tnt / vanilla (no need to duplicate).
+    normal: 4
+    tnt_gigantic: 4
+    tnt_lethal: 1
+    tnt_lucky: 4
+
+# Enchanting tables: pooled blast durability (fractional wear until break). Potato punch shows x/max like obsidian.
+enchantment-table-explosions:
+  display-layers: 6
+  hits-to-break:
+    normal: 6
+    tnt_gigantic: 6
+    tnt_lethal: 1
+    tnt_lucky: 6
+
+# Cannon / raid tuning (TNT caps, high-altitude detonation mute, fragile blocks when water suppresses blast break).
+# Legacy key cosmic-cannon still merges if present — prefer cannon-rules in new installs.
+cannon-rules:
+  enabled: true
+  # When explosion epicenter block Y is greater than this value: no explosion, no blast durability chips (TNT can still fly higher).
+  suppress-explosion-when-y-above: 255
+  # If primed-TNT skips block-break underwater, still break fence gates / carpets / spawners / heads / etc.
+  water-vulnerable-blocks-bypass: true
+  max-primed-tnt-server-wide: 500
+  max-glacia-falling-sand-per-chunk: 64
+
+# Throttle firing menu/GUI commands in quick succession (/shop → /pv, etc.).
+# One shared timestamp per player: any tracked label advances the cooldown; blocked if you run another too soon (InvMenu dupes).
+# interval-ms applies to roots not listed under command-interval-ms. Longer intervals for vault/shop-heavy menus.
+command-rate-limit:
+  enabled: true
+  interval-ms: 700
+  command-interval-ms:
+    shop: 2500
+    pv: 2500
+    vault: 2500
+    playervault: 2500
+  bypass-permission: "glacia.command.ratelimit.bypass"
+  commands:
+    - shop
+    - pv
+    - vault
+    - playervault
+    - enderchest
+    - ec
+    - ah
+    - auctionhouse
+    - trash
+    - bin
+    - dispose
+    - workbench
+    - craft
+    - wb
+    - enchanter
+    - ce
+    - blackmarket
+    - bah
+    - slotbot
+    - bot
+    - slot
+    - collect
+    - titles
+    - kit
+    - gkits
+    - gkit
+    - fastchest
+    - fchest
+    - trade
+
 near-radius: 100
 wild-min-radius: 6000
 wild-max-radius: 7000
@@ -12,6 +93,11 @@ world-border-enabled: true
 world-border-radius: 24000
 world-border-world: ""
 world-border-message-cooldown: 2
+chunk-borders:
+  refresh-ticks: 8
+  height: 6
+  base-y-offset: -1
+  full-height: true
 relic-cooldowns:
   frostwake_trident: "2m"
   stormflare_torch: "5m"
@@ -63,6 +149,79 @@ moderation:
     discord-enabled: true
     cooldown-seconds: 60
     duplicate-window-seconds: 120
+
+anticheat:
+  enabled: true
+  alert-permission: "glacia.anticheat.alerts"
+  violation-decay-per-second: 1
+  # Glacia Guard — staff chat + AuditFileLogger only (no kicks/teleports from these checks).
+  guard:
+    enabled: true
+    fingerprint-enabled: true
+    risk-history:
+      enabled: true
+      reset-days: 7
+      blend-weight: 0.35
+      max-score: 100
+    log-min-confidence: 82
+    bypass-permission: ""
+    module-broadcast-cooldown-seconds: 18
+    lag:
+      ping-soft: 180
+      ping-hard: 340
+      jitter-soft-ms: 38
+      jitter-hard-ms: 85
+      multiplier-soft: 1.12
+      multiplier-hard: 1.28
+      # Extra signals (EWMA RTT spike + long gaps between PlayerAuthInput). Set false for ping/jitter-only.
+      advanced-lag-detection: true
+      spike-above-ewma-soft-ms: 72
+      spike-above-ewma-hard-ms: 140
+      stall-interval-soft-ms: 92
+      stall-interval-hard-ms: 175
+      min-ping-ewma-samples: 10
+    modules:
+      packet-storm: true
+      packet-storm-max-per-second: 220
+      multi-aura: true
+      no-swing: true
+      kill-aura: true
+      aim-assist: true
+      collision-anomaly: true
+      collision-box-flag-threshold: 12
+  reach:
+    enabled: true
+    threshold: 3.3
+    alert-vl: 8
+  autoclicker:
+    enabled: true
+    cps-threshold: 12
+    low-variance-threshold-ms: 12.0
+    alert-vl: 8
+    alert-cooldown-seconds: 30
+  timer:
+    enabled: true
+    min-samples: 12
+    average-threshold-ms: 44.0
+    variance-threshold-ms: 6.5
+    alert-vl: 8
+  speed:
+    enabled: true
+    ground-max: 0.70
+    air-max: 0.42
+    sprint-bonus: 0.08
+    max-ping: 260
+    alert-vl: 8
+  badpackets:
+    enabled: true
+    max-pitch: 90.0
+    alert-vl: 4
+  velocity:
+    enabled: true
+    min-horizontal-motion: 0.12
+    min-ratio: 0.55
+    max-ping: 220
+    alert-vl: 6
 
 faction-contribution:
   enabled: true
@@ -132,3 +291,48 @@ faction-contribution:
       tasks:
         bosses_killed: 15
         elite_mobs_killed: 500
+
+faction-core-claims:
+  # The first /f claim a faction makes becomes its Core Chunk.
+  # Normal claims must be connected so the faction base grows around the core instead of scattering.
+  normal-require-adjacent: true
+  raid:
+    # Raid claims mark cannon source chunks. TNT fired from dispensers in these chunks can breach enemy core chunks.
+    permanent: true
+  premium:
+    enabled: true
+    # Premium claims are wilderness chunks beside this region.
+    warzone-region: "Warzone"
+    adjacent-chunk-distance: 1
+    base-cost: 1000000
+    increment-per-existing: 500000
+    limit-per-faction: 3
+  breach:
+    minimum-y: 20
+    cooldown-seconds: 28800
+    tiers:
+      - max-y: 100
+        percent: 10
+      - max-y: 150
+        percent: 15
+      - max-y: 250
+        percent: 20
+      - max-y: 255
+        percent: 25
+
+faction-guardian:
+  # Factions stay hidden from /f top until their physical Chunk Guardian exists.
+  require-for-ftop: true
+  # If a faction is not created/placed during grace, the guardian is auto-placed after this long.
+  place-deadline-seconds: 86400
+  # TNT from raid claims can breach when it explodes in the guardian's chunk.
+  breach-radius-chunks: 0
+  # Guardian visuals only spawn when players are nearby.
+  spawn-distance: 96
+  despawn-distance: 112
+  entity:
+    scale: 0.55
+    orbit-radius: 7.0
+    orbit-height: 8.0
+    orbit-speed: 0.035
+    update-ticks: 2

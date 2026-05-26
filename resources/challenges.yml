@@ -3,6 +3,27 @@ reset-seconds: 86400
 active-count: 5
 faction-participant-limit: 3
 
+# Placement rewards support two shapes:
+# 1) Legacy fixed rewards:
+#    1st:
+#      - id: money_note
+#        amount: 5000000
+# 2) Random rolled rewards:
+#    1st:
+#      reward-count: "{2-4}"
+#      unique: true
+#      pool:
+#        - chance: 50
+#          id: money_note
+#          amount: 5000000
+#        - chance: 25
+#          id: fishing_orb
+#          max: 15
+#          new: 6
+#        - chance: 25
+#          id: exoticdust
+#          percent: "{6-12}"
+
 challenge-pool:
   - id: envoys_broken
     display: "&bMost Envoys Broken"

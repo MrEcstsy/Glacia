@@ -23,7 +23,7 @@ final class TebexCommand extends BaseCommand{
 
 		if($action === "poll" || $action === "refresh"){
 			if(!$manager->isEnabled()){
-				$sender->sendMessage(C::colorize("&r&cTebex is disabled or missing secret in config.yml."));
+				$sender->sendMessage(C::colorize("&r&cTebex is disabled or missing secret in tebex.yml."));
 				return;
 			}
 			if(!$manager->queuePoll(true)){

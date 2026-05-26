@@ -24,7 +24,7 @@ final class WarpCommand extends BaseCommand {
     public function onRun(CommandSender $sender, string $aliasUsed, array $args): void
     {
         if (!$sender instanceof Player) {
-            $sender->sendMessage(C::RED . "This command can only be used in-game.");
+            $sender->sendMessage(C::colorize("&cThis command can only be used in-game."));
             return;
         }
 
@@ -34,26 +34,32 @@ final class WarpCommand extends BaseCommand {
         $warp = Loader::getWarpManager()->getWarp($warpName);
 
         if ($warp === null) {
-            $sender->sendMessage(C::RED . "Warp '{$warpName}' does not exist.");
+            $sender->sendMessage(C::colorize("&cWarp '{$warpName}' does not exist."));
             return;
         }
     
         if ($player === null && isset($args["name"])) {
-            $sender->sendMessage(C::RED . "Player '{$args["name"]}' not found.");
+            $sender->sendMessage(C::colorize("&cPlayer '{$args["name"]}' not found."));
             return;
         }
         
         if ($player !== null) {
             if (!$sender->hasPermission("glacia.warp.others")) {
-                $sender->sendMessage(C::RED . "You do not have permission to warp others.");
+                $sender->sendMessage(C::colorize("&cYou do not have permission to warp others."));
                 return;
             }
         
-            $warp->teleport($player);
-            $sender->sendMessage(C::GREEN . "Player '{$player->getName()}' has been warped to '{$warpName}'.");
+            if ($warp->teleport($player)) {
+                $sender->sendMessage(C::colorize("&aPlayer '{$player->getName()}' has been warped to '{$warpName}'."));
+            } else {
+                $sender->sendMessage(C::colorize("&cWarp '{$warpName}' could not be loaded right now."));
+            }
         } else {
-            $warp->teleport($sender);
-            $sender->sendMessage(C::GREEN . "You have been warped to '{$warpName}'.");
+            if ($warp->teleport($sender)) {
+                $sender->sendMessage(C::colorize("&aYou have been warped to '{$warpName}'."));
+            } else {
+                $sender->sendMessage(C::colorize("&cWarp '{$warpName}' could not be loaded right now."));
+            }
         }        
     }
 
